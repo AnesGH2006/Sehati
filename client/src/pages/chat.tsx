@@ -10,7 +10,7 @@ import { useRoute } from "wouter";
 import chatBg from "@assets/generated_images/modern_chat_interface_abstract_background_with_geometric_patterns.png";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-const EMOJIS = ["😊", "😂", "❤️", "👍", "🤝", "🙏", "🔨", "🔧", "🏠", "📍", "✨", "✅"];
+const EMOJIS = ["😊", "😂", "❤️", "👍", "🤝", "🙏", "🔨", "🔧", "🏠", "📍", "✨", "✅" , "💬", "📞", "📸", "📅", "💰", "📝", "📄", "📊" ];
 
 export default function Chat() {
   const [match, params] = useRoute("/chat/:id");
