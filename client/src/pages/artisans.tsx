@@ -13,8 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 export default function Artisans() {
+  const { t, i18n } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedDairas, setSelectedDairas] = useState<string[]>([]);
@@ -49,21 +51,23 @@ export default function Artisans() {
     setPriceRange([10000]);
   };
 
+  const isRtl = i18n.language === 'ar';
+
   return (
     <div className="min-h-screen flex flex-col bg-background font-sans">
       <Navbar />
       
-      <main className="flex-1 container px-4 md:px-8 py-8" dir="rtl">
+      <main className="flex-1 container px-4 md:px-8 py-8">
         <div className="flex flex-col md:flex-row gap-8">
           
           {/* Mobile Filter Trigger */}
           <div className="md:hidden flex flex-col gap-4">
              <div className="flex gap-2">
               <div className="relative flex-1">
-                <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Search className={`absolute ${isRtl ? 'right-3' : 'left-3'} top-2.5 h-4 w-4 text-muted-foreground`} />
                 <Input 
-                  placeholder="بحث بالاسم..." 
-                  className="pr-9" 
+                  placeholder={t('artisans.search_name')} 
+                  className={isRtl ? "pr-9" : "pl-9"}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -74,7 +78,7 @@ export default function Artisans() {
                     <SlidersHorizontal className="h-4 w-4" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="right" dir="rtl" className="w-[300px]">
+                <SheetContent side={isRtl ? "right" : "left"} className="w-[300px]">
                   <div className="mt-6">
                     <Filters 
                       selectedCategories={selectedCategories}
@@ -84,6 +88,7 @@ export default function Artisans() {
                       priceRange={priceRange}
                       setPriceRange={setPriceRange}
                       clearFilters={clearFilters}
+                      t={t}
                     />
                   </div>
                 </SheetContent>
@@ -101,14 +106,14 @@ export default function Artisans() {
           {/* Desktop Sidebar Filters */}
           <aside className="hidden md:block w-64 shrink-0 space-y-6 sticky top-24 h-fit">
             <div className="space-y-2">
-              <h2 className="font-heading font-bold text-xl">تصفية متقدمة</h2>
-              <p className="text-sm text-muted-foreground">اعثر على الحرفي المناسب</p>
+              <h2 className="font-heading font-bold text-xl">{t('artisans.filter_title')}</h2>
+              <p className="text-sm text-muted-foreground">{t('artisans.filter_subtitle')}</p>
             </div>
             <div className="relative">
-              <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className={`absolute ${isRtl ? 'right-3' : 'left-3'} top-2.5 h-4 w-4 text-muted-foreground`} />
               <Input 
-                placeholder="بحث بالاسم..." 
-                className="pr-9"
+                placeholder={t('artisans.search_name')} 
+                className={isRtl ? "pr-9" : "pl-9"}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -121,6 +126,7 @@ export default function Artisans() {
               priceRange={priceRange}
               setPriceRange={setPriceRange}
               clearFilters={clearFilters}
+              t={t}
             />
           </aside>
 
@@ -128,8 +134,8 @@ export default function Artisans() {
           <div className="flex-1">
             <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-heading font-bold mb-2">جميع الحرفيين</h1>
-                <p className="text-muted-foreground">عرض {filteredArtisans.length} حرفي متاح في تيارت</p>
+                <h1 className="text-3xl font-heading font-bold mb-2">{t('artisans.title')}</h1>
+                <p className="text-muted-foreground">{t('artisans.count', { count: filteredArtisans.length })}</p>
               </div>
               <ActiveFilters 
                 className="hidden md:flex"
@@ -166,8 +172,8 @@ export default function Artisans() {
                 animate={{ opacity: 1 }}
                 className="text-center py-20 bg-muted/20 rounded-2xl border border-dashed"
               >
-                <p className="text-muted-foreground">لا يوجد حرفيين يطابقون خيارات البحث حالياً.</p>
-                <Button variant="link" onClick={clearFilters} className="mt-2 text-primary">إعادة تعيين الفلاتر</Button>
+                <p className="text-muted-foreground">{t('artisans.no_results')}</p>
+                <Button variant="link" onClick={clearFilters} className="mt-2 text-primary">{t('artisans.reset_filters')}</Button>
               </motion.div>
             )}
           </div>
@@ -200,16 +206,16 @@ function ActiveFilters({ selectedCategories, toggleCategory, selectedDairas, tog
   );
 }
 
-function Filters({ selectedCategories, toggleCategory, selectedDairas, toggleDaira, priceRange, setPriceRange, clearFilters }: any) {
+function Filters({ selectedCategories, toggleCategory, selectedDairas, toggleDaira, priceRange, setPriceRange, clearFilters, t }: any) {
   return (
     <div className="space-y-4">
       <Accordion type="multiple" defaultValue={["categories", "location"]} className="w-full">
         <AccordionItem value="categories">
-          <AccordionTrigger className="font-heading font-bold">التصنيف</AccordionTrigger>
+          <AccordionTrigger className="font-heading font-bold">{t('artisans.category')}</AccordionTrigger>
           <AccordionContent>
             <div className="space-y-2 pt-2">
               {CATEGORIES.map((cat) => (
-                <div key={cat.id} className="flex items-center space-x-2 space-x-reverse">
+                <div key={cat.id} className="flex items-center gap-2">
                   <Checkbox 
                     id={`cat-${cat.id}`} 
                     checked={selectedCategories.includes(cat.label)}
@@ -223,11 +229,11 @@ function Filters({ selectedCategories, toggleCategory, selectedDairas, toggleDai
         </AccordionItem>
 
         <AccordionItem value="location">
-          <AccordionTrigger className="font-heading font-bold">المنطقة (الدائرة)</AccordionTrigger>
+          <AccordionTrigger className="font-heading font-bold">{t('artisans.location')}</AccordionTrigger>
           <AccordionContent>
             <div className="space-y-2 pt-2 h-48 overflow-y-auto pl-2 custom-scrollbar">
               {DAIRAS.map((daira) => (
-                <div key={daira} className="flex items-center space-x-2 space-x-reverse">
+                <div key={daira} className="flex items-center gap-2">
                   <Checkbox 
                     id={`loc-${daira}`} 
                     checked={selectedDairas.includes(daira)}
@@ -241,7 +247,7 @@ function Filters({ selectedCategories, toggleCategory, selectedDairas, toggleDai
         </AccordionItem>
 
         <AccordionItem value="price">
-          <AccordionTrigger className="font-heading font-bold">السعر الأقصى</AccordionTrigger>
+          <AccordionTrigger className="font-heading font-bold">{t('artisans.max_price')}</AccordionTrigger>
           <AccordionContent>
             <div className="pt-4 px-2 space-y-4">
               <div className="text-center font-bold text-primary">{priceRange[0]} دج</div>
@@ -262,7 +268,7 @@ function Filters({ selectedCategories, toggleCategory, selectedDairas, toggleDai
         </AccordionItem>
       </Accordion>
       
-      <Button variant="ghost" className="w-full mt-4 text-muted-foreground" onClick={clearFilters}>إعادة تعيين الكل</Button>
+      <Button variant="ghost" className="w-full mt-4 text-muted-foreground" onClick={clearFilters}>{t('artisans.reset')}</Button>
     </div>
   );
 }

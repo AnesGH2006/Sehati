@@ -3,8 +3,11 @@ import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { ShieldCheck, Users, Sparkles, MapPin, Search, MessageSquare, Star } from "lucide-react";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 export default function Home() {
+  const { t } = useTranslation();
+
   return (
     <div className="min-h-screen flex flex-col bg-background font-sans">
       <Navbar />
@@ -13,31 +16,31 @@ export default function Home() {
         <Hero />
         
         {/* Usage Guide Section */}
-        <section className="py-24 bg-background" dir="rtl">
+        <section className="py-24 bg-background">
           <div className="container px-4 md:px-8 text-center space-y-16">
             <div className="max-w-2xl mx-auto space-y-4">
-              <h2 className="text-3xl md:text-5xl font-heading font-bold">كيفية الاستخدام</h2>
-              <p className="text-lg text-muted-foreground">خطوات بسيطة للوصول إلى أفضل الخدمات الحرفية في تيارت</p>
+              <h2 className="text-3xl md:text-5xl font-heading font-bold">{t('usage.title')}</h2>
+              <p className="text-lg text-muted-foreground">{t('usage.subtitle')}</p>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
               <div className="absolute top-1/2 left-0 w-full h-0.5 bg-primary/10 -translate-y-1/2 hidden md:block -z-0" />
               <UsageStep 
                 number="1"
-                title="تصفح الحرفيين"
-                description="ادخل إلى صفحة الحرفيين واستخدم الفلاتر لاختيار التخصص والمنطقة."
+                title={t('usage.step1_title')}
+                description={t('usage.step1_desc')}
                 icon={<Search className="w-8 h-8" />}
               />
               <UsageStep 
                 number="2"
-                title="قارن واطلع"
-                description="شاهد الملفات الشخصية، سنوات الخبرة، ومعرض الأعمال لكل حرفي."
+                title={t('usage.step2_title')}
+                description={t('usage.step2_desc')}
                 icon={<Users className="w-8 h-8" />}
               />
               <UsageStep 
                 number="3"
-                title="تواصل مباشرة"
-                description="افتح محادثة فورية للاتفاق على الموعد والسعر بكل سهولة."
+                title={t('usage.step3_title')}
+                description={t('usage.step3_desc')}
                 icon={<MessageSquare className="w-8 h-8" />}
               />
             </div>
@@ -45,7 +48,7 @@ export default function Home() {
         </section>
 
         {/* Why Herfati Section */}
-        <section className="py-24 bg-white dark:bg-background" dir="rtl">
+        <section className="py-24 bg-white dark:bg-background">
           <div className="container px-4 md:px-8">
             <div className="max-w-3xl mx-auto text-center mb-16 space-y-4">
               <h2 className="text-3xl md:text-5xl font-heading font-bold">لماذا تختار منصة حرفتي؟</h2>
@@ -76,7 +79,7 @@ export default function Home() {
         </section>
 
         {/* How it works Section */}
-        <section className="py-24 bg-muted/30" dir="rtl">
+        <section className="py-24 bg-muted/30">
           <div className="container px-4 md:px-8">
             <h2 className="text-3xl md:text-4xl font-heading font-bold text-center mb-16">كيف يعمل الموقع؟</h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
@@ -109,7 +112,7 @@ export default function Home() {
         </section>
 
         {/* Mission Section */}
-        <section className="py-24 bg-primary text-primary-foreground text-center" dir="rtl">
+        <section className="py-24 bg-primary text-primary-foreground text-center">
           <div className="container px-4 md:px-8 max-w-4xl">
             <Sparkles className="h-12 w-12 mx-auto mb-6 opacity-80" />
             <h2 className="text-3xl md:text-5xl font-heading font-bold mb-6">مهمتنا دعم الحرف المحلي</h2>
@@ -169,7 +172,7 @@ function UsageStep({ number, title, description, icon }: any) {
       <div className="h-16 w-16 rounded-2xl bg-primary text-white flex items-center justify-center mx-auto shadow-lg shadow-primary/20">
         {icon}
       </div>
-      <div className="inline-block px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full mb-2">الخطوة {number}</div>
+      <div className="inline-block px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full mb-2">Step {number}</div>
       <h3 className="text-xl font-bold font-heading">{title}</h3>
       <p className="text-muted-foreground text-sm leading-relaxed">{description}</p>
     </motion.div>

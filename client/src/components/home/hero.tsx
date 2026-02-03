@@ -4,10 +4,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DAIRAS, CATEGORIES } from "@/lib/constants";
 import heroImage from "@assets/generated_images/algerian_artisan_working_on_pottery_or_leather_in_a_bright_workshop.png";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 export function Hero() {
+  const { t } = useTranslation();
+
   return (
-    <div className="relative min-h-[600px] flex items-center justify-center overflow-hidden" dir="rtl">
+    <div className="relative min-h-[600px] flex items-center justify-center overflow-hidden">
       {/* Background Image with Overlay */}
       <div className="absolute inset-0 z-0">
         <img 
@@ -27,7 +30,7 @@ export function Hero() {
             transition={{ duration: 0.5 }}
             className="text-4xl md:text-6xl font-bold font-heading text-white leading-tight"
           >
-            اعثر على أمهر الحرفيين <br/> في <span className="text-primary-foreground bg-primary/90 px-2 rounded-md">تيارت</span>
+            {t('hero.title')}
           </motion.h1>
           
           <motion.p 
@@ -36,7 +39,7 @@ export function Hero() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="text-lg md:text-xl text-gray-200 max-w-2xl mx-auto"
           >
-            منصة تجمع بين الخبرة والإتقان. تصفح مئات الحرفيين، قارن الأسعار، وتواصل مباشرة.
+            {t('hero.subtitle')}
           </motion.p>
         </div>
       </div>
