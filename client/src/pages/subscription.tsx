@@ -10,20 +10,23 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DAIRAS, CATEGORIES } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 export default function Subscription() {
+  const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const [duration, setDuration] = useState("1");
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const isRtl = i18n.language === 'ar';
 
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitted(true);
     toast({
-      title: "تم استلام طلبك!",
-      description: "اشتراكك تحت المراجعة حالياً، سنتواصل معك فور التفعيل.",
+      title: t('subscription.subscribe_now'),
+      description: t('subscription.under_review'),
     });
   };
 
@@ -36,16 +39,15 @@ export default function Subscription() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             className="text-center space-y-6 max-w-md p-8 bg-card rounded-3xl border shadow-xl"
-            dir="rtl"
           >
             <div className="h-20 w-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
               <Clock className="h-10 w-10 text-primary animate-pulse" />
             </div>
-            <h1 className="text-3xl font-heading font-bold text-primary">اشتراكك تحت المراجعة</h1>
+            <h1 className="text-3xl font-heading font-bold text-primary">{t('subscription.under_review')}</h1>
             <p className="text-muted-foreground text-lg">
-              شكراً لثقتك بنا. نقوم حالياً بمراجعة وصل الدفع الخاص بك. سيتم تفعيل حسابك الحرفي خلال 24 ساعة كحد أقصى.
+              {t('subscription.review_desc')}
             </p>
-            <Button className="w-full" variant="outline" onClick={() => window.location.href = "/"}>العودة للرئيسية</Button>
+            <Button className="w-full" variant="outline" onClick={() => window.location.href = "/"}>{t('common.back_home')}</Button>
           </motion.div>
         </main>
         <Footer />
@@ -57,57 +59,57 @@ export default function Subscription() {
     <div className="min-h-screen flex flex-col bg-background font-sans">
       <Navbar />
       
-      <main className="flex-1 py-16" dir="rtl">
+      <main className="flex-1 py-16">
         <div className="container px-4 md:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-            <h1 className="text-4xl font-heading font-bold">باقة الحرفي المتميز</h1>
-            <p className="text-xl text-muted-foreground">خطة واحدة بسيطة وشاملة لنمو نشاطك في تيارت</p>
+            <h1 className="text-4xl font-heading font-bold">{t('subscription.title')}</h1>
+            <p className="text-xl text-muted-foreground">{t('subscription.subtitle')}</p>
           </div>
 
           <div className="max-w-2xl mx-auto">
             <Card className="border-2 border-primary relative shadow-2xl z-10">
-              <div className="absolute -top-4 right-1/2 translate-x-1/2 bg-primary text-white px-4 py-1 rounded-full text-sm font-bold shadow-lg">
-                الباقة الشاملة
+              <div className={`absolute -top-4 ${isRtl ? 'right-1/2 translate-x-1/2' : 'left-1/2 -translate-x-1/2'} bg-primary text-white px-4 py-1 rounded-full text-sm font-bold shadow-lg`}>
+                {t('subscription.plan_name')}
               </div>
               <CardHeader className="text-center pt-8">
-                <CardTitle className="text-3xl font-heading text-primary">حرفي محترف</CardTitle>
-                <CardDescription className="text-lg">كل ما تحتاجه للنجاح في منصة حرفتي</CardDescription>
+                <CardTitle className="text-3xl font-heading text-primary">{t('subscription.plan_name')}</CardTitle>
+                <CardDescription className="text-lg">{t('subscription.plan_desc')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-8">
                 <div className="bg-muted/30 p-6 rounded-2xl border border-border/50">
-                  <Label className="text-base font-bold mb-4 block">اختر مدة الاشتراك:</Label>
+                  <Label className="text-base font-bold mb-4 block">{t('subscription.duration')}</Label>
                   <Tabs defaultValue="1" className="w-full" onValueChange={setDuration}>
                     <TabsList className="grid w-full grid-cols-3 h-auto p-1 bg-background/50">
                       <TabsTrigger value="1" className="py-3 flex flex-col">
-                        <span className="font-bold">شهر واحد</span>
-                        <span className="text-xs opacity-70">4000 دج</span>
+                        <span className="font-bold">{t('subscription.month')}</span>
+                        <span className="text-xs opacity-70">{t('subscription.price_1')}</span>
                       </TabsTrigger>
                       <TabsTrigger value="3" className="py-3 flex flex-col">
-                        <span className="font-bold">3 أشهر</span>
-                        <span className="text-xs opacity-70">11,000 دج</span>
+                        <span className="font-bold">{t('subscription.3months')}</span>
+                        <span className="text-xs opacity-70">{t('subscription.price_3')}</span>
                       </TabsTrigger>
                       <TabsTrigger value="6" className="py-3 flex flex-col">
-                        <span className="font-bold">6 أشهر</span>
-                        <span className="text-xs opacity-70">20,000 دج</span>
+                        <span className="font-bold">{t('subscription.6months')}</span>
+                        <span className="text-xs opacity-70">{t('subscription.price_6')}</span>
                       </TabsTrigger>
                     </TabsList>
                   </Tabs>
                 </div>
 
                 <div className="space-y-4 px-4">
-                  <h3 className="font-bold text-lg border-b pb-2">مميزات الباقة:</h3>
+                  <h3 className="font-bold text-lg border-b pb-2">{t('subscription.features')}</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FeatureItem text="ملف شخصي احترافي كامل" />
-                    <FeatureItem text="معرض أعمال غير محدود الصور" />
-                    <FeatureItem text="تواصل مباشر مع الزبائن" />
-                    <FeatureItem text="ظهور مميز في نتائج البحث" />
-                    <FeatureItem text="إحصائيات لزيارات ملفك" />
-                    <FeatureItem text="دعم فني مخصص" />
+                    <FeatureItem text={t('subscription.feat_profile')} />
+                    <FeatureItem text={t('subscription.feat_portfolio')} />
+                    <FeatureItem text={t('subscription.feat_chat')} />
+                    <FeatureItem text={t('subscription.feat_search')} />
+                    <FeatureItem text={t('subscription.feat_stats')} />
+                    <FeatureItem text={t('subscription.feat_support')} />
                   </div>
                 </div>
               </CardContent>
               <CardFooter className="p-8 pt-0">
-                <JoinDialog plan={`${duration} أشهر`} onSubmit={handleJoin} />
+                <JoinDialog plan={duration === "1" ? t('subscription.month') : duration === "3" ? t('subscription.3months') : t('subscription.6months')} onSubmit={handleJoin} t={t} i18n={i18n} />
               </CardFooter>
             </Card>
           </div>
@@ -130,79 +132,80 @@ function FeatureItem({ text }: { text: string }) {
   );
 }
 
-function JoinDialog({ plan, onSubmit }: { plan: string, onSubmit: (e: any) => void }) {
+function JoinDialog({ plan, onSubmit, t, i18n }: { plan: string, onSubmit: (e: any) => void, t: any, i18n: any }) {
   const [receipt, setReceipt] = useState<string | null>(null);
   const [portfolioCount, setPortfolioCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const portfolioRef = useRef<HTMLInputElement>(null);
+  const isRtl = i18n.language === 'ar';
 
   return (
     <Dialog>
       <DialogTrigger asChild>
         <Button size="lg" className="w-full h-14 text-xl bg-primary hover:bg-primary/90 font-bold shadow-xl shadow-primary/20">
-          <CreditCard className="ml-2 w-6 h-6" />
-          اشترك الآن
+          <CreditCard className={`${isRtl ? 'ml-2' : 'mr-2'} w-6 h-6`} />
+          {t('subscription.subscribe_now')}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto custom-scrollbar" dir="rtl">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto custom-scrollbar">
         <DialogHeader>
-          <DialogTitle className="font-heading text-xl">التسجيل كحرفي - باقة {plan}</DialogTitle>
+          <DialogTitle className="font-heading text-xl">{t('subscription.form_title', { plan })}</DialogTitle>
           <DialogDescription>
-            أدخل معلوماتك المهنية وارفع وصل الدفع لتفعيل حسابك.
+            {t('subscription.form_desc')}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4 pt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2 text-right">
-              <Label>الاسم الكامل</Label>
+            <div className="space-y-2">
+              <Label>{t('subscription.full_name')}</Label>
               <div className="relative">
-                <User className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="محمد علي" className="pr-9" required />
+                <User className={`absolute ${isRtl ? 'right-3' : 'left-3'} top-2.5 h-4 w-4 text-muted-foreground`} />
+                <Input placeholder="محمد علي" className={isRtl ? "pr-9" : "pl-9"} required />
               </div>
             </div>
-            <div className="space-y-2 text-right">
-              <Label>البريد الإلكتروني</Label>
+            <div className="space-y-2">
+              <Label>{t('subscription.email')}</Label>
               <div className="relative">
-                <Mail className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input type="email" placeholder="example@gmail.com" className="pr-9" required />
+                <Mail className={`absolute ${isRtl ? 'right-3' : 'left-3'} top-2.5 h-4 w-4 text-muted-foreground`} />
+                <Input type="email" placeholder="example@gmail.com" className={isRtl ? "pr-9" : "pl-9"} required />
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2 text-right">
-              <Label>سعر الخدمة يبدأ من (دج)</Label>
+            <div className="space-y-2">
+              <Label>{t('subscription.price_start')}</Label>
               <div className="relative">
-                <Banknote className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input type="number" placeholder="1500" className="pr-9" required />
+                <Banknote className={`absolute ${isRtl ? 'right-3' : 'left-3'} top-2.5 h-4 w-4 text-muted-foreground`} />
+                <Input type="number" placeholder="1500" className={isRtl ? "pr-9" : "pl-9"} required />
               </div>
             </div>
-            <div className="space-y-2 text-right">
-              <Label>سنوات الخبرة</Label>
+            <div className="space-y-2">
+              <Label>{t('subscription.exp_years')}</Label>
               <div className="relative">
-                <Briefcase className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input type="number" placeholder="5" className="pr-9" required />
+                <Briefcase className={`absolute ${isRtl ? 'right-3' : 'left-3'} top-2.5 h-4 w-4 text-muted-foreground`} />
+                <Input type="number" placeholder="5" className={isRtl ? "pr-9" : "pl-9"} required />
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2 text-right">
-              <Label>الحرفة</Label>
-              <Select dir="rtl">
+            <div className="space-y-2">
+              <Label>{t('subscription.category_label')}</Label>
+              <Select dir={isRtl ? "rtl" : "ltr"}>
                 <SelectTrigger>
-                  <SelectValue placeholder="اختر الحرفة" />
+                  <SelectValue placeholder={t('subscription.category_placeholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {CATEGORIES.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2 text-right">
-              <Label>الدائرة</Label>
-              <Select dir="rtl">
+            <div className="space-y-2">
+              <Label>{t('subscription.daira_label')}</Label>
+              <Select dir={isRtl ? "rtl" : "ltr"}>
                 <SelectTrigger>
-                  <SelectValue placeholder="اختر الدائرة" />
+                  <SelectValue placeholder={t('subscription.daira_placeholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {DAIRAS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
@@ -212,7 +215,7 @@ function JoinDialog({ plan, onSubmit }: { plan: string, onSubmit: (e: any) => vo
           </div>
 
           <div className="space-y-2">
-            <Label className="font-bold">معرض الصور (أعمالك السابقة)</Label>
+            <Label className="font-bold">{t('subscription.portfolio')}</Label>
             <input 
               type="file" 
               hidden 
@@ -228,12 +231,12 @@ function JoinDialog({ plan, onSubmit }: { plan: string, onSubmit: (e: any) => vo
               onClick={() => portfolioRef.current?.click()}
             >
               <ImageIcon className="h-4 w-4" />
-              {portfolioCount > 0 ? `تم اختيار ${portfolioCount} صور` : "اختر صور أعمالك"}
+              {portfolioCount > 0 ? t('subscription.portfolio_count', { count: portfolioCount }) : t('subscription.portfolio_select')}
             </Button>
           </div>
           
           <div className="p-4 border-2 border-dashed rounded-xl bg-primary/5 text-center space-y-2">
-            <Label className="block mb-2 font-bold text-primary">وصل الدفع (CCP / Baridimob)</Label>
+            <Label className="block mb-2 font-bold text-primary">{t('subscription.receipt')}</Label>
             <input 
               type="file" 
               hidden 
@@ -249,11 +252,12 @@ function JoinDialog({ plan, onSubmit }: { plan: string, onSubmit: (e: any) => vo
               onClick={() => fileInputRef.current?.click()}
             >
               <Upload className="h-4 w-4" />
-              {receipt || "ارفع صورة الوصل"}
+              {receipt || t('subscription.receipt_upload')}
             </Button>
+            <p className="text-[10px] text-muted-foreground italic">{t('subscription.receipt_hint')}</p>
           </div>
 
-          <Button type="submit" className="w-full h-12 text-lg font-bold mt-4">إرسال طلب الانضمام</Button>
+          <Button type="submit" className="w-full h-12 text-lg font-bold mt-4">{t('subscription.submit_join')}</Button>
         </form>
       </DialogContent>
     </Dialog>
