@@ -24,6 +24,7 @@ export const CATEGORIES = [
   { id: "mechanic", label: "ميكانيك", icon: "Car" },
   { id: "welding", label: "تلحيم", icon: "Flame" },
   { id: "gardening", label: "بستنة", icon: "Flower2" },
+  { id: "tailoring", label: "خياطة", icon: "Scissors" },
 ];
 
 export const MOCK_ARTISANS = [
