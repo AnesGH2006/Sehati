@@ -23,7 +23,7 @@ export default function Home() {
               <p className="text-lg text-muted-foreground">{t('usage.subtitle')}</p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative max-w-5xl mx-auto">
               <div className="absolute top-1/2 left-0 w-full h-0.5 bg-primary/10 -translate-y-1/2 hidden md:block -z-0" />
               <UsageStep 
                 number="1"
@@ -55,7 +55,7 @@ export default function Home() {
               <p className="text-lg text-muted-foreground">نحن نغير الطريقة التي يتواصل بها الناس مع الحرفيين في ولاية تيارت، بجعلها أكثر أماناً، سرعة، واحترافية.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-6xl mx-auto">
               <FeatureCard 
                 icon={<ShieldCheck className="h-10 w-10" />}
                 title="موثوقية تامة"
@@ -82,7 +82,7 @@ export default function Home() {
         <section className="py-24 bg-muted/30">
           <div className="container px-4 md:px-8">
             <h2 className="text-3xl md:text-4xl font-heading font-bold text-center mb-16">كيف يعمل الموقع؟</h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 max-w-6xl mx-auto">
               <Step 
                 number="01"
                 title="ابحث"
@@ -113,7 +113,7 @@ export default function Home() {
 
         {/* Mission Section */}
         <section className="py-24 bg-primary text-primary-foreground text-center">
-          <div className="container px-4 md:px-8 max-w-4xl">
+          <div className="container px-4 md:px-8 max-w-4xl mx-auto">
             <Sparkles className="h-12 w-12 mx-auto mb-6 opacity-80" />
             <h2 className="text-3xl md:text-5xl font-heading font-bold mb-6">مهمتنا دعم الحرف المحلي</h2>
             <p className="text-xl md:text-2xl leading-relaxed opacity-90">
@@ -135,7 +135,7 @@ function FeatureCard({ icon, title, description, delay }: any) {
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay }}
       viewport={{ once: true }}
-      className="p-8 rounded-3xl bg-card border card-hover text-center space-y-4"
+      className="p-8 rounded-3xl bg-card border card-hover text-center space-y-4 flex flex-col items-center"
     >
       <div className="h-20 w-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto text-primary">
         {icon}
@@ -148,7 +148,7 @@ function FeatureCard({ icon, title, description, delay }: any) {
 
 function Step({ number, title, description, icon }: any) {
   return (
-    <div className="relative p-6 text-center space-y-4">
+    <div className="relative p-6 text-center space-y-4 flex flex-col items-center">
       <div className="text-5xl font-black font-heading text-primary/10 absolute top-0 left-1/2 -translate-x-1/2 -z-0">
         {number}
       </div>
@@ -167,7 +167,7 @@ function UsageStep({ number, title, description, icon }: any) {
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      className="relative z-10 bg-card border p-8 rounded-3xl space-y-4 shadow-sm hover:shadow-md transition-shadow"
+      className="relative z-10 bg-card border p-8 rounded-3xl space-y-4 shadow-sm hover:shadow-md transition-shadow flex flex-col items-center"
     >
       <div className="h-16 w-16 rounded-2xl bg-primary text-white flex items-center justify-center mx-auto shadow-lg shadow-primary/20">
         {icon}
