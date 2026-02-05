@@ -7,10 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
-import { User, Lock, Mail } from "lucide-react";
+import { User, Lock, Mail, Eye, EyeOff } from "lucide-react";
 
 export default function Auth() {
   const [, setLocation] = useLocation();
+  const [showPass, setShowPass] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col bg-background font-sans">
@@ -41,7 +42,19 @@ export default function Auth() {
                     <Label htmlFor="password">كلمة المرور</Label>
                     <div className="relative">
                       <Lock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input id="password" type="password" placeholder="••••••••" className="pr-9" />
+                      <Input 
+                        id="password" 
+                        type={showPass ? "text" : "password"} 
+                        placeholder="••••••••" 
+                        className="pr-9 pl-10" 
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPass(!showPass)}
+                        className="absolute left-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
                     </div>
                   </div>
                 </CardContent>
@@ -81,7 +94,19 @@ export default function Auth() {
                     <Label htmlFor="reg-pass">كلمة المرور</Label>
                     <div className="relative">
                       <Lock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input id="reg-pass" type="password" placeholder="••••••••" className="pr-9" />
+                      <Input 
+                        id="reg-pass" 
+                        type={showPass ? "text" : "password"} 
+                        placeholder="••••••••" 
+                        className="pr-9 pl-10" 
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPass(!showPass)}
+                        className="absolute left-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
                     </div>
                   </div>
                 </CardContent>
