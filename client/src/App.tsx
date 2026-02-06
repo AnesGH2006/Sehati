@@ -10,6 +10,7 @@ import Profile from "@/pages/profile";
 import Chat from "@/pages/chat";
 import Subscription from "@/pages/subscription";
 import Auth from "@/pages/auth";
+import ArtisanDashboard from "@/pages/artisan-dashboard";
 import { ThemeProvider } from "next-themes";
 
 function Router() {
@@ -22,6 +23,7 @@ function Router() {
       <Route path="/chat" component={Chat} />
       <Route path="/subscription" component={Subscription} />
       <Route path="/auth" component={Auth} />
+      <Route path="/artisan/dashboard" component={ArtisanDashboard} />
       <Route component={NotFound} />
     </Switch>
   );
