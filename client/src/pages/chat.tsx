@@ -10,7 +10,30 @@ import { useRoute } from "wouter";
 import chatBg from "@assets/generated_images/modern_chat_interface_abstract_background_with_geometric_patterns.png";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-const EMOJIS = ["😊", "😂", "❤️", "👍", "🤝", "🙏", "🔨", "🔧", "🏠", "📍", "✨", "✅" , "💬", "📞", "📸", "📅", "💰", "📝", "📄", "📊" ];
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const EMOJI_CATEGORIES = [
+  {
+    name: "Faces",
+    label: "وجوه",
+    emojis: ["😊", "😂", "🤣", "❤️", "😍", "🥰", "😎", "🤔", "😊", "😇", "🥳", "🤩", "😜", "😇", "🥺", "😭", "😤", "😡", "🤯", "😴", "🤮", "😷", "🤠"]
+  },
+  {
+    name: "Gestures",
+    label: "إيماءات",
+    emojis: ["👍", "👎", "🤝", "🙏", "👋", "👏", "🙌", "👊", "✌️", "🤞", "🤟", "🤘", "🤙", "🤚", "✋", "🖖", "👌", "🤌", "🤏", "✍️", "🤳", "💪"]
+  },
+  {
+    name: "Tools",
+    label: "أدوات",
+    emojis: ["🔨", "🔧", "🪚", "🪛", "⛏️", "⚒️", "🛠️", "🔩", "⚙️", "🪜", "🧱", "🪠", "🛀", "🚿", "🚽", "🪣", "🧽", "🧼", "🧹", "🧺"]
+  },
+  {
+    name: "Work",
+    label: "عمل",
+    emojis: ["🏠", "🏢", "🏭", "📍", "✨", "✅", "💬", "📞", "📸", "📅", "💰", "📝", "📄", "📊", "🏗️", "📐", "📏", "🔦", "🔋", "🔌"]
+  }
+];
 
 export default function Chat() {
   const [match, params] = useRoute("/chat/:id");
@@ -157,14 +180,31 @@ export default function Chat() {
                     <Smile className="w-5 h-5" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-2" align="start">
-                  <div className="grid grid-cols-4 gap-2">
-                    {EMOJIS.map(emoji => (
-                      <button key={emoji} className="text-xl hover:scale-125 transition-transform" onClick={() => addEmoji(emoji)}>
-                        {emoji}
-                      </button>
+                <PopoverContent className="w-80 p-0" align="start">
+                  <Tabs defaultValue={EMOJI_CATEGORIES[0].name} className="w-full">
+                    <TabsList className="w-full grid grid-cols-4 h-9">
+                      {EMOJI_CATEGORIES.map(cat => (
+                        <TabsTrigger key={cat.name} value={cat.name} className="text-[10px] px-1">
+                          {cat.label}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                    {EMOJI_CATEGORIES.map(cat => (
+                      <TabsContent key={cat.name} value={cat.name} className="p-2">
+                        <div className="grid grid-cols-6 gap-1 max-h-48 overflow-y-auto">
+                          {cat.emojis.map(emoji => (
+                            <button 
+                              key={emoji} 
+                              className="text-2xl p-1 hover:bg-muted rounded transition-colors text-center" 
+                              onClick={() => addEmoji(emoji)}
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      </TabsContent>
                     ))}
-                  </div>
+                  </Tabs>
                 </PopoverContent>
               </Popover>
 
