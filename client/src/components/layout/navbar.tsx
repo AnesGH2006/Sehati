@@ -108,6 +108,11 @@ export function Navbar() {
               تسجيل الدخول
             </Button>
           </Link>
+          <Link href="/artisan/dashboard">
+            <Button variant="ghost" className="gap-2 text-primary font-bold">
+              لوحة التحكم
+            </Button>
+          </Link>
           <Link href="/subscription">
             <Button className="bg-primary hover:bg-primary/90">انضم كحرفي</Button>
           </Link>

@@ -12,20 +12,34 @@ import Subscription from "@/pages/subscription";
 import Auth from "@/pages/auth";
 import ArtisanDashboard from "@/pages/artisan-dashboard";
 import { ThemeProvider } from "next-themes";
+import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 function Router() {
+  const { i18n } = useTranslation();
   return (
-    <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/artisans" component={Artisans} />
-      <Route path="/profile/:id" component={Profile} />
-      <Route path="/chat/:id" component={Chat} />
-      <Route path="/chat" component={Chat} />
-      <Route path="/subscription" component={Subscription} />
-      <Route path="/auth" component={Auth} />
-      <Route path="/artisan/dashboard" component={ArtisanDashboard} />
-      <Route component={NotFound} />
-    </Switch>
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={i18n.language}
+        initial={{ opacity: 0, x: i18n.language === 'ar' ? 20 : -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: i18n.language === 'ar' ? -20 : 20 }}
+        transition={{ duration: 0.3 }}
+        className="min-h-screen flex flex-col"
+      >
+        <Switch>
+          <Route path="/" component={Home} />
+          <Route path="/artisans" component={Artisans} />
+          <Route path="/profile/:id" component={Profile} />
+          <Route path="/chat/:id" component={Chat} />
+          <Route path="/chat" component={Chat} />
+          <Route path="/subscription" component={Subscription} />
+          <Route path="/auth" component={Auth} />
+          <Route path="/artisan/dashboard" component={ArtisanDashboard} />
+          <Route component={NotFound} />
+        </Switch>
+      </motion.div>
+    </AnimatePresence>
   );
 }
 
