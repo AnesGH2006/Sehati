@@ -17,15 +17,22 @@ import { useTranslation } from "react-i18next";
 
 function Router() {
   const { i18n } = useTranslation();
+  const isAr = i18n.language === 'ar';
+
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence mode="wait" initial={false}>
       <motion.div
         key={i18n.language}
-        initial={{ opacity: 0, x: i18n.language === 'ar' ? 20 : -20 }}
+        initial={{ opacity: 0, x: isAr ? -100 : 100 }}
         animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: i18n.language === 'ar' ? -20 : 20 }}
-        transition={{ duration: 0.3 }}
-        className="min-h-screen flex flex-col"
+        exit={{ opacity: 0, x: isAr ? 100 : -100 }}
+        transition={{ 
+          type: "spring",
+          stiffness: 300,
+          damping: 30,
+          duration: 0.3 
+        }}
+        className="min-h-screen flex flex-col overflow-x-hidden"
       >
         <Switch>
           <Route path="/" component={Home} />
