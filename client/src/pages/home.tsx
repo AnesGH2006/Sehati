@@ -112,13 +112,21 @@ export default function Home() {
         </section>
 
         {/* Mission Section */}
-        <section className="py-24 bg-primary text-primary-foreground text-center">
-          <div className="container px-4 md:px-8 max-w-4xl mx-auto">
-            <Sparkles className="h-12 w-12 mx-auto mb-6 opacity-80" />
-            <h2 className="text-3xl md:text-5xl font-heading font-bold mb-6">مهمتنا دعم الحرف المحلي</h2>
-            <p className="text-xl md:text-2xl leading-relaxed opacity-90">
-              نهدف في "حرفتي" إلى رقمنة قطاع الحرف في ولاية تيارت، وتوفير فرص عمل أكبر لأبناء المنطقة، مع ضمان جودة الخدمة للمواطنين.
-            </p>
+        <section className="py-24 relative overflow-hidden">
+          <div className="absolute inset-0 bg-primary z-0" />
+          <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent z-10 animate-pulse" />
+          <div className="container px-4 md:px-8 max-w-4xl mx-auto relative z-20 text-primary-foreground text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+            >
+              <Sparkles className="h-12 w-12 mx-auto mb-6 opacity-80" />
+              <h2 className="text-3xl md:text-5xl font-heading font-bold mb-6">مهمتنا دعم الحرف المحلي</h2>
+              <p className="text-xl md:text-2xl leading-relaxed opacity-90">
+                نهدف في "حرفتي" إلى رقمنة قطاع الحرف في ولاية تيارت، وتوفير فرص عمل أكبر لأبناء المنطقة، مع ضمان جودة الخدمة للمواطنين.
+              </p>
+            </motion.div>
           </div>
         </section>
       </main>
@@ -131,13 +139,14 @@ export default function Home() {
 function FeatureCard({ icon, title, description, delay }: any) {
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, scale: 0.9 }}
+      whileInView={{ opacity: 1, scale: 1 }}
+      whileHover={{ y: -10, transition: { duration: 0.2 } }}
       transition={{ duration: 0.5, delay }}
       viewport={{ once: true }}
-      className="p-8 rounded-3xl bg-card border card-hover text-center space-y-4 flex flex-col items-center"
+      className="p-8 rounded-3xl bg-white/50 dark:bg-card/50 backdrop-blur-xl border border-white/20 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none text-center space-y-4 flex flex-col items-center hover:border-primary/50 transition-colors"
     >
-      <div className="h-20 w-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto text-primary">
+      <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto text-primary shadow-inner">
         {icon}
       </div>
       <h3 className="text-xl font-bold font-heading">{title}</h3>
@@ -166,10 +175,11 @@ function UsageStep({ number, title, description, icon }: any) {
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
+      whileHover={{ scale: 1.02 }}
       viewport={{ once: true }}
-      className="relative z-10 bg-card border p-8 rounded-3xl space-y-4 shadow-sm hover:shadow-md transition-shadow flex flex-col items-center"
+      className="relative z-10 bg-white/40 dark:bg-card/40 backdrop-blur-lg border border-white/20 p-8 rounded-3xl space-y-4 shadow-sm hover:shadow-xl hover:border-primary/30 transition-all duration-300 flex flex-col items-center group"
     >
-      <div className="h-16 w-16 rounded-2xl bg-primary text-white flex items-center justify-center mx-auto shadow-lg shadow-primary/20">
+      <div className="h-16 w-16 rounded-2xl bg-primary text-white flex items-center justify-center mx-auto shadow-lg shadow-primary/20 group-hover:rotate-6 transition-transform">
         {icon}
       </div>
       <div className="inline-block px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full mb-2">Step {number}</div>
