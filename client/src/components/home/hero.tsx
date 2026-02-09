@@ -23,8 +23,11 @@ export function Hero() {
     return () => clearInterval(timer);
   }, []);
 
+  const nextImage = () => setCurrentImage((prev) => (prev + 1) % HERO_IMAGES.length);
+  const prevImage = () => setCurrentImage((prev) => (prev - 1 + HERO_IMAGES.length) % HERO_IMAGES.length);
+
   return (
-    <section className="relative min-h-[90vh] flex items-center pt-16 overflow-hidden">
+    <section className="relative min-h-[90vh] flex items-center pt-16 overflow-hidden group">
       {/* Dynamic Background */}
       <div className="absolute inset-0 z-0">
         <AnimatePresence mode="wait">
@@ -55,7 +58,7 @@ export function Hero() {
             transition={{ duration: 0.8 }}
             className="space-y-6"
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary border border-primary/20 backdrop-blur-md animate-bounce-slow">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary border border-primary/20 backdrop-blur-md">
               <Sparkles className="w-4 h-4" />
               <span className="text-xs font-bold tracking-wider uppercase">أكبر منصة للحرفيين في تيارت</span>
             </div>
@@ -71,53 +74,27 @@ export function Hero() {
               {t('hero.subtitle')}
             </p>
           </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="bg-white/40 dark:bg-black/40 backdrop-blur-2xl p-4 md:p-6 rounded-[2rem] border border-white/20 shadow-2xl max-w-3xl mx-auto"
-          >
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1 relative group">
-                <Search className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors`} />
-                <input 
-                  type="text" 
-                  placeholder={t('hero.search_placeholder')}
-                  className={`w-full ${isRtl ? 'pr-12' : 'pl-12'} h-14 bg-white/50 dark:bg-black/50 border-none rounded-2xl focus:ring-2 focus:ring-primary/30 transition-all text-lg font-medium outline-none`}
-                />
-              </div>
-              <div className="w-full md:w-48 relative group">
-                <MapPin className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors`} />
-                <select className={`w-full ${isRtl ? 'pr-12' : 'pl-12'} h-14 bg-white/50 dark:bg-black/50 border-none rounded-2xl focus:ring-2 focus:ring-primary/30 transition-all text-lg font-medium outline-none appearance-none`}>
-                  <option value="">{t('hero.location_placeholder')}</option>
-                  <option>تيارت</option>
-                  <option>السوقر</option>
-                  <option>فرندة</option>
-                </select>
-              </div>
-              <Button size="lg" className="h-14 px-8 rounded-2xl font-bold text-lg shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
-                {t('hero.search_button')}
-              </Button>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1, delay: 0.5 }}
-            className="flex flex-wrap justify-center gap-6 pt-8"
-          >
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground bg-background/50 backdrop-blur-sm px-4 py-2 rounded-full border">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              400+ حرفي نشط
-            </div>
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground bg-background/50 backdrop-blur-sm px-4 py-2 rounded-full border">
-              <div className="w-2 h-2 rounded-full bg-primary" />
-              13 دائرة مغطاة
-            </div>
-          </motion.div>
         </div>
+      </div>
+
+      {/* Manual Controls */}
+      <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-4 md:px-8 z-30 opacity-0 group-hover:opacity-100 transition-opacity">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={isRtl ? nextImage : prevImage}
+          className="h-12 w-12 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white"
+        >
+          <ChevronRight className="h-8 w-8" />
+        </Button>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={isRtl ? prevImage : nextImage}
+          className="h-12 w-12 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white"
+        >
+          <ChevronLeft className="h-8 w-8" />
+        </Button>
       </div>
 
       {/* Hero Navigation Dots */}
