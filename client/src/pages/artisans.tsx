@@ -300,30 +300,3 @@ function Filters({ selectedCategories, toggleCategory, selectedWilaya, setSelect
     </div>
   );
 }
-
-        <AccordionItem value="price">
-          <AccordionTrigger className="font-heading font-bold">{t('artisans.max_price')}</AccordionTrigger>
-          <AccordionContent>
-            <div className="pt-4 px-2 space-y-4">
-              <div className="text-center font-bold text-primary">{priceRange[0]} دج</div>
-              <Slider 
-                value={priceRange} 
-                onValueChange={setPriceRange}
-                max={10000} 
-                min={500}
-                step={500} 
-                className="w-full" 
-              />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>500 دج</span>
-                <span>10000 دج</span>
-              </div>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-      
-      <Button variant="ghost" className="w-full mt-4 text-muted-foreground" onClick={clearFilters}>{t('artisans.reset')}</Button>
-    </div>
-  );
-}
