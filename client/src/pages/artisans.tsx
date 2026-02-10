@@ -2,23 +2,25 @@ import { useState, useMemo } from "react";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { ArtisanCard } from "@/components/artisan/artisan-card";
-import { MOCK_ARTISANS, DAIRAS, CATEGORIES } from "@/lib/constants";
+import { MOCK_ARTISANS, DAIRAS, CATEGORIES, LOCATIONS } from "@/lib/constants";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { Search, SlidersHorizontal, X, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function Artisans() {
   const { t, i18n } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedWilaya, setSelectedWilaya] = useState<string | null>(null);
   const [selectedDairas, setSelectedDairas] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState([10000]);
 
@@ -47,6 +49,7 @@ export default function Artisans() {
   const clearFilters = () => {
     setSearchQuery("");
     setSelectedCategories([]);
+    setSelectedWilaya(null);
     setSelectedDairas([]);
     setPriceRange([10000]);
   };
@@ -83,12 +86,15 @@ export default function Artisans() {
                     <Filters 
                       selectedCategories={selectedCategories}
                       toggleCategory={toggleCategory}
+                      selectedWilaya={selectedWilaya}
+                      setSelectedWilaya={setSelectedWilaya}
                       selectedDairas={selectedDairas}
                       toggleDaira={toggleDaira}
                       priceRange={priceRange}
                       setPriceRange={setPriceRange}
                       clearFilters={clearFilters}
                       t={t}
+                      isRtl={isRtl}
                     />
                   </div>
                 </SheetContent>
@@ -121,12 +127,15 @@ export default function Artisans() {
             <Filters 
               selectedCategories={selectedCategories}
               toggleCategory={toggleCategory}
+              selectedWilaya={selectedWilaya}
+              setSelectedWilaya={setSelectedWilaya}
               selectedDairas={selectedDairas}
               toggleDaira={toggleDaira}
               priceRange={priceRange}
               setPriceRange={setPriceRange}
               clearFilters={clearFilters}
               t={t}
+              isRtl={isRtl}
             />
           </aside>
 
@@ -206,7 +215,7 @@ function ActiveFilters({ selectedCategories, toggleCategory, selectedDairas, tog
   );
 }
 
-function Filters({ selectedCategories, toggleCategory, selectedDairas, toggleDaira, priceRange, setPriceRange, clearFilters, t }: any) {
+function Filters({ selectedCategories, toggleCategory, selectedWilaya, setSelectedWilaya, selectedDairas, toggleDaira, priceRange, setPriceRange, clearFilters, t, isRtl }: any) {
   return (
     <div className="space-y-4">
       <Accordion type="multiple" defaultValue={["categories", "location"]} className="w-full">
@@ -231,20 +240,66 @@ function Filters({ selectedCategories, toggleCategory, selectedDairas, toggleDai
         <AccordionItem value="location">
           <AccordionTrigger className="font-heading font-bold">{t('artisans.location')}</AccordionTrigger>
           <AccordionContent>
-            <div className="space-y-2 pt-2 h-48 overflow-y-auto pl-2 custom-scrollbar">
-              {DAIRAS.map((daira) => (
-                <div key={daira} className="flex items-center gap-2">
-                  <Checkbox 
-                    id={`loc-${daira}`} 
-                    checked={selectedDairas.includes(daira)}
-                    onCheckedChange={() => toggleDaira(daira)}
-                  />
-                  <Label htmlFor={`loc-${daira}`} className="text-sm font-normal cursor-pointer">{daira}</Label>
+            <div className="space-y-4 pt-2">
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">الولاية</Label>
+                <Select onValueChange={(val) => { setSelectedWilaya(val); }} value={selectedWilaya || ""}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="اختر ولاية" />
+                  </SelectTrigger>
+                  <SelectContent dir={isRtl ? "rtl" : "ltr"}>
+                    {DAIRAS.map(wilaya => <SelectItem key={wilaya} value={wilaya}>{wilaya}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedWilaya && (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">الدوائر</Label>
+                  <div className="space-y-2 max-h-40 overflow-y-auto pl-2 custom-scrollbar border rounded-md p-2 bg-muted/20">
+                    {(LOCATIONS as any)[selectedWilaya].map((daira: string) => (
+                      <div key={daira} className="flex items-center gap-2">
+                        <Checkbox 
+                          id={`loc-${daira}`} 
+                          checked={selectedDairas.includes(daira)}
+                          onCheckedChange={() => toggleDaira(daira)}
+                        />
+                        <Label htmlFor={`loc-${daira}`} className="text-xs font-normal cursor-pointer">{daira}</Label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
+              )}
             </div>
           </AccordionContent>
         </AccordionItem>
+
+        <AccordionItem value="price">
+          <AccordionTrigger className="font-heading font-bold">{t('artisans.max_price')}</AccordionTrigger>
+          <AccordionContent>
+            <div className="pt-4 px-2 space-y-4">
+              <div className="text-center font-bold text-primary">{priceRange[0]} دج</div>
+              <Slider 
+                value={priceRange} 
+                onValueChange={setPriceRange}
+                max={10000} 
+                min={500}
+                step={500} 
+                className="w-full" 
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>500 دج</span>
+                <span>10000 دج</span>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+      
+      <Button variant="ghost" className="w-full mt-4 text-muted-foreground" onClick={clearFilters}>{t('artisans.reset')}</Button>
+    </div>
+  );
+}
 
         <AccordionItem value="price">
           <AccordionTrigger className="font-heading font-bold">{t('artisans.max_price')}</AccordionTrigger>

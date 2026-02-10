@@ -135,6 +135,7 @@ function FeatureItem({ text }: { text: string }) {
 function JoinDialog({ plan, onSubmit, t, i18n }: { plan: string, onSubmit: (e: any) => void, t: any, i18n: any }) {
   const [receipt, setReceipt] = useState<string | null>(null);
   const [portfolioCount, setPortfolioCount] = useState(0);
+  const [selectedWilaya, setSelectedWilaya] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const portfolioRef = useRef<HTMLInputElement>(null);
   const isRtl = i18n.language === 'ar';
@@ -189,11 +190,11 @@ function JoinDialog({ plan, onSubmit, t, i18n }: { plan: string, onSubmit: (e: a
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>{t('subscription.category_label')}</Label>
               <Select dir={isRtl ? "rtl" : "ltr"}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 text-xs px-2">
                   <SelectValue placeholder={t('subscription.category_placeholder')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -202,13 +203,26 @@ function JoinDialog({ plan, onSubmit, t, i18n }: { plan: string, onSubmit: (e: a
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>{t('subscription.daira_label')}</Label>
-              <Select dir={isRtl ? "rtl" : "ltr"}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t('subscription.daira_placeholder')} />
+              <Label>الولاية</Label>
+              <Select dir={isRtl ? "rtl" : "ltr"} onValueChange={setSelectedWilaya}>
+                <SelectTrigger className="h-9 text-xs px-2">
+                  <SelectValue placeholder="الولاية" />
                 </SelectTrigger>
                 <SelectContent>
                   {DAIRAS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>الدائرة</Label>
+              <Select dir={isRtl ? "rtl" : "ltr"} disabled={!selectedWilaya}>
+                <SelectTrigger className="h-9 text-xs px-2">
+                  <SelectValue placeholder="الدائرة" />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectedWilaya && (LOCATIONS as any)[selectedWilaya].map((d: string) => (
+                    <SelectItem key={d} value={d}>{d}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
