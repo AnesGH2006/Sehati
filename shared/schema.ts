@@ -34,6 +34,7 @@ export const artisans = pgTable("artisans", {
   email: text("email").notNull(),
   phone: text("phone").notNull(),
   category: text("category").notNull(),
+  wilaya: text("wilaya").notNull().default("الجزائر"),
   daira: text("daira").notNull(),
   description: text("description"),
   priceStart: integer("price_start").notNull().default(1000),

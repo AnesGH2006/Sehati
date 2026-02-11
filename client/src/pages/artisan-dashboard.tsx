@@ -12,11 +12,31 @@ import {
   Image as ImageIcon, 
   CreditCard,
   TrendingUp,
-  Clock
+  Clock,
+  MapPin,
+  Save
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { LOCATIONS, DAIRAS } from "@/lib/constants";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ArtisanDashboard() {
+  const { toast } = useToast();
+  const [isEditingLocation, setIsEditingLocation] = useState(false);
+  const [wilaya, setWilaya] = useState("الجزائر");
+  const [daira, setDaira] = useState("سيدي امحمد");
+
+  const handleSaveLocation = () => {
+    setIsEditingLocation(false);
+    toast({
+      title: "تم التحديث",
+      description: "تم تغيير موقعك بنجاح",
+    });
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-muted/30 font-sans">
       <Navbar />
@@ -28,19 +48,64 @@ export default function ArtisanDashboard() {
               <LayoutDashboard className="w-8 h-8 text-primary" />
               لوحة التحكم
             </h1>
-            <p className="text-muted-foreground mt-1">أهلاً بك مجدداً، إليك نظرة على نشاطك اليوم</p>
+            <div className="flex items-center gap-2 mt-1 text-muted-foreground">
+              <MapPin className="w-4 h-4 text-primary" />
+              <span>موقعك الحالي: {wilaya}، {daira}</span>
+            </div>
           </div>
           <div className="flex gap-2 w-full md:w-auto">
+            <Button variant="outline" className="flex-1 md:flex-none gap-2" onClick={() => setIsEditingLocation(!isEditingLocation)}>
+              <MapPin className="w-4 h-4" />
+              تغيير الموقع
+            </Button>
             <Button variant="outline" className="flex-1 md:flex-none gap-2">
               <Settings className="w-4 h-4" />
               تعديل الملف
             </Button>
-            <Button className="flex-1 md:flex-none gap-2">
-              <CreditCard className="w-4 h-4" />
-              تجديد الاشتراك
-            </Button>
           </div>
         </div>
+
+        {isEditingLocation && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            className="mb-8"
+            dir="rtl"
+          >
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                  <div className="space-y-2">
+                    <Label className="font-bold">الولاية</Label>
+                    <Select value={wilaya} onValueChange={(val) => { setWilaya(val); setDaira((LOCATIONS as any)[val][0]); }}>
+                      <SelectTrigger className="bg-background">
+                        <SelectValue placeholder="اختر ولاية" />
+                      </SelectTrigger>
+                      <SelectContent dir="rtl">
+                        {DAIRAS.map(w => <SelectItem key={w} value={w}>{w}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-bold">الدائرة</Label>
+                    <Select value={daira} onValueChange={setDaira}>
+                      <SelectTrigger className="bg-background">
+                        <SelectValue placeholder="اختر دائرة" />
+                      </SelectTrigger>
+                      <SelectContent dir="rtl">
+                        {(LOCATIONS as any)[wilaya].map((d: string) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button className="gap-2 font-bold" onClick={handleSaveLocation}>
+                    <Save className="w-4 h-4" />
+                    حفظ الموقع الجديد
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" dir="rtl">
