@@ -48,14 +48,17 @@ export default function Home() {
         </section>
 
         {/* Why Herfati Section */}
-        <section className="py-24 bg-white dark:bg-background">
+        <section className="py-24 bg-gradient-to-b from-background to-muted/20 relative overflow-hidden">
+          <div className="absolute top-0 left-1/4 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10 animate-pulse" />
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-secondary/5 rounded-full blur-3xl -z-10 animate-pulse" style={{ animationDelay: '2s' }} />
+          
           <div className="container px-4 md:px-8">
             <div className="max-w-3xl mx-auto text-center mb-16 space-y-4">
-              <h2 className="text-3xl md:text-5xl font-heading font-bold">لماذا تختار منصة حرفتي؟</h2>
-              <p className="text-lg text-muted-foreground">نحن نغير الطريقة التي يتواصل بها الناس مع الحرفيين في ولاية تيارت، بجعلها أكثر أماناً، سرعة، واحترافية.</p>
+              <h2 className="text-3xl md:text-5xl font-heading font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">لماذا تختار منصة حرفتي؟</h2>
+              <p className="text-lg text-muted-foreground">نحن نغير الطريقة التي يتواصل بها الناس مع الحرفيين، بجعلها أكثر أماناً، سرعة، واحترافية.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
               <FeatureCard 
                 icon={<ShieldCheck className="h-10 w-10" />}
                 title="موثوقية تامة"
@@ -134,14 +137,15 @@ function FeatureCard({ icon, title, description, delay }: any) {
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay }}
+      whileHover={{ y: -10 }}
       viewport={{ once: true }}
-      className="p-8 rounded-3xl bg-card border card-hover text-center space-y-4 flex flex-col items-center"
+      className="p-8 rounded-[2.5rem] bg-card/50 backdrop-blur-xl border border-white/10 shadow-2xl shadow-primary/5 text-center space-y-4 flex flex-col items-center group transition-all duration-500 hover:bg-card/80"
     >
-      <div className="h-20 w-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto text-primary">
+      <div className="h-20 w-20 rounded-3xl bg-primary/10 flex items-center justify-center mx-auto text-primary group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500">
         {icon}
       </div>
       <h3 className="text-xl font-bold font-heading">{title}</h3>
-      <p className="text-muted-foreground leading-relaxed">{description}</p>
+      <p className="text-muted-foreground leading-relaxed text-sm">{description}</p>
     </motion.div>
   );
 }

@@ -24,8 +24,8 @@ export function ArtisanCard({ id, name, category, daira, rating, reviews, priceS
   const isRtl = i18n.language === 'ar';
 
   return (
-    <Card className="overflow-hidden group hover:shadow-2xl transition-all duration-500 border-border/50 bg-gradient-to-b from-card to-muted/20 backdrop-blur-md relative">
-      <div className="relative h-56 overflow-hidden">
+    <Card className="overflow-hidden group hover:shadow-[0_20px_50px_rgba(var(--primary-rgb),0.15)] transition-all duration-500 border-border/40 bg-card/40 backdrop-blur-2xl rounded-[2.5rem] relative">
+      <div className="relative h-64 overflow-hidden">
         <img 
           src={image} 
           alt={name} 
