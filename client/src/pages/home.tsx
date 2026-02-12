@@ -12,12 +12,13 @@ export default function Home() {
     <div className="min-h-screen flex flex-col bg-background font-sans">
       <Navbar />
       
+      <main className="flex-1">
         {/* Hero Section with Enhanced Background */}
         <section className="relative min-h-[90vh] flex items-center overflow-hidden">
           <div className="absolute inset-0 z-0">
             <img 
-              src="/images/hero-bg.jpg" 
-              className="w-full h-full object-cover opacity-20 dark:opacity-10 scale-105 animate-slow-zoom" 
+              src="/images/hero-bg.png" 
+              className="w-full h-full object-cover opacity-20 dark:opacity-10 scale-105" 
               alt="Background"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-background via-background/80 to-background" />
