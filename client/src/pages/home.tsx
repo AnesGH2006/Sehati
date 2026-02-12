@@ -13,18 +13,7 @@ export default function Home() {
       <Navbar />
       
       <main className="flex-1">
-        {/* Hero Section with Enhanced Background */}
-        <section className="relative min-h-[90vh] flex items-center overflow-hidden">
-          <div className="absolute inset-0 z-0">
-            <img 
-              src="/images/hero-bg.png" 
-              className="w-full h-full object-cover opacity-20 dark:opacity-10 scale-105" 
-              alt="Background"
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-background via-background/80 to-background" />
-          </div>
-          <Hero />
-        </section>
+        <Hero />
         
         {/* Usage Guide Section */}
         <section className="py-24 bg-background">
@@ -100,7 +89,7 @@ export default function Home() {
               <Step 
                 number="01"
                 title="ابحث"
-                description="استخدم الفلاتر المتقدمة لاختيار الحرفة والدائرة في الجزائر"
+                description="استخدم الفلاتر المتقدمة لاختيار الحرفة والدائرة في ولاية تيارت."
                 icon={<Search className="w-6 h-6" />}
               />
               <Step 
@@ -131,7 +120,7 @@ export default function Home() {
             <Sparkles className="h-12 w-12 mx-auto mb-6 opacity-80" />
             <h2 className="text-3xl md:text-5xl font-heading font-bold mb-6">مهمتنا دعم الحرف المحلي</h2>
             <p className="text-xl md:text-2xl leading-relaxed opacity-90">
-              نهدف في "حرفتي" إلى رقمنة قطاع الحرف في الجزائر، وتوفير فرص عمل أكبر لأبناء المنطقة، مع ضمان جودة الخدمة للمواطنين.
+              نهدف في "حرفتي" إلى رقمنة قطاع الحرف في ولاية تيارت، وتوفير فرص عمل أكبر لأبناء المنطقة، مع ضمان جودة الخدمة للمواطنين.
             </p>
           </div>
         </section>
