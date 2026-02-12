@@ -73,7 +73,7 @@ export default function Auth() {
               <Card className="border-border/50 shadow-xl">
                 <CardHeader className="space-y-1 text-center">
                   <CardTitle className="text-2xl font-heading font-bold">إنشاء حساب زبون</CardTitle>
-                  <CardDescription>ابحث عن أمهر الحرفيين في تيارت بسهولة</CardDescription>
+                  <CardDescription>ابحث عن أمهر الحرفيين في الجزائر بسهولة</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2 text-right">

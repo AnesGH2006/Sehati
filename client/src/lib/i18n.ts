@@ -27,12 +27,12 @@ i18n
             "language": "اللغة"
           },
           "hero": {
-            "title": "اعثر على أمهر الحرفيين في تيارت",
+            "title": "اعثر على أمهر الحرفيين في الجزائر",
             "subtitle": "منصة تجمع بين الخبرة والإتقان. تصفح مئات الحرفيين، قارن الأسعار، وتواصل مباشرة."
           },
           "usage": {
             "title": "كيفية الاستخدام",
-            "subtitle": "خطوات بسيطة للوصول إلى أفضل الخدمات الحرفية في تيارت",
+            "subtitle": "خطوات بسيطة للوصول إلى أفضل الخدمات الحرفية في الجزائر",
             "step1_title": "تصفح الحرفيين",
             "step1_desc": "ادخل إلى صفحة الحرفيين واستخدم الفلاتر لاختيار التخصص والمنطقة.",
             "step2_title": "قارن واطلع",
@@ -42,7 +42,7 @@ i18n
           },
           "artisans": {
             "title": "جميع الحرفيين",
-            "count": "عرض {{count}} حرفي متاح في تيارت",
+            "count": "عرض {{count}} حرفي متاح في الجزائر",
             "filter_title": "تصفية متقدمة",
             "filter_subtitle": "اعثر على الحرفي المناسب",
             "search_name": "بحث بالاسم...",
@@ -61,7 +61,7 @@ i18n
           },
           "subscription": {
             "title": "باقة الحرفي المتميز",
-            "subtitle": "خطة واحدة بسيطة وشاملة لنمو نشاطك في تيارت",
+            "subtitle": "خطة واحدة بسيطة وشاملة لنمو نشاطك في الجزائر",
             "plan_name": "حرفي محترف",
             "plan_desc": "كل ما تحتاجه للنجاح في منصة حرفتي",
             "duration": "اختر مدة الاشتراك:",
@@ -127,12 +127,12 @@ i18n
             "language": "Langue"
           },
           "hero": {
-            "title": "Trouvez les meilleurs artisans à Tiaret",
+            "title": "Trouvez les meilleurs artisans en Algérie",
             "subtitle": "Une plateforme alliant expertise et maîtrise. Parcourez des centaines d'artisans, comparez les prix et communiquez directement."
           },
           "usage": {
             "title": "Comment ça marche",
-            "subtitle": "Des étapes simples pour accéder aux meilleurs services artisanaux à Tiaret",
+            "subtitle": "Des étapes simples pour accéder aux meilleurs services artisanaux en Algérie",
             "step1_title": "Parcourir les artisans",
             "step1_desc": "Accédez à la page des artisans et utilisez les filtres pour choisir la spécialité et la région.",
             "step2_title": "Comparer et consulter",
@@ -142,7 +142,7 @@ i18n
           },
           "artisans": {
             "title": "Tous les Artisans",
-            "count": "{{count}} artisans disponibles à Tiaret",
+            "count": "{{count}} artisans disponibles en Algérie",
             "filter_title": "Filtrage Avancé",
             "filter_subtitle": "Trouvez l'artisan idéal",
             "search_name": "Rechercher par nom...",
@@ -161,7 +161,7 @@ i18n
           },
           "subscription": {
             "title": "Forfait Artisan Premium",
-            "subtitle": "Un plan simple et complet pour faire croître votre activité à Tiaret",
+            "subtitle": "Un plan simple et complet pour faire croître votre activité en Algérie",
             "plan_name": "Artisan Pro",
             "plan_desc": "Tout ce dont vous avez besoin pour réussir sur Herfati",
             "duration": "Choisissez la durée :",
@@ -227,12 +227,12 @@ i18n
             "language": "Language"
           },
           "hero": {
-            "title": "Find the best artisans in Tiaret",
+            "title": "Find the best artisans in Algeria",
             "subtitle": "A platform combining expertise and mastery. Browse hundreds of artisans, compare prices, and communicate directly."
           },
           "usage": {
             "title": "How it Works",
-            "subtitle": "Simple steps to access the best artisan services in Tiaret",
+            "subtitle": "Simple steps to access the best artisan services in Algeria",
             "step1_title": "Browse Artisans",
             "step1_desc": "Go to the artisans page and use filters to select specialty and area.",
             "step2_title": "Compare and View",
@@ -242,7 +242,7 @@ i18n
           },
           "artisans": {
             "title": "All Artisans",
-            "count": "Showing {{count}} artisans available in Tiaret",
+            "count": "Showing {{count}} artisans available in Algeria",
             "filter_title": "Advanced Filters",
             "filter_subtitle": "Find the right artisan",
             "search_name": "Search by name...",
@@ -261,7 +261,7 @@ i18n
           },
           "subscription": {
             "title": "Premium Artisan Plan",
-            "subtitle": "A simple and comprehensive plan to grow your business in Tiaret",
+            "subtitle": "A simple and comprehensive plan to grow your business in Algeria",
             "plan_name": "Artisan Pro",
             "plan_desc": "Everything you need to succeed on Herfati",
             "duration": "Choose duration:",
