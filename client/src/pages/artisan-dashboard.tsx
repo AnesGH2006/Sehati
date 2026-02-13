@@ -168,18 +168,18 @@ export default function ArtisanDashboard() {
           <div className="space-y-8">
             <Card className="bg-primary text-primary-foreground border-none">
               <CardHeader>
-                <CardTitle className="text-lg font-heading">حالة الاشتراك</CardTitle>
+                <CardTitle className="text-lg font-heading">حالة العضوية</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <span>الباقة الحالية</span>
-                  <span className="font-bold">برونزية (شهر واحد)</span>
+                  <span>نوع الحساب</span>
+                  <span className="font-bold">حرفي حر (مجاني)</span>
                 </div>
                 <div className="h-2 w-full bg-white/20 rounded-full overflow-hidden">
-                  <div className="h-full bg-white w-[40%]" />
+                  <div className="h-full bg-white w-full" />
                 </div>
-                <p className="text-xs opacity-80">ينتهي اشتراكك في 18 فيفري 2026</p>
-                <Button variant="secondary" className="w-full font-bold">تجديد الاشتراك الآن</Button>
+                <p className="text-xs opacity-80">عضويتك مفعلة مدى الحياة مجاناً</p>
+                <Button variant="secondary" className="w-full font-bold">تطوير الحساب (قريباً)</Button>
               </CardContent>
             </Card>
 

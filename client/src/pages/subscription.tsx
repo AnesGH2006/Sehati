@@ -144,15 +144,15 @@ function JoinDialog({ plan, onSubmit, t, i18n }: { plan: string, onSubmit: (e: a
     <Dialog>
       <DialogTrigger asChild>
         <Button size="lg" className="w-full h-14 text-xl bg-primary hover:bg-primary/90 font-bold shadow-xl shadow-primary/20">
-          <CreditCard className={`${isRtl ? 'ml-2' : 'mr-2'} w-6 h-6`} />
-          {t('subscription.subscribe_now')}
+          <User className={`${isRtl ? 'ml-2' : 'mr-2'} w-6 h-6`} />
+          انضم الآن مجاناً
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto custom-scrollbar">
         <DialogHeader>
           <DialogTitle className="font-heading text-xl">{t('subscription.form_title', { plan })}</DialogTitle>
           <DialogDescription>
-            {t('subscription.form_desc')}
+            سجل معلوماتك المهنية وابدأ في استقبال طلبات الزبائن فوراً
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4 pt-4">
@@ -250,28 +250,11 @@ function JoinDialog({ plan, onSubmit, t, i18n }: { plan: string, onSubmit: (e: a
           </div>
           
           <div className="p-4 border-2 border-dashed rounded-xl bg-primary/5 text-center space-y-2">
-            <Label className="block mb-2 font-bold text-primary">{t('subscription.receipt')}</Label>
-            <input 
-              type="file" 
-              hidden 
-              ref={fileInputRef} 
-              accept="image/*" 
-              onChange={(e) => setReceipt(e.target.files?.[0]?.name || null)} 
-              required 
-            />
-            <Button 
-              type="button" 
-              variant="default" 
-              className="w-full gap-2 shadow-lg"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Upload className="h-4 w-4" />
-              {receipt || t('subscription.receipt_upload')}
-            </Button>
-            <p className="text-[10px] text-muted-foreground italic">{t('subscription.receipt_hint')}</p>
+            <p className="text-sm font-bold text-primary">التسجيل مجاني لفترة محدودة</p>
+            <p className="text-xs text-muted-foreground">لا يتطلب رفع وصل دفع حالياً</p>
           </div>
 
-          <Button type="submit" className="w-full h-12 text-lg font-bold mt-4">{t('subscription.submit_join')}</Button>
+          <Button type="submit" className="w-full h-12 text-lg font-bold mt-4">إتمام التسجيل المجاني</Button>
         </form>
       </DialogContent>
     </Dialog>
