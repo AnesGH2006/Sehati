@@ -1,33 +1,72 @@
 import { useState, useRef } from "react";
+import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
-import { Check, Mail, User, CreditCard, Upload, Clock, Briefcase, Banknote, Image as ImageIcon } from "lucide-react";
+import { Check, Mail, User, Banknote, Briefcase, Image as ImageIcon, Clock } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DAIRAS, CATEGORIES, LOCATIONS } from "@/lib/constants";
-import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion } from "framer-motion";
-import { useTranslation } from "react-i18next";
+import { DAIRAS, CATEGORIES, LOCATIONS } from "@/lib/constants";
 
 export default function Subscription() {
   const { t, i18n } = useTranslation();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [duration, setDuration] = useState("1");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const isRtl = i18n.language === 'ar';
 
-  const handleJoin = (e: React.FormEvent) => {
+  const registerMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/artisans", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      setIsSubmitted(true);
+      toast({
+        title: "تم التسجيل بنجاح",
+        description: "أهلاً بك في عائلة حرفتي! حسابك مفعل الآن.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/artisans"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "فشل التسجيل",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleJoin = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsSubmitted(true);
-    toast({
-      title: t('subscription.subscribe_now'),
-      description: t('subscription.under_review'),
-    });
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      name: formData.get("name"),
+      email: formData.get("email"),
+      category: formData.get("category"),
+      daira: formData.get("daira"),
+      priceStart: parseInt(formData.get("priceStart") as string),
+      yearsOfExperience: parseInt(formData.get("yearsOfExperience") as string),
+      description: "حرفي محترف في منصة حرفتي",
+      image: "https://images.unsplash.com/photo-1581244277943-fe4a9c777189?w=400&h=400&fit=crop",
+      isVerified: false,
+      rating: "5.0",
+      reviews: 0,
+      portfolioImages: [],
+      ownerId: "guest-" + Date.now(),
+    };
+    registerMutation.mutate(data);
   };
 
   if (isSubmitted) {
@@ -161,14 +200,14 @@ function JoinDialog({ plan, onSubmit, t, i18n }: { plan: string, onSubmit: (e: a
               <Label>{t('subscription.full_name')}</Label>
               <div className="relative">
                 <User className={`absolute ${isRtl ? 'right-3' : 'left-3'} top-2.5 h-4 w-4 text-muted-foreground`} />
-                <Input placeholder="محمد علي" className={isRtl ? "pr-9" : "pl-9"} required />
+                <Input name="name" placeholder="محمد علي" className={isRtl ? "pr-9" : "pl-9"} required />
               </div>
             </div>
             <div className="space-y-2">
               <Label>{t('subscription.email')}</Label>
               <div className="relative">
                 <Mail className={`absolute ${isRtl ? 'right-3' : 'left-3'} top-2.5 h-4 w-4 text-muted-foreground`} />
-                <Input type="email" placeholder="example@gmail.com" className={isRtl ? "pr-9" : "pl-9"} required />
+                <Input name="email" type="email" placeholder="example@gmail.com" className={isRtl ? "pr-9" : "pl-9"} required />
               </div>
             </div>
           </div>
@@ -178,14 +217,14 @@ function JoinDialog({ plan, onSubmit, t, i18n }: { plan: string, onSubmit: (e: a
               <Label>{t('subscription.price_start')}</Label>
               <div className="relative">
                 <Banknote className={`absolute ${isRtl ? 'right-3' : 'left-3'} top-2.5 h-4 w-4 text-muted-foreground`} />
-                <Input type="number" placeholder="1500" className={isRtl ? "pr-9" : "pl-9"} required />
+                <Input name="priceStart" type="number" placeholder="1500" className={isRtl ? "pr-9" : "pl-9"} required />
               </div>
             </div>
             <div className="space-y-2">
               <Label>{t('subscription.exp_years')}</Label>
               <div className="relative">
                 <Briefcase className={`absolute ${isRtl ? 'right-3' : 'left-3'} top-2.5 h-4 w-4 text-muted-foreground`} />
-                <Input type="number" placeholder="5" className={isRtl ? "pr-9" : "pl-9"} required />
+                <Input name="yearsOfExperience" type="number" placeholder="5" className={isRtl ? "pr-9" : "pl-9"} required />
               </div>
             </div>
           </div>
@@ -193,7 +232,7 @@ function JoinDialog({ plan, onSubmit, t, i18n }: { plan: string, onSubmit: (e: a
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>{t('subscription.category_label')}</Label>
-              <Select dir={isRtl ? "rtl" : "ltr"}>
+              <Select name="category" dir={isRtl ? "rtl" : "ltr"} required>
                 <SelectTrigger className="h-9 text-xs px-2">
                   <SelectValue placeholder={t('subscription.category_placeholder')} />
                 </SelectTrigger>
@@ -204,7 +243,7 @@ function JoinDialog({ plan, onSubmit, t, i18n }: { plan: string, onSubmit: (e: a
             </div>
             <div className="space-y-2">
               <Label>الولاية</Label>
-              <Select dir={isRtl ? "rtl" : "ltr"} onValueChange={setSelectedWilaya}>
+              <Select dir={isRtl ? "rtl" : "ltr"} onValueChange={setSelectedWilaya} required>
                 <SelectTrigger className="h-9 text-xs px-2">
                   <SelectValue placeholder="الولاية" />
                 </SelectTrigger>
@@ -215,7 +254,7 @@ function JoinDialog({ plan, onSubmit, t, i18n }: { plan: string, onSubmit: (e: a
             </div>
             <div className="space-y-2">
               <Label>الدائرة</Label>
-              <Select dir={isRtl ? "rtl" : "ltr"} disabled={!selectedWilaya}>
+              <Select name="daira" dir={isRtl ? "rtl" : "ltr"} disabled={!selectedWilaya} required>
                 <SelectTrigger className="h-9 text-xs px-2">
                   <SelectValue placeholder="الدائرة" />
                 </SelectTrigger>
@@ -254,7 +293,9 @@ function JoinDialog({ plan, onSubmit, t, i18n }: { plan: string, onSubmit: (e: a
             <p className="text-xs text-muted-foreground">لا يتطلب رفع وصل دفع حالياً</p>
           </div>
 
-          <Button type="submit" className="w-full h-12 text-lg font-bold mt-4">إتمام التسجيل المجاني</Button>
+          <Button type="submit" className="w-full h-12 text-lg font-bold mt-4" disabled={registerMutation.isPending}>
+            {registerMutation.isPending ? t('common.loading') : "إتمام التسجيل المجاني"}
+          </Button>
         </form>
       </DialogContent>
     </Dialog>
