@@ -42,24 +42,24 @@ export default function Profile() {
                         <CheckCircle2 className="w-6 h-6 text-blue-500 fill-blue-50" />
                       )}
                     </div>
-                    <p className="text-muted-foreground text-lg flex items-center gap-2 mt-1">
-                      <span className="font-bold text-primary">{artisan.category}</span>
-                      <span>•</span>
+                    <p className="text-muted-foreground text-lg flex items-center gap-2 mt-1 font-bold">
+                      <span className="text-primary">{artisan.category}</span>
+                      <span className="opacity-30">•</span>
                       <span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {artisan.daira}</span>
                     </p>
                   </div>
 
                   <div className="flex gap-3 w-full md:w-auto">
-                    <Button variant="outline" size="icon" className="rounded-full">
+                    <Button variant="outline" size="icon" className="rounded-2xl border-primary/20 hover:bg-primary/5 hover:text-primary transition-all duration-300">
                       <Share2 className="w-4 h-4" />
                     </Button>
-                    <Button variant="outline" size="icon" className="rounded-full">
+                    <Button variant="outline" size="icon" className="rounded-2xl border-primary/20 hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all duration-300">
                       <Heart className="w-4 h-4" />
                     </Button>
                     <Link href={`/chat/${artisan.id}`} className="flex-1 md:flex-none">
-                      <Button size="lg" className="w-full md:w-auto gap-2 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
-                        <MessageCircle className="w-5 h-5" />
-                        تواصل معي
+                      <Button size="lg" className="w-full md:w-auto gap-3 bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 rounded-2xl h-14 px-8 text-lg font-black transition-all active:scale-95 group">
+                        <MessageCircle className="w-6 h-6 transition-transform group-hover:scale-110 group-hover:rotate-12" />
+                        تواصل معي الآن
                       </Button>
                     </Link>
                   </div>
@@ -126,16 +126,17 @@ export default function Profile() {
                 </TabsContent>
 
                 <TabsContent value="portfolio" className="mt-6">
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                     {[1, 2, 3, 4, 5, 6].map((i) => (
-                      <div key={i} className="aspect-square rounded-xl overflow-hidden bg-muted group relative">
+                      <div key={i} className="aspect-video md:aspect-square rounded-[2rem] overflow-hidden bg-muted group relative shadow-lg hover:shadow-primary/20 transition-all duration-500">
                         <img 
-                          src={`https://picsum.photos/seed/${artisan.id * 10 + i}/400/400`} 
+                          src={`https://picsum.photos/seed/${artisan.id * 10 + i}/600/600`} 
                           alt="Project" 
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                         />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <Button variant="secondary" size="sm">عرض</Button>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-end p-6">
+                          <p className="text-white font-bold text-lg mb-2 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">مشروع متميز #{i}</p>
+                          <Button variant="secondary" size="sm" className="w-full rounded-xl font-bold backdrop-blur-md bg-white/20 border-white/20 text-white hover:bg-white hover:text-black">عرض التفاصيل</Button>
                         </div>
                       </div>
                     ))}
