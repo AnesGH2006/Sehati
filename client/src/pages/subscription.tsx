@@ -148,13 +148,7 @@ export default function Subscription() {
                 </div>
               </CardContent>
               <CardFooter className="p-8 pt-0">
-                <JoinDialog 
-                  plan={duration === "1" ? t('subscription.month') : duration === "3" ? t('subscription.3months') : t('subscription.6months')} 
-                  onSubmit={handleJoin} 
-                  t={t} 
-                  i18n={i18n}
-                  registerMutation={registerMutation}
-                />
+                <JoinDialog plan={duration === "1" ? t('subscription.month') : duration === "3" ? t('subscription.3months') : t('subscription.6months')} onSubmit={handleJoin} t={t} i18n={i18n} />
               </CardFooter>
             </Card>
           </div>
@@ -177,9 +171,11 @@ function FeatureItem({ text }: { text: string }) {
   );
 }
 
-function JoinDialog({ plan, onSubmit, t, i18n, registerMutation }: { plan: string, onSubmit: (e: any) => void, t: any, i18n: any, registerMutation: any }) {
+function JoinDialog({ plan, onSubmit, t, i18n }: { plan: string, onSubmit: (e: any) => void, t: any, i18n: any }) {
+  const [receipt, setReceipt] = useState<string | null>(null);
   const [portfolioCount, setPortfolioCount] = useState(0);
   const [selectedWilaya, setSelectedWilaya] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const portfolioRef = useRef<HTMLInputElement>(null);
   const isRtl = i18n.language === 'ar';
 
@@ -236,7 +232,6 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation }: { plan: strin
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>{t('subscription.category_label')}</Label>
-              <span className="sr-only">الحرفة</span>
               <Select name="category" dir={isRtl ? "rtl" : "ltr"} required>
                 <SelectTrigger className="h-9 text-xs px-2">
                   <SelectValue placeholder={t('subscription.category_placeholder')} />

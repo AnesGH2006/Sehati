@@ -1,5 +1,4 @@
 import { Hero } from "@/components/home/hero";
-import { FeaturedArtisans } from "@/components/home/featured-artisans";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { ShieldCheck, Users, Sparkles, MapPin, Search, MessageSquare, Star } from "lucide-react";
@@ -15,7 +14,6 @@ export default function Home() {
       
       <main className="flex-1">
         <Hero />
-        <FeaturedArtisans />
         
         {/* Usage Guide Section */}
         <section className="py-24 bg-background">
