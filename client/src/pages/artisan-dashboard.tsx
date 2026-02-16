@@ -27,7 +27,7 @@ export default function ArtisanDashboard() {
   const { toast } = useToast();
   const [isEditingLocation, setIsEditingLocation] = useState(false);
   const [wilaya, setWilaya] = useState("الجزائر");
-  const [daira, setDaira] = useState("سيدي امحمد");
+  const [daira, setDaira] = useState("Algiers");
 
   const handleSaveLocation = () => {
     setIsEditingLocation(false);
