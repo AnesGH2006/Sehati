@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
-import { Check, Mail, User, Banknote, Briefcase, Image as ImageIcon, Clock } from "lucide-react";
+import { Check, Mail, User, Banknote, Briefcase, Image as ImageIcon, Clock, Phone } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -54,6 +54,7 @@ export default function Subscription() {
     const data = {
       name: formData.get("name"),
       email: formData.get("email"),
+      phone: formData.get("phone"),
       category: formData.get("category"),
       daira: formData.get("daira"),
       priceStart: parseInt(formData.get("priceStart") as string),
@@ -211,8 +212,16 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation }: { plan: strin
               <Label>{t('subscription.email')}</Label>
               <div className="relative">
                 <Mail className={`absolute ${isRtl ? 'right-3' : 'left-3'} top-2.5 h-4 w-4 text-muted-foreground`} />
-                <Input name="email" type="email" placeholder="example@gmail.com" className={isRtl ? "pr-9" : "pl-9"} required />
+                <Input name="email" type="email" placeholder="alaagh23dz@gmail.com" className={isRtl ? "pr-9" : "pl-9"} required />
               </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>رقم الهاتف</Label>
+            <div className="relative">
+              <Phone className={`absolute ${isRtl ? 'right-3' : 'left-3'} top-2.5 h-4 w-4 text-muted-foreground`} />
+              <Input name="phone" type="tel" placeholder="06XXXXXXXX" className={isRtl ? "pr-9" : "pl-9"} required />
             </div>
           </div>
 
