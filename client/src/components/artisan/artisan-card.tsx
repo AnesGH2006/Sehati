@@ -1,4 +1,4 @@
-import { Star, MapPin, BadgeCheck, Briefcase, Banknote, Image as ImageIcon } from "lucide-react";
+import { Star, MapPin, BadgeCheck, Briefcase, Banknote, Image as ImageIcon, Phone } from "lucide-react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ interface ArtisanCardProps {
   name: string;
   category: string;
   daira: string;
+  phone: string;
   rating: number;
   reviews: number;
   priceStart: number;
@@ -19,7 +20,7 @@ interface ArtisanCardProps {
   portfolioImages?: string[];
 }
 
-export function ArtisanCard({ id, name, category, daira, rating, reviews, priceStart, yearsOfExperience = 0, image, isVerified, portfolioImages = [] }: ArtisanCardProps) {
+export function ArtisanCard({ id, name, category, daira, phone, rating, reviews, priceStart, yearsOfExperience = 0, image, isVerified, portfolioImages = [] }: ArtisanCardProps) {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === 'ar';
 
@@ -63,10 +64,19 @@ export function ArtisanCard({ id, name, category, daira, rating, reviews, priceS
       
       <CardContent className="p-6 flex-1 flex flex-col">
         <div className="space-y-3 mb-6">
-          <h3 className="font-heading font-bold text-2xl tracking-tight group-hover:text-primary transition-colors duration-300 line-clamp-1">{name}</h3>
+          <div className="flex justify-between items-start gap-2">
+            <h3 className="font-heading font-bold text-2xl tracking-tight group-hover:text-primary transition-colors duration-300 line-clamp-1">{name}</h3>
+            <a href={`tel:${phone}`} className="p-2 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shadow-sm">
+              <Phone className="w-5 h-5" />
+            </a>
+          </div>
           <div className="flex items-center text-muted-foreground/80 font-bold text-sm">
             <MapPin className={`w-4 h-4 text-primary ${isRtl ? 'ml-1.5' : 'mr-1.5'}`} />
             {daira}
+          </div>
+          <div className="flex items-center text-muted-foreground/80 font-bold text-sm">
+            <Phone className={`w-4 h-4 text-primary ${isRtl ? 'ml-1.5' : 'mr-1.5'}`} />
+            {phone}
           </div>
         </div>
         
@@ -97,5 +107,7 @@ export function ArtisanCard({ id, name, category, daira, rating, reviews, priceS
         </Link>
       </CardFooter>
     </Card>
+  );
+}
   );
 }
