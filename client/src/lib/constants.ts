@@ -54,7 +54,8 @@ export const MOCK_ARTISANS = [
     rating: 4.8,
     reviews: 124,
     priceStart: 2000,
-    image: "/attached_assets/artisan-1.jpg", // Placeholder
+    phone: "0550123456",
+    image: "https://images.unsplash.com/photo-1581244277943-fe4a9c777189?w=400&h=400&fit=crop",
     isVerified: true,
     description: "خبرة 15 سنة في النجارة العصرية والتقليدية. صناعة الأثاث والأبواب والنوافذ."
   },
@@ -66,7 +67,8 @@ export const MOCK_ARTISANS = [
     rating: 4.9,
     reviews: 89,
     priceStart: 1500,
-    image: "/attached_assets/artisan-2.jpg", // Placeholder
+    phone: "0660987654",
+    image: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=400&h=400&fit=crop",
     isVerified: true,
     description: "مختصة في اللباس التقليدي والعصري. خياطة حسب الطلب بجودة عالية."
   },
@@ -78,7 +80,8 @@ export const MOCK_ARTISANS = [
     rating: 4.5,
     reviews: 56,
     priceStart: 1000,
-    image: "/attached_assets/artisan-1.jpg", // reuse
+    phone: "0770112233",
+    image: "https://images.unsplash.com/photo-1590674867571-67d801951467?w=400&h=400&fit=crop",
     isVerified: false,
     description: "تركيب وصيانة الشبكات الكهربائية المنزلية والصناعية. تدخل سريع."
   },
@@ -90,7 +93,8 @@ export const MOCK_ARTISANS = [
     rating: 4.7,
     reviews: 210,
     priceStart: 1200,
-    image: "/attached_assets/artisan-1.jpg", // reuse
+    phone: "0555667788",
+    image: "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=400&h=400&fit=crop",
     isVerified: true,
     description: "تصليح التسربات وتركيب الأنابيب والتدفئة المركزية."
   }

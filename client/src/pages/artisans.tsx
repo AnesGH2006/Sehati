@@ -169,7 +169,20 @@ export default function Artisans() {
                     exit={{ opacity: 0, scale: 0.9 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <ArtisanCard {...artisan} />
+                    <ArtisanCard
+                      id={artisan.id}
+                      name={artisan.name}
+                      category={artisan.category}
+                      daira={artisan.daira}
+                      phone={artisan.phone || "06XXXXXXXX"}
+                      rating={artisan.rating}
+                      reviews={artisan.reviews}
+                      priceStart={artisan.priceStart}
+                      yearsOfExperience={artisan.yearsOfExperience}
+                      image={artisan.image}
+                      isVerified={artisan.isVerified}
+                      portfolioImages={artisan.portfolioImages}
+                    />
                   </motion.div>
                 ))}
               </AnimatePresence>

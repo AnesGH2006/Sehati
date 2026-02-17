@@ -66,9 +66,15 @@ export function ArtisanCard({ id, name, category, daira, phone, rating, reviews,
         <div className="space-y-3 mb-6">
           <div className="flex justify-between items-start gap-2">
             <h3 className="font-heading font-bold text-2xl tracking-tight group-hover:text-primary transition-colors duration-300 line-clamp-1">{name}</h3>
-            <a href={`tel:${phone}`} className="p-2 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shadow-sm">
-              <Phone className="w-5 h-5" />
-            </a>
+            <div className="flex items-center gap-2">
+              <a 
+                href={`tel:${phone}`} 
+                className="p-2 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shadow-sm z-10"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Phone className="w-5 h-5" />
+              </a>
+            </div>
           </div>
           <div className="flex items-center text-muted-foreground/80 font-bold text-sm">
             <MapPin className={`w-4 h-4 text-primary ${isRtl ? 'ml-1.5' : 'mr-1.5'}`} />
@@ -107,7 +113,5 @@ export function ArtisanCard({ id, name, category, daira, phone, rating, reviews,
         </Link>
       </CardFooter>
     </Card>
-  );
-}
   );
 }
