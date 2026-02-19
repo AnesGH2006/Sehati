@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
+import { motion } from "framer-motion";
 
 interface ArtisanCardProps {
   id: number;
@@ -130,7 +131,5 @@ export function ArtisanCard({ id, name, category, daira, phone, rating, reviews,
         </Link>
       </CardFooter>
     </Card>
-  );
-}
   );
 }
