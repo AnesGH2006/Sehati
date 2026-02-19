@@ -45,31 +45,36 @@ export default function ArtisanDashboard() {
       
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(var(--primary-rgb),0.05),transparent_50%)] pointer-events-none" />
       
-      <main className="flex-1 container px-4 py-8 relative z-10">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4" dir="rtl">
+      <main className="flex-1 container px-4 py-12 relative z-10">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6" 
+          dir="rtl"
+        >
           <div>
-            <h1 className="text-4xl font-heading font-black tracking-tight flex items-center gap-3">
-              <div className="p-2 rounded-2xl bg-primary/10 text-primary">
-                <LayoutDashboard className="w-8 h-8" />
+            <h1 className="text-5xl font-heading font-black tracking-tighter flex items-center gap-4 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              <div className="p-3 rounded-[2rem] bg-primary/10 text-primary shadow-2xl border border-primary/20">
+                <LayoutDashboard className="w-10 h-10" />
               </div>
               لوحة التحكم
             </h1>
-            <div className="flex items-center gap-2 mt-2 text-muted-foreground font-bold">
-              <MapPin className="w-4 h-4 text-primary" />
+            <div className="flex items-center gap-3 mt-4 text-muted-foreground font-black bg-muted/30 w-fit px-4 py-2 rounded-2xl border border-border/50">
+              <MapPin className="w-5 h-5 text-primary" />
               <span>موقعك الحالي: {wilaya}، {daira}</span>
             </div>
           </div>
-          <div className="flex gap-2 w-full md:w-auto">
-            <Button variant="outline" className="flex-1 md:flex-none gap-2" onClick={() => setIsEditingLocation(!isEditingLocation)}>
-              <MapPin className="w-4 h-4" />
+          <div className="flex gap-4 w-full md:w-auto">
+            <Button variant="outline" className="flex-1 md:flex-none gap-3 h-14 rounded-2xl font-black border-primary/20 hover:bg-primary/5 shadow-lg transition-all active:scale-95" onClick={() => setIsEditingLocation(!isEditingLocation)}>
+              <MapPin className="w-5 h-5" />
               تغيير الموقع
             </Button>
-            <Button variant="outline" className="flex-1 md:flex-none gap-2">
-              <Settings className="w-4 h-4" />
+            <Button variant="outline" className="flex-1 md:flex-none gap-3 h-14 rounded-2xl font-black border-primary/20 hover:bg-primary/5 shadow-lg transition-all active:scale-95">
+              <Settings className="w-5 h-5" />
               تعديل الملف
             </Button>
           </div>
-        </div>
+        </motion.div>
 
         {isEditingLocation && (
           <motion.div 
@@ -249,34 +254,39 @@ export default function ArtisanDashboard() {
 
 function StatCard({ icon, label, value, trend, subtext, color = "primary" }: any) {
   const colorClasses: any = {
-    primary: "bg-primary/10 text-primary",
-    blue: "bg-blue-500/10 text-blue-600",
-    purple: "bg-purple-500/10 text-purple-600",
-    amber: "bg-amber-500/10 text-amber-600",
-    green: "bg-green-500/10 text-green-600",
+    primary: "bg-primary/20 text-primary border-primary/30 shadow-[0_0_20px_rgba(var(--primary-rgb),0.2)]",
+    blue: "bg-blue-500/20 text-blue-400 border-blue-500/30 shadow-[0_0_20px_rgba(59,130,246,0.2)]",
+    purple: "bg-purple-500/20 text-purple-400 border-purple-500/30 shadow-[0_0_20px_rgba(168,85,247,0.2)]",
+    amber: "bg-amber-500/20 text-amber-400 border-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.2)]",
+    green: "bg-green-500/20 text-green-400 border-green-500/30 shadow-[0_0_20px_rgba(34,197,94,0.2)]",
   };
 
   return (
-    <Card className="overflow-hidden border-none shadow-md bg-card/50 backdrop-blur-xl hover:shadow-lg transition-all duration-300 group">
-      <CardContent className="p-4 md:p-6">
-        <div className="flex items-start justify-between">
-          <div className={`p-3 rounded-2xl ${colorClasses[color]} group-hover:scale-110 transition-transform duration-300`}>
-            {icon}
+    <motion.div
+      whileHover={{ y: -8, scale: 1.02 }}
+      transition={{ type: "spring", stiffness: 300 }}
+    >
+      <Card className="overflow-hidden border-white/10 shadow-2xl bg-gradient-to-br from-card/60 to-card/20 backdrop-blur-3xl rounded-[2.5rem] transition-all duration-500 group ring-1 ring-white/10 hover:ring-primary/40 h-full">
+        <CardContent className="p-6 md:p-8">
+          <div className="flex items-start justify-between">
+            <div className={`p-4 rounded-[1.5rem] border ${colorClasses[color]} group-hover:rotate-12 transition-all duration-500`}>
+              {icon}
+            </div>
+            {trend && (
+              <span className={`text-[10px] font-black px-3 py-1.5 rounded-full border ${trend.startsWith('+') ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>
+                {trend}
+              </span>
+            )}
           </div>
-          {trend && (
-            <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${trend.startsWith('+') ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-              {trend}
-            </span>
-          )}
-        </div>
-        <div className="mt-4">
-          <div className="text-3xl font-black font-heading tracking-tight">{value}</div>
-          <div className="text-xs font-bold text-muted-foreground flex items-center gap-1 mt-1 opacity-80">
-            {label}
-            {subtext && <span className="opacity-70">({subtext})</span>}
+          <div className="mt-8">
+            <div className="text-4xl font-black font-heading tracking-tighter leading-none">{value}</div>
+            <div className="text-xs font-black text-muted-foreground/60 flex items-center gap-2 mt-3 uppercase tracking-widest">
+              {label}
+              {subtext && <span className="text-primary/60 font-black">({subtext})</span>}
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }
