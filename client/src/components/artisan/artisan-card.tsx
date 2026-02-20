@@ -21,7 +21,7 @@ interface ArtisanCardProps {
   portfolioImages?: string[];
 }
 
-export function ArtisanCard({ id, name, category, daira, phone, rating, reviews, priceStart, yearsOfExperience = 0, image, isVerified, portfolioImages = [] }: ArtisanCardProps) {
+export function ArtisanCard({ id, name, category, daira, phone, rating, reviews, priceStart, yearsOfExperience = 7, image, isVerified, portfolioImages = [] }: ArtisanCardProps) {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === 'ar';
 
@@ -93,7 +93,7 @@ export function ArtisanCard({ id, name, category, daira, phone, rating, reviews,
               <div className="p-1 rounded-md bg-primary/5 mr-1.5 group-hover/phone:bg-primary/10 transition-colors">
                 <Phone className="w-3 h-3 text-primary" />
               </div>
-              {phone}
+              <span onClick={(e) => e.stopPropagation()}>{phone}</span>
             </div>
           </div>
         </div>
