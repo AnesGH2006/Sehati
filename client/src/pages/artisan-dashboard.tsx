@@ -40,38 +40,51 @@ export default function ArtisanDashboard() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background/95 font-sans selection:bg-primary/30">
+    <div className="min-h-screen flex flex-col bg-[#050505] text-white font-sans selection:bg-primary/30">
       <Navbar />
       
-      <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(var(--primary-rgb),0.05),transparent_50%)] pointer-events-none" />
+      {/* Dynamic Background Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[120px] animate-pulse delay-700" />
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.03]" />
+      </div>
       
-      <main className="flex-1 container px-4 py-12 relative z-10">
+      <main className="flex-1 container max-w-7xl px-6 py-16 relative z-10">
+        {/* Header Section */}
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6" 
+          className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-16 gap-8 border-b border-white/5 pb-12" 
           dir="rtl"
         >
-          <div>
-            <h1 className="text-5xl font-heading font-black tracking-tighter flex items-center gap-4 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              <div className="p-3 rounded-[2rem] bg-primary/10 text-primary shadow-2xl border border-primary/20">
-                <LayoutDashboard className="w-10 h-10" />
-              </div>
-              لوحة التحكم
-            </h1>
-            <div className="flex items-center gap-3 mt-4 text-muted-foreground font-black bg-muted/30 w-fit px-4 py-2 rounded-2xl border border-border/50">
-              <MapPin className="w-5 h-5 text-primary" />
-              <span>موقعك الحالي: {wilaya}، {daira}</span>
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-black uppercase tracking-widest mb-2">
+              <div className="w-2 h-2 rounded-full bg-primary animate-ping" />
+              لوحة التحكم الاحترافية
             </div>
+            <h1 className="text-6xl font-heading font-black tracking-tighter bg-gradient-to-l from-white via-white to-white/40 bg-clip-text text-transparent">
+              أهلاً بك، <span className="text-primary italic">يا فنان</span>
+            </h1>
+            <p className="text-muted-foreground font-medium text-lg max-w-md leading-relaxed">
+              تتبع أداء أعمالك، تواصل مع زبائنك، وقم بإدارة متجرك الإلكتروني من مكان واحد.
+            </p>
           </div>
-          <div className="flex gap-4 w-full md:w-auto">
-            <Button variant="outline" className="flex-1 md:flex-none gap-3 h-14 rounded-2xl font-black border-primary/20 hover:bg-primary/5 shadow-lg transition-all active:scale-95" onClick={() => setIsEditingLocation(!isEditingLocation)}>
-              <MapPin className="w-5 h-5" />
-              تغيير الموقع
+          
+          <div className="flex flex-wrap gap-4 w-full lg:w-auto">
+            <Button 
+              variant="outline" 
+              className="flex-1 lg:flex-none gap-3 h-14 px-8 rounded-2xl font-black border-white/10 bg-white/5 hover:bg-white/10 text-white shadow-2xl transition-all active:scale-95 group"
+              onClick={() => setIsEditingLocation(!isEditingLocation)}
+            >
+              <MapPin className="w-5 h-5 text-primary group-hover:animate-bounce" />
+              تعديل الموقع
             </Button>
-            <Button variant="outline" className="flex-1 md:flex-none gap-3 h-14 rounded-2xl font-black border-primary/20 hover:bg-primary/5 shadow-lg transition-all active:scale-95">
-              <Settings className="w-5 h-5" />
-              تعديل الملف
+            <Button 
+              className="flex-1 lg:flex-none gap-3 h-14 px-8 rounded-2xl font-black bg-primary hover:bg-primary/90 text-white shadow-[0_15px_30px_rgba(var(--primary-rgb),0.3)] transition-all active:scale-95 group"
+            >
+              <Settings className="w-5 h-5 group-hover:rotate-90 transition-transform duration-500" />
+              إعدادات الحساب
             </Button>
           </div>
         </motion.div>
@@ -80,37 +93,37 @@ export default function ArtisanDashboard() {
           <motion.div 
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
-            className="mb-8"
+            className="mb-12 overflow-hidden"
             dir="rtl"
           >
-            <Card className="border-primary/20 bg-primary/5">
-              <CardContent className="pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-                  <div className="space-y-2">
-                    <Label className="font-bold">الولاية</Label>
+            <Card className="border-white/10 bg-white/5 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl">
+              <CardContent className="p-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-end">
+                  <div className="space-y-3">
+                    <Label className="font-black text-sm text-white/60">الولاية</Label>
                     <Select value={wilaya} onValueChange={(val) => { setWilaya(val); setDaira((LOCATIONS as any)[val][0]); }}>
-                      <SelectTrigger className="bg-background">
+                      <SelectTrigger className="bg-white/5 border-white/10 h-14 rounded-2xl text-white font-bold">
                         <SelectValue placeholder="اختر ولاية" />
                       </SelectTrigger>
-                      <SelectContent dir="rtl">
+                      <SelectContent dir="rtl" className="bg-[#121212] border-white/10 text-white">
                         {DAIRAS.map(w => <SelectItem key={w} value={w}>{w}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="font-bold">الدائرة</Label>
+                  <div className="space-y-3">
+                    <Label className="font-black text-sm text-white/60">الدائرة</Label>
                     <Select value={daira} onValueChange={setDaira}>
-                      <SelectTrigger className="bg-background">
+                      <SelectTrigger className="bg-white/5 border-white/10 h-14 rounded-2xl text-white font-bold">
                         <SelectValue placeholder="اختر دائرة" />
                       </SelectTrigger>
-                      <SelectContent dir="rtl">
+                      <SelectContent dir="rtl" className="bg-[#121212] border-white/10 text-white">
                         {(LOCATIONS as any)[wilaya].map((d: string) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button className="gap-2 font-bold" onClick={handleSaveLocation}>
-                    <Save className="w-4 h-4" />
-                    حفظ الموقع الجديد
+                  <Button className="h-14 rounded-2xl gap-3 font-black shadow-xl" onClick={handleSaveLocation}>
+                    <Save className="w-5 h-5" />
+                    تحديث الموقع الجغرافي
                   </Button>
                 </div>
               </CardContent>
@@ -118,65 +131,80 @@ export default function ArtisanDashboard() {
           </motion.div>
         )}
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" dir="rtl">
-          <StatCard icon={<Eye className="w-5 h-5" />} label="مشاهدات الملف" value="1,240" trend="+12%" color="blue" />
-          <StatCard icon={<MessageSquare className="w-5 h-5" />} label="رسائل جديدة" value="8" trend="+3" color="purple" />
-          <StatCard icon={<Star className="w-5 h-5" />} label="التقييم العام" value="4.8" trend="0.2" color="amber" />
-          <StatCard icon={<Clock className="w-5 h-5" />} label="أيام الاشتراك" value="∞" subtext="باقية" color="green" />
+        {/* Stats Grid - More Refined */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16" dir="rtl">
+          <StatCard icon={<Eye />} label="مشاهدات الملف" value="1,240" trend="+12%" color="blue" />
+          <StatCard icon={<MessageSquare />} label="رسائل جديدة" value="8" trend="+3" color="purple" />
+          <StatCard icon={<Star />} label="التقييم العام" value="4.8" trend="0.2" color="amber" />
+          <StatCard icon={<Clock />} label="أيام الاشتراك" value="∞" subtext="باقية" color="green" />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8" dir="rtl">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
-            <Card className="border-none shadow-xl bg-card/40 backdrop-blur-2xl rounded-[2rem] overflow-hidden">
-              <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border/10">
-                <CardTitle className="text-xl font-heading font-black flex items-center gap-2">
-                  <ImageIcon className="w-5 h-5 text-primary" />
-                  معرض الأعمال (Portfolio)
-                </CardTitle>
-                <Button variant="ghost" size="sm" className="text-primary font-black hover:bg-primary/10 rounded-xl">إضافة عمل جديد +</Button>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8" dir="rtl">
+          {/* Main Content Area */}
+          <div className="lg:col-span-8 space-y-8">
+            {/* Portfolio Grid */}
+            <Card className="border-white/5 bg-white/[0.02] backdrop-blur-3xl rounded-[3rem] overflow-hidden shadow-2xl ring-1 ring-white/10">
+              <CardHeader className="p-8 flex flex-row items-center justify-between border-b border-white/5 bg-white/[0.01]">
+                <div>
+                  <CardTitle className="text-2xl font-heading font-black flex items-center gap-3">
+                    <ImageIcon className="w-6 h-6 text-primary" />
+                    معرض الأعمال
+                  </CardTitle>
+                  <p className="text-muted-foreground text-sm font-medium mt-1">اعرض مهاراتك من خلال أفضل صور أعمالك.</p>
+                </div>
+                <Button className="rounded-2xl font-black px-6 hover:scale-105 transition-transform">إضافة عمل +</Button>
               </CardHeader>
-              <CardContent className="pt-6">
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="aspect-square rounded-3xl bg-muted/30 relative group overflow-hidden border border-border/50 hover:border-primary/50 transition-all duration-500">
-                      <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4 z-10">
-                        <Button size="icon" variant="secondary" className="h-10 w-10 rounded-2xl shadow-2xl scale-75 group-hover:scale-100 transition-transform duration-300">
-                          <ImageIcon className="w-5 h-5" />
+              <CardContent className="p-8">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <motion.div 
+                      key={i} 
+                      whileHover={{ scale: 1.05 }}
+                      className="aspect-square rounded-[2rem] bg-white/5 relative group overflow-hidden border border-white/10 hover:border-primary/50 transition-all duration-500 shadow-xl"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center p-6 z-10">
+                        <Button size="icon" variant="secondary" className="h-12 w-12 rounded-2xl shadow-2xl scale-75 group-hover:scale-100 transition-transform duration-300">
+                          <ImageIcon className="w-6 h-6" />
                         </Button>
                       </div>
-                      <div className="h-full w-full flex items-center justify-center text-muted-foreground">
-                        <ImageIcon className="w-12 h-12 opacity-10 group-hover:scale-125 transition-transform duration-700" />
+                      <div className="h-full w-full flex items-center justify-center text-muted-foreground/20">
+                        {i <= 3 ? (
+                          <img src={`https://images.unsplash.com/photo-${1500000000000 + i}?auto=format&fit=crop&q=80&w=400`} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" alt="" />
+                        ) : (
+                          <ImageIcon className="w-16 h-16 opacity-10 group-hover:scale-125 transition-transform duration-700" />
+                        )}
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-none shadow-xl bg-card/40 backdrop-blur-2xl rounded-[2rem] overflow-hidden">
-              <CardHeader className="border-b border-border/10">
-                <CardTitle className="text-xl font-heading font-black flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5 text-primary" />
-                  أحدث الرسائل
+            {/* Messages - More Compact and Structured */}
+            <Card className="border-white/5 bg-white/[0.02] backdrop-blur-3xl rounded-[3rem] overflow-hidden shadow-2xl ring-1 ring-white/10">
+              <CardHeader className="p-8 border-b border-white/5 bg-white/[0.01]">
+                <CardTitle className="text-2xl font-heading font-black flex items-center gap-3">
+                  <MessageSquare className="w-6 h-6 text-primary" />
+                  الرسائل الواردة
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="divide-y divide-border/10">
+                <div className="divide-y divide-white/5">
                   {[1, 2, 3].map((i) => (
-                    <div key={i} className="p-6 flex items-center gap-4 hover:bg-primary/5 transition-all cursor-pointer group">
-                      <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-black text-xl group-hover:scale-110 transition-transform duration-300 shadow-inner">
-                        ز
+                    <div key={i} className="p-8 flex items-center gap-6 hover:bg-white/[0.03] transition-all cursor-pointer group relative">
+                      <div className="h-16 w-16 rounded-[1.5rem] bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary font-black text-2xl group-hover:scale-110 transition-transform duration-500 shadow-inner border border-primary/20">
+                        {i === 1 ? 'س' : i === 2 ? 'م' : 'ع'}
                       </div>
-                      <div className="flex-1">
-                        <div className="flex justify-between items-center mb-1">
-                          <h4 className="font-black text-lg group-hover:text-primary transition-colors">زبون مهتم #{i}</h4>
-                          <span className="text-xs font-bold text-muted-foreground/60 bg-muted/50 px-2 py-1 rounded-lg">منذ ساعتين</span>
+                      <div className="flex-1 space-y-1">
+                        <div className="flex justify-between items-center">
+                          <h4 className="font-black text-xl group-hover:text-primary transition-colors">
+                            {i === 1 ? 'سامي كمال' : i === 2 ? 'مراد بن علي' : 'عمر فاروق'}
+                          </h4>
+                          <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest bg-white/5 px-3 py-1 rounded-full border border-white/5">منذ {i * 15} دقيقة</span>
                         </div>
-                        <p className="text-sm font-medium text-muted-foreground/80 line-clamp-1">هل أنت متاح للعمل يوم الغد؟ أحتاج مساعدة في...</p>
+                        <p className="text-muted-foreground font-medium text-sm line-clamp-1 max-w-md">أهلاً بك، هل يمكننا الاتفاق على موعد للعمل الأسبوع القادم؟ أحتاج لمعرفة...</p>
                       </div>
-                      <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]" />
+                      {i === 1 && <div className="w-3 h-3 rounded-full bg-primary shadow-[0_0_15px_rgba(var(--primary-rgb),0.8)] animate-pulse" />}
                     </div>
                   ))}
                 </div>
@@ -184,62 +212,72 @@ export default function ArtisanDashboard() {
             </Card>
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-8">
-            <Card className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground border-none shadow-[0_20px_40px_rgba(var(--primary-rgb),0.3)] rounded-[2.5rem] overflow-hidden relative group">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-white/20 transition-colors duration-500" />
-              <CardHeader>
-                <CardTitle className="text-2xl font-heading font-black flex items-center gap-2">
-                  <BadgeCheck className="w-6 h-6" />
-                  حالة العضوية
-                </CardTitle>
+          {/* Sidebar - Integrated Look */}
+          <div className="lg:col-span-4 space-y-8">
+            <Card className="bg-primary border-none shadow-[0_25px_50px_rgba(var(--primary-rgb),0.4)] rounded-[2.5rem] overflow-hidden relative group">
+              <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -mr-24 -mt-24 blur-3xl group-hover:bg-white/20 transition-all duration-700" />
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-black/10 rounded-full -ml-16 -mb-16 blur-2xl" />
+              <CardHeader className="p-8 pb-4 relative z-10">
+                <div className="flex items-center gap-3 text-white/80 font-black text-xs uppercase tracking-widest mb-2">
+                  <BadgeCheck className="w-5 h-5 text-white" />
+                  توثيق الحساب
+                </div>
+                <CardTitle className="text-3xl font-heading font-black text-white leading-tight">حسابك مفعل وموثق بنجاح</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6 relative z-10">
-                <div className="flex justify-between items-center">
-                  <span className="font-bold opacity-90">نوع الحساب</span>
-                  <Badge className="bg-white/20 text-white border-none px-4 py-1.5 rounded-xl font-black">حرفي حر (مجاني)</Badge>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs font-black mb-1">
-                    <span>نسبة اكتمال الملف</span>
-                    <span>100%</span>
+              <CardContent className="p-8 pt-0 space-y-8 relative z-10">
+                <div className="p-5 bg-white/10 rounded-3xl border border-white/10 backdrop-blur-xl">
+                  <div className="flex justify-between items-end mb-4">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">نوع الاشتراك</span>
+                      <div className="text-xl font-black text-white italic">حرفي VIP (مجاني)</div>
+                    </div>
+                    <Badge className="bg-green-400 text-green-900 border-none px-3 py-1 rounded-lg font-black text-[10px]">نشط</Badge>
                   </div>
-                  <div className="h-3 w-full bg-black/20 rounded-full overflow-hidden p-0.5">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: "100%" }}
-                      transition={{ duration: 1.5, ease: "easeOut" }}
-                      className="h-full bg-white rounded-full shadow-[0_0_15px_rgba(255,255,255,0.5)]" 
-                    />
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-[10px] font-black text-white/80 uppercase">
+                      <span>اكتمال الملف الشخصي</span>
+                      <span>100%</span>
+                    </div>
+                    <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: "100%" }}
+                        transition={{ duration: 2, delay: 0.5 }}
+                        className="h-full bg-white shadow-[0_0_20px_white]" 
+                      />
+                    </div>
                   </div>
                 </div>
-                <div className="p-4 bg-white/10 rounded-2xl border border-white/10 backdrop-blur-md">
-                  <p className="text-sm font-bold leading-relaxed">عضويتك مفعلة مدى الحياة مجاناً. استمتع بكافة المميزات الحالية!</p>
-                </div>
-                <Button variant="secondary" className="w-full font-black h-12 rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:scale-[1.02] active:scale-[0.98] text-primary">تطوير الحساب (قريباً)</Button>
+                <Button variant="secondary" className="w-full font-black h-16 rounded-[1.5rem] shadow-2xl hover:shadow-white/20 transition-all hover:scale-[1.02] active:scale-[0.98] text-primary text-lg">إدارة الاشتراك</Button>
               </CardContent>
             </Card>
 
-            <Card className="border-none shadow-xl bg-card/40 backdrop-blur-2xl rounded-[2rem] overflow-hidden">
-              <CardHeader className="border-b border-border/10">
-                <CardTitle className="text-xl font-heading font-black flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-green-500" />
-                  تلميحات للنمو
+            <Card className="border-white/5 bg-white/[0.02] backdrop-blur-3xl rounded-[3rem] overflow-hidden shadow-2xl ring-1 ring-white/10">
+              <CardHeader className="p-8 border-b border-white/5 bg-white/[0.01]">
+                <CardTitle className="text-xl font-heading font-black flex items-center gap-3">
+                  <TrendingUp className="w-6 h-6 text-green-500" />
+                  مركز النصائح
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4 pt-6">
-                <div className="p-4 rounded-2xl bg-green-500/5 border border-green-500/10 flex gap-4 items-start group hover:bg-green-500/10 transition-colors">
-                  <div className="p-2 rounded-xl bg-green-500/20 text-green-600 group-hover:scale-110 transition-transform">
+              <CardContent className="p-8 space-y-6">
+                <div className="flex gap-4 items-start group">
+                  <div className="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20 group-hover:bg-primary group-hover:text-white transition-all">
                     <ImageIcon className="w-5 h-5" />
                   </div>
-                  <p className="text-sm font-bold leading-relaxed">إضافة 5 صور جديدة لمعرض أعمالك يزيد من نسبة تواصل الزبائن بـ 30%.</p>
+                  <div className="space-y-1">
+                    <h5 className="font-black text-white text-sm">جودة الصور</h5>
+                    <p className="text-xs font-medium text-muted-foreground leading-relaxed">استخدام إضاءة طبيعية في صور أعمالك يزيد من ثقة الزبائن بنسبة كبيرة.</p>
+                  </div>
                 </div>
                 
-                <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10 flex gap-4 items-start group hover:bg-blue-500/10 transition-colors">
-                  <div className="p-2 rounded-xl bg-blue-500/20 text-blue-600 group-hover:scale-110 transition-transform">
+                <div className="flex gap-4 items-start group">
+                  <div className="p-3 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20 group-hover:bg-amber-500 group-hover:text-white transition-all">
                     <Star className="w-5 h-5" />
                   </div>
-                  <p className="text-sm font-bold leading-relaxed">الرد السريع على رسائل الزبائن يحسن ترتيبك في نتائج البحث.</p>
+                  <div className="space-y-1">
+                    <h5 className="font-black text-white text-sm">التفاعل المستمر</h5>
+                    <p className="text-xs font-medium text-muted-foreground leading-relaxed">الرد على التعليقات والتقييمات يحسن من ظهورك في الصفحة الأولى.</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
