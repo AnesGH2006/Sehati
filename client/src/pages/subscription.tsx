@@ -212,7 +212,7 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation }: { plan: strin
               <Label>{t('subscription.email')}</Label>
               <div className="relative">
                 <Mail className={`absolute ${isRtl ? 'right-3' : 'left-3'} top-2.5 h-4 w-4 text-muted-foreground`} />
-                <Input name="email" type="email" placeholder="alaagh23dz@gmail.com" className={isRtl ? "pr-9" : "pl-9"} required />
+                <Input name="email" type="email" placeholder="example@gmail.com" className={isRtl ? "pr-9" : "pl-9"} required />
               </div>
             </div>
           </div>

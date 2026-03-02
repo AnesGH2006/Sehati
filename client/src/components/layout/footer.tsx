@@ -27,7 +27,7 @@ export function Footer() {
               <li><a href="/" className="hover:text-primary transition-colors">{t('nav.home')}</a></li>
               <li><a href="/artisans" className="hover:text-primary transition-colors">{t('nav.artisans')}</a></li>
               <li><a href="/subscription" className="hover:text-primary transition-colors">{t('nav.subscriptions')}</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">{t('footer.about')}</a></li>
+              <li><a href="/about" className="hover:text-primary transition-colors">{t('footer.about')}</a></li>
             </ul>
           </div>
 

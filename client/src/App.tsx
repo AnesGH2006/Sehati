@@ -11,6 +11,7 @@ import Chat from "@/pages/chat";
 import Subscription from "@/pages/subscription";
 import Auth from "@/pages/auth";
 import ArtisanDashboard from "@/pages/artisan-dashboard";
+import About from "@/pages/about";
 import { ThemeProvider } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -43,6 +44,7 @@ function Router() {
           <Route path="/subscription" component={Subscription} />
           <Route path="/auth" component={Auth} />
           <Route path="/artisan/dashboard" component={ArtisanDashboard} />
+          <Route path="/about" component={About} />
           <Route component={NotFound} />
         </Switch>
       </motion.div>
