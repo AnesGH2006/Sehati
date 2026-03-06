@@ -25,22 +25,33 @@ export function Hero() {
       <div className="container relative z-10 px-4 md:px-8">
         <div className="max-w-3xl mx-auto text-center space-y-6">
           <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
             className="text-4xl md:text-6xl font-bold font-heading text-white leading-tight"
           >
             {t('hero.title')}
           </motion.h1>
           
           <motion.p 
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
+            transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
             className="text-lg md:text-xl text-gray-200 max-w-2xl mx-auto"
           >
             {t('hero.subtitle')}
           </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="pt-8"
+          >
+            <Button size="lg" className="h-16 px-10 text-xl font-bold rounded-2xl shadow-2xl hover:scale-105 transition-transform">
+              ابدأ الآن مجاناً
+            </Button>
+          </motion.div>
         </div>
       </div>
     </div>

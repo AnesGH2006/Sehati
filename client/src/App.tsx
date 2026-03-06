@@ -16,6 +16,23 @@ import { ThemeProvider } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 
+function PageTransition({ children }: { children: React.ReactNode }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -20, scale: 0.98 }}
+      transition={{ 
+        duration: 0.4,
+        ease: [0.22, 1, 0.36, 1] 
+      }}
+      className="w-full flex-1 flex flex-col"
+    >
+      {children}
+    </motion.div>
+  );
+}
+
 function Router() {
   const { i18n } = useTranslation();
   const isAr = i18n.language === 'ar';
@@ -36,16 +53,56 @@ function Router() {
         className="min-h-screen flex flex-col overflow-x-hidden"
       >
         <Switch>
-          <Route path="/" component={Home} />
-          <Route path="/artisans" component={Artisans} />
-          <Route path="/profile/:id" component={Profile} />
-          <Route path="/chat/:id" component={Chat} />
-          <Route path="/chat" component={Chat} />
-          <Route path="/subscription" component={Subscription} />
-          <Route path="/auth" component={Auth} />
-          <Route path="/artisan/dashboard" component={ArtisanDashboard} />
-          <Route path="/about" component={About} />
-          <Route component={NotFound} />
+          <Route path="/">
+            <PageTransition>
+              <Home />
+            </PageTransition>
+          </Route>
+          <Route path="/artisans">
+            <PageTransition>
+              <Artisans />
+            </PageTransition>
+          </Route>
+          <Route path="/profile/:id">
+            <PageTransition>
+              <Profile />
+            </PageTransition>
+          </Route>
+          <Route path="/chat/:id">
+            <PageTransition>
+              <Chat />
+            </PageTransition>
+          </Route>
+          <Route path="/chat">
+            <PageTransition>
+              <Chat />
+            </PageTransition>
+          </Route>
+          <Route path="/subscription">
+            <PageTransition>
+              <Subscription />
+            </PageTransition>
+          </Route>
+          <Route path="/auth">
+            <PageTransition>
+              <Auth />
+            </PageTransition>
+          </Route>
+          <Route path="/artisan/dashboard">
+            <PageTransition>
+              <ArtisanDashboard />
+            </PageTransition>
+          </Route>
+          <Route path="/about">
+            <PageTransition>
+              <About />
+            </PageTransition>
+          </Route>
+          <Route>
+            <PageTransition>
+              <NotFound />
+            </PageTransition>
+          </Route>
         </Switch>
       </motion.div>
     </AnimatePresence>
