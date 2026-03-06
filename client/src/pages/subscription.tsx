@@ -145,6 +145,10 @@ export default function Subscription() {
                     <FeatureItem text={t('subscription.feat_search')} />
                     <FeatureItem text={t('subscription.feat_stats')} />
                     <FeatureItem text={t('subscription.feat_support')} />
+                    <FeatureItem text={t('subscription.feat_badge')} />
+                    <FeatureItem text={t('subscription.feat_sms')} />
+                    <FeatureItem text={t('subscription.feat_ads')} />
+                    <FeatureItem text={t('subscription.feat_priority')} />
                   </div>
                 </div>
               </CardContent>
