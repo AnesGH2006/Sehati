@@ -193,25 +193,25 @@ export default function Subscription() {
                     </div>
                   )}
                   
-                  <CardHeader className="p-12 pb-8 text-center">
-                    <CardTitle className="text-3xl font-black mb-4">{plan.name}</CardTitle>
-                    <CardDescription className="text-lg font-bold min-h-[50px] opacity-70">{plan.description}</CardDescription>
-                    <div className="mt-10">
-                      <span className="text-6xl md:text-7xl font-black font-heading tracking-tighter text-foreground">{plan.price}</span>
-                      <span className="text-muted-foreground font-bold ml-2 text-xl">{plan.duration}</span>
+                  <CardHeader className="p-8 pb-4 text-center">
+                    <CardTitle className="text-2xl font-black mb-2">{plan.name}</CardTitle>
+                    <CardDescription className="text-sm font-bold min-h-[40px] opacity-70">{plan.description}</CardDescription>
+                    <div className="mt-6">
+                      <span className="text-5xl font-black font-heading tracking-tighter text-foreground">{plan.price}</span>
+                      <span className="text-muted-foreground font-bold ml-1 text-lg">{plan.duration}</span>
                     </div>
                   </CardHeader>
 
-                  <CardContent className="p-12 pt-0 flex-1">
-                    <div className="space-y-6">
-                      <p className="font-black text-sm uppercase tracking-widest text-muted-foreground mb-8">{isRtl ? "ماذا ستحصل:" : "What's included:"}</p>
+                  <CardContent className="p-8 pt-0 flex-1">
+                    <div className="space-y-4">
+                      <p className="font-black text-[10px] uppercase tracking-widest text-muted-foreground mb-4">{isRtl ? "ماذا ستحصل:" : "What's included:"}</p>
                       {plan.features.map((feature, i) => (
                         <FeatureItem key={i} text={feature} />
                       ))}
                     </div>
                   </CardContent>
 
-                  <CardFooter className="p-12 pt-0">
+                  <CardFooter className="p-8 pt-0">
                     <JoinDialog 
                       plan={plan.name} 
                       onSubmit={handleJoin} 
@@ -235,11 +235,11 @@ export default function Subscription() {
 
 function FeatureItem({ text }: { text: string }) {
   return (
-    <div className="flex items-center gap-4">
-      <div className="bg-primary/10 rounded-full p-1.5 shrink-0">
-        <Check className="w-5 h-5 text-primary" />
+    <div className="flex items-center gap-3">
+      <div className="bg-primary/10 rounded-full p-1 shrink-0">
+        <Check className="w-4 h-4 text-primary" />
       </div>
-      <span className="text-lg font-bold">{text}</span>
+      <span className="text-base font-bold">{text}</span>
     </div>
   );
 }
@@ -253,7 +253,7 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation, buttonVariant =
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button size="lg" variant={buttonVariant} className={`w-full h-20 text-xl font-black rounded-3xl shadow-xl transition-all hover:scale-[1.05] active:scale-95 ${buttonVariant === 'default' ? 'shadow-primary/20' : ''}`}>
+        <Button size="lg" variant={buttonVariant} className={`w-full h-16 text-lg font-black rounded-2xl shadow-xl transition-all hover:scale-[1.05] active:scale-95 ${buttonVariant === 'default' ? 'shadow-primary/20' : ''}`}>
           {t('subscription.subscribe_now')}
         </Button>
       </DialogTrigger>
