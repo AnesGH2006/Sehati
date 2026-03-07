@@ -22,9 +22,65 @@ export default function Subscription() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [duration, setDuration] = useState("1");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const isRtl = i18n.language === 'ar';
+
+  const plans = [
+    {
+      id: "starter",
+      name: t('subscription.plan_starter'),
+      price: t('subscription.price_free'),
+      duration: t('subscription.duration_forever'),
+      description: isRtl ? "بداية مثالية للحرفيين الجدد" : "Perfect start for new artisans",
+      features: [
+        t('subscription.feat_profile'),
+        t('subscription.feat_portfolio'),
+        t('subscription.feat_chat'),
+        t('subscription.feat_search_basic'),
+        t('subscription.feat_support_basic'),
+      ],
+      color: "border-slate-200",
+      buttonVariant: "outline" as const
+    },
+    {
+      id: "standard",
+      name: t('subscription.plan_standard'),
+      price: t('subscription.price_standard'),
+      duration: t('subscription.duration_month'),
+      description: isRtl ? "الخيار الأفضل للنمو السريع" : "The best choice for rapid growth",
+      popular: true,
+      features: [
+        t('subscription.feat_profile'),
+        t('subscription.feat_portfolio_unlimited'),
+        t('subscription.feat_chat'),
+        t('subscription.feat_search_priority'),
+        t('subscription.feat_badge_verified'),
+        t('subscription.feat_stats'),
+        t('subscription.feat_support_priority'),
+      ],
+      color: "border-primary ring-2 ring-primary/20 scale-105",
+      buttonVariant: "default" as const
+    },
+    {
+      id: "pro",
+      name: t('subscription.plan_pro'),
+      price: t('subscription.price_pro'),
+      duration: t('subscription.duration_month'),
+      description: isRtl ? "للمحترفين والشركات الكبيرة" : "For professionals and large businesses",
+      features: [
+        t('subscription.feat_profile'),
+        t('subscription.feat_portfolio_unlimited'),
+        t('subscription.feat_chat'),
+        t('subscription.feat_search_top'),
+        t('subscription.feat_badge_gold'),
+        t('subscription.feat_stats'),
+        t('subscription.feat_ads'),
+        t('subscription.feat_sms'),
+      ],
+      color: "border-amber-500/50 ring-2 ring-amber-500/10",
+      buttonVariant: "default" as const
+    }
+  ];
 
   const registerMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -34,14 +90,14 @@ export default function Subscription() {
     onSuccess: () => {
       setIsSubmitted(true);
       toast({
-        title: "تم التسجيل بنجاح",
-        description: "أهلاً بك في عائلة حرفتي! حسابك مفعل الآن.",
+        title: isRtl ? "تم التسجيل بنجاح" : "Registration Successful",
+        description: isRtl ? "أهلاً بك في عائلة حرفتي! حسابك مفعل الآن." : "Welcome to Herfati! Your account is now active.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/artisans"] });
     },
     onError: (error: Error) => {
       toast({
-        title: "فشل التسجيل",
+        title: isRtl ? "فشل التسجيل" : "Registration Failed",
         description: error.message,
         variant: "destructive",
       });
@@ -59,7 +115,7 @@ export default function Subscription() {
       daira: formData.get("daira"),
       priceStart: parseInt(formData.get("priceStart") as string),
       yearsOfExperience: parseInt(formData.get("yearsOfExperience") as string),
-      description: "حرفي محترف في منصة حرفتي",
+      description: isRtl ? "حرفي محترف في منصة حرفتي" : "Professional artisan on Herfati",
       image: "https://images.unsplash.com/photo-1581244277943-fe4a9c777189?w=400&h=400&fit=crop",
       isVerified: false,
       rating: "5.0",
@@ -99,69 +155,72 @@ export default function Subscription() {
     <div className="min-h-screen flex flex-col bg-background font-sans">
       <Navbar />
       
-      <main className="flex-1 py-16">
+      <main className="flex-1 py-24">
         <div className="container px-4 md:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-            <h1 className="text-4xl font-heading font-bold">{t('subscription.title')}</h1>
-            <p className="text-xl text-muted-foreground">{t('subscription.subtitle')}</p>
+          <div className="text-center max-w-3xl mx-auto mb-20 space-y-6">
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-5xl md:text-6xl font-heading font-black tracking-tighter"
+            >
+              {t('subscription.title')}
+            </motion.h1>
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-xl text-muted-foreground font-medium"
+            >
+              {t('subscription.subtitle')}
+            </motion.p>
           </div>
 
-          <div className="max-w-2xl mx-auto">
-            <Card className="border-2 border-primary relative shadow-2xl z-10">
-              <div className={`absolute -top-4 ${isRtl ? 'right-1/2 translate-x-1/2' : 'left-1/2 -translate-x-1/2'} bg-primary text-white px-4 py-1 rounded-full text-sm font-bold shadow-lg`}>
-                {t('subscription.plan_name')}
-              </div>
-              <CardHeader className="text-center pt-8">
-                <CardTitle className="text-3xl font-heading text-primary">{t('subscription.plan_name')}</CardTitle>
-                <CardDescription className="text-lg">{t('subscription.plan_desc')}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-8">
-                <div className="bg-muted/30 p-6 rounded-2xl border border-border/50">
-                  <Label className="text-base font-bold mb-4 block">{t('subscription.duration')}</Label>
-                  <Tabs defaultValue="1" className="w-full" onValueChange={setDuration}>
-                    <TabsList className="grid w-full grid-cols-3 h-auto p-1 bg-background/50">
-                      <TabsTrigger value="1" className="py-3 flex flex-col">
-                        <span className="font-bold">{t('subscription.month')}</span>
-                        <span className="text-xs opacity-70">{t('subscription.price_1')}</span>
-                      </TabsTrigger>
-                      <TabsTrigger value="3" className="py-3 flex flex-col">
-                        <span className="font-bold">{t('subscription.3months')}</span>
-                        <span className="text-xs opacity-70">{t('subscription.price_3')}</span>
-                      </TabsTrigger>
-                      <TabsTrigger value="6" className="py-3 flex flex-col">
-                        <span className="font-bold">{t('subscription.6months')}</span>
-                        <span className="text-xs opacity-70">{t('subscription.price_6')}</span>
-                      </TabsTrigger>
-                    </TabsList>
-                  </Tabs>
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto">
+            {plans.map((plan, index) => (
+              <motion.div
+                key={plan.id}
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <Card className={`relative h-full border-2 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col transition-all duration-500 hover:-translate-y-2 ${plan.color}`}>
+                  {plan.popular && (
+                    <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-primary text-white px-6 py-1.5 rounded-full text-xs font-black uppercase tracking-widest shadow-xl">
+                      {isRtl ? "الأكثر طلباً" : "Most Popular"}
+                    </div>
+                  )}
+                  
+                  <CardHeader className="p-10 pb-6 text-center">
+                    <CardTitle className="text-2xl font-black mb-2">{plan.name}</CardTitle>
+                    <CardDescription className="text-sm font-bold min-h-[40px]">{plan.description}</CardDescription>
+                    <div className="mt-8">
+                      <span className="text-5xl font-black font-heading tracking-tighter text-foreground">{plan.price}</span>
+                      <span className="text-muted-foreground font-bold ml-1">{plan.duration}</span>
+                    </div>
+                  </CardHeader>
 
-                <div className="space-y-4 px-4">
-                  <h3 className="font-bold text-lg border-b pb-2">{t('subscription.features')}</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FeatureItem text={t('subscription.feat_profile')} />
-                    <FeatureItem text={t('subscription.feat_portfolio')} />
-                    <FeatureItem text={t('subscription.feat_chat')} />
-                    <FeatureItem text={t('subscription.feat_search')} />
-                    <FeatureItem text={t('subscription.feat_stats')} />
-                    <FeatureItem text={t('subscription.feat_support')} />
-                    <FeatureItem text={t('subscription.feat_badge')} />
-                    <FeatureItem text={t('subscription.feat_sms')} />
-                    <FeatureItem text={t('subscription.feat_ads')} />
-                    <FeatureItem text={t('subscription.feat_priority')} />
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="p-8 pt-0">
-                <JoinDialog 
-                  plan={duration === "1" ? t('subscription.month') : duration === "3" ? t('subscription.3months') : t('subscription.6months')} 
-                  onSubmit={handleJoin} 
-                  t={t} 
-                  i18n={i18n} 
-                  registerMutation={registerMutation}
-                />
-              </CardFooter>
-            </Card>
+                  <CardContent className="p-10 pt-0 flex-1">
+                    <div className="space-y-4">
+                      <p className="font-black text-xs uppercase tracking-widest text-muted-foreground mb-6">{isRtl ? "ماذا ستحصل:" : "What's included:"}</p>
+                      {plan.features.map((feature, i) => (
+                        <FeatureItem key={i} text={feature} />
+                      ))}
+                    </div>
+                  </CardContent>
+
+                  <CardFooter className="p-10 pt-0">
+                    <JoinDialog 
+                      plan={plan.name} 
+                      onSubmit={handleJoin} 
+                      t={t} 
+                      i18n={i18n} 
+                      registerMutation={registerMutation}
+                      buttonVariant={plan.buttonVariant}
+                    />
+                  </CardFooter>
+                </Card>
+              </motion.div>
+            ))}
           </div>
         </div>
       </main>
@@ -174,15 +233,15 @@ export default function Subscription() {
 function FeatureItem({ text }: { text: string }) {
   return (
     <div className="flex items-center gap-2">
-      <div className="bg-primary/10 rounded-full p-1">
+      <div className="bg-primary/10 rounded-full p-1 shrink-0">
         <Check className="w-4 h-4 text-primary" />
       </div>
-      <span className="text-sm">{text}</span>
+      <span className="text-sm font-bold">{text}</span>
     </div>
   );
 }
 
-function JoinDialog({ plan, onSubmit, t, i18n, registerMutation }: { plan: string, onSubmit: (e: any) => void, t: any, i18n: any, registerMutation: any }) {
+function JoinDialog({ plan, onSubmit, t, i18n, registerMutation, buttonVariant = "default" }: { plan: string, onSubmit: (e: any) => void, t: any, i18n: any, registerMutation: any, buttonVariant?: "default" | "outline" }) {
   const [portfolioCount, setPortfolioCount] = useState(0);
   const [selectedWilaya, setSelectedWilaya] = useState<string | null>(null);
   const portfolioRef = useRef<HTMLInputElement>(null);
@@ -191,16 +250,15 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation }: { plan: strin
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button size="lg" className="w-full h-14 text-xl bg-primary hover:bg-primary/90 font-bold shadow-xl shadow-primary/20">
-          <User className={`${isRtl ? 'ml-2' : 'mr-2'} w-6 h-6`} />
-          انضم الآن مجاناً
+        <Button size="lg" variant={buttonVariant} className={`w-full h-16 text-lg font-black rounded-2xl shadow-xl transition-all hover:scale-[1.02] active:scale-95 ${buttonVariant === 'default' ? 'shadow-primary/20' : ''}`}>
+          {t('subscription.subscribe_now')}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto custom-scrollbar">
         <DialogHeader>
           <DialogTitle className="font-heading text-xl">{t('subscription.form_title', { plan })}</DialogTitle>
           <DialogDescription>
-            سجل معلوماتك المهنية وابدأ في استقبال طلبات الزبائن فوراً
+            {isRtl ? "سجل معلوماتك المهنية وابدأ في استقبال طلبات الزبائن فوراً" : "Register your professional info and start receiving customer requests immediately"}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4 pt-4">
@@ -209,7 +267,7 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation }: { plan: strin
               <Label>{t('subscription.full_name')}</Label>
               <div className="relative">
                 <User className={`absolute ${isRtl ? 'right-3' : 'left-3'} top-2.5 h-4 w-4 text-muted-foreground`} />
-                <Input name="name" placeholder="محمد علي" className={isRtl ? "pr-9" : "pl-9"} required />
+                <Input name="name" placeholder={isRtl ? "محمد علي" : "John Doe"} className={isRtl ? "pr-9" : "pl-9"} required />
               </div>
             </div>
             <div className="space-y-2">
@@ -222,7 +280,7 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation }: { plan: strin
           </div>
 
           <div className="space-y-2">
-            <Label>رقم الهاتف</Label>
+            <Label>{isRtl ? "رقم الهاتف" : "Phone Number"}</Label>
             <div className="relative">
               <Phone className={`absolute ${isRtl ? 'right-3' : 'left-3'} top-2.5 h-4 w-4 text-muted-foreground`} />
               <Input name="phone" type="tel" placeholder="06XXXXXXXX" className={isRtl ? "pr-9" : "pl-9"} required />
@@ -259,10 +317,10 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation }: { plan: strin
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>الولاية</Label>
+              <Label>{isRtl ? "الولاية" : "Wilaya"}</Label>
               <Select dir={isRtl ? "rtl" : "ltr"} onValueChange={setSelectedWilaya} required>
                 <SelectTrigger className="h-9 text-xs px-2">
-                  <SelectValue placeholder="الولاية" />
+                  <SelectValue placeholder={isRtl ? "الولاية" : "Wilaya"} />
                 </SelectTrigger>
                 <SelectContent>
                   {DAIRAS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
@@ -270,10 +328,10 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation }: { plan: strin
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>الدائرة</Label>
+              <Label>{isRtl ? "الدائرة" : "Daira"}</Label>
               <Select name="daira" dir={isRtl ? "rtl" : "ltr"} disabled={!selectedWilaya} required>
                 <SelectTrigger className="h-9 text-xs px-2">
-                  <SelectValue placeholder="الدائرة" />
+                  <SelectValue placeholder={isRtl ? "الدائرة" : "Daira"} />
                 </SelectTrigger>
                 <SelectContent>
                   {selectedWilaya && (LOCATIONS as any)[selectedWilaya].map((d: string) => (
@@ -306,12 +364,12 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation }: { plan: strin
           </div>
           
           <div className="p-4 border-2 border-dashed rounded-xl bg-primary/5 text-center space-y-2">
-            <p className="text-sm font-bold text-primary">التسجيل مجاني لفترة محدودة</p>
-            <p className="text-xs text-muted-foreground">لا يتطلب رفع وصل دفع حالياً</p>
+            <p className="text-sm font-bold text-primary">{isRtl ? "التسجيل مجاني لفترة محدودة" : "Registration is free for a limited time"}</p>
+            <p className="text-xs text-muted-foreground">{isRtl ? "لا يتطلب رفع وصل دفع حالياً" : "No payment receipt required at this time"}</p>
           </div>
 
           <Button type="submit" className="w-full h-12 text-lg font-bold mt-4" disabled={registerMutation.isPending}>
-            {registerMutation.isPending ? t('common.loading') : "إتمام التسجيل المجاني"}
+            {registerMutation.isPending ? t('common.loading') : (isRtl ? "إتمام التسجيل" : "Complete Registration")}
           </Button>
         </form>
       </DialogContent>
