@@ -1,5 +1,6 @@
 import { Facebook, Instagram, Twitter, Mail, MapPin, Phone } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Link } from "wouter";
 
 export function Footer() {
   const { t, i18n } = useTranslation();
@@ -24,10 +25,10 @@ export function Footer() {
           <div className="text-right">
             <h3 className="font-heading font-bold text-lg mb-4">{t('nav.home')}</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><a href="/" className="hover:text-primary transition-colors">{t('nav.home')}</a></li>
-              <li><a href="/artisans" className="hover:text-primary transition-colors">{t('nav.artisans')}</a></li>
-              <li><a href="/subscription" className="hover:text-primary transition-colors">{t('nav.subscriptions')}</a></li>
-              <li><a href="/about" className="hover:text-primary transition-colors">{t('footer.about')}</a></li>
+              <li><Link href="/"><span className="hover:text-primary transition-colors cursor-pointer">{t('nav.home')}</span></Link></li>
+              <li><Link href="/artisans"><span className="hover:text-primary transition-colors cursor-pointer">{t('nav.artisans')}</span></Link></li>
+              <li><Link href="/subscription"><span className="hover:text-primary transition-colors cursor-pointer">{t('nav.subscriptions')}</span></Link></li>
+              <li><Link href="/about"><span className="hover:text-primary transition-colors cursor-pointer">{t('footer.about')}</span></Link></li>
             </ul>
           </div>
 

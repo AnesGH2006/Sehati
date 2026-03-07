@@ -128,22 +128,23 @@ export default function Subscription() {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen flex flex-col bg-background font-sans">
+      <div className="min-h-screen flex flex-col bg-background font-sans selection:bg-primary/20">
         <Navbar />
         <main className="flex-1 flex items-center justify-center p-4">
           <motion.div 
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="text-center space-y-6 max-w-md p-8 bg-card rounded-3xl border shadow-xl"
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="text-center space-y-8 max-w-lg p-12 bg-card rounded-[3rem] border shadow-2xl"
           >
-            <div className="h-20 w-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-              <Clock className="h-10 w-10 text-primary animate-pulse" />
+            <div className="h-24 w-24 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+              <Clock className="h-12 w-12 text-primary animate-pulse" />
             </div>
-            <h1 className="text-3xl font-heading font-bold text-primary">{t('subscription.under_review')}</h1>
-            <p className="text-muted-foreground text-lg">
+            <h1 className="text-4xl font-heading font-black text-primary leading-tight">{t('subscription.under_review')}</h1>
+            <p className="text-muted-foreground text-xl leading-relaxed">
               {t('subscription.review_desc')}
             </p>
-            <Button className="w-full" variant="outline" onClick={() => window.location.href = "/"}>{t('common.back_home')}</Button>
+            <Button size="lg" className="w-full h-16 text-lg font-black rounded-2xl" variant="outline" onClick={() => window.location.href = "/"}>{t('common.back_home')}</Button>
           </motion.div>
         </main>
         <Footer />
@@ -152,63 +153,65 @@ export default function Subscription() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background font-sans">
+    <div className="min-h-screen flex flex-col bg-background font-sans selection:bg-primary/20">
       <Navbar />
       
-      <main className="flex-1 py-24">
-        <div className="container px-4 md:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-20 space-y-6">
-            <motion.h1 
-              initial={{ opacity: 0, y: 20 }}
+      <main className="flex-1 flex items-center justify-center py-12 md:py-24">
+        <div className="container max-w-[1920px] mx-auto px-4 md:px-8 xl:px-12">
+          <div className="text-center max-w-4xl mx-auto mb-16 md:mb-24 space-y-10">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-5xl md:text-6xl font-heading font-black tracking-tighter"
+              transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
             >
-              {t('subscription.title')}
-            </motion.h1>
-            <motion.p 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="text-xl text-muted-foreground font-medium"
-            >
-              {t('subscription.subtitle')}
-            </motion.p>
+              <h1 className="text-7xl md:text-9xl font-heading font-black tracking-tight leading-[1.1] mb-10 bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
+                {t('subscription.title')}
+              </h1>
+              <p className="text-2xl md:text-4xl text-muted-foreground font-medium max-w-4xl mx-auto leading-relaxed opacity-80">
+                {t('subscription.subtitle')}
+              </p>
+            </motion.div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 lg:gap-16 max-w-[1600px] mx-auto items-stretch">
             {plans.map((plan, index) => (
               <motion.div
                 key={plan.id}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
+                initial={{ opacity: 0, y: 50, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ 
+                  duration: 1, 
+                  delay: index * 0.2,
+                  ease: [0.23, 1, 0.32, 1] 
+                }}
+                className="flex"
               >
-                <Card className={`relative h-full border-2 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col transition-all duration-500 hover:-translate-y-2 ${plan.color}`}>
+                <Card className={`relative h-full border-2 rounded-[3rem] overflow-hidden shadow-2xl flex flex-col transition-all duration-700 hover:-translate-y-4 hover:shadow-primary/10 ${plan.color}`}>
                   {plan.popular && (
-                    <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-primary text-white px-6 py-1.5 rounded-full text-xs font-black uppercase tracking-widest shadow-xl">
+                    <div className="absolute top-8 left-1/2 -translate-x-1/2 bg-primary text-white px-8 py-2 rounded-full text-sm font-black uppercase tracking-widest shadow-xl">
                       {isRtl ? "الأكثر طلباً" : "Most Popular"}
                     </div>
                   )}
                   
-                  <CardHeader className="p-10 pb-6 text-center">
-                    <CardTitle className="text-2xl font-black mb-2">{plan.name}</CardTitle>
-                    <CardDescription className="text-sm font-bold min-h-[40px]">{plan.description}</CardDescription>
-                    <div className="mt-8">
-                      <span className="text-5xl font-black font-heading tracking-tighter text-foreground">{plan.price}</span>
-                      <span className="text-muted-foreground font-bold ml-1">{plan.duration}</span>
+                  <CardHeader className="p-12 pb-8 text-center">
+                    <CardTitle className="text-3xl font-black mb-4">{plan.name}</CardTitle>
+                    <CardDescription className="text-lg font-bold min-h-[50px] opacity-70">{plan.description}</CardDescription>
+                    <div className="mt-10">
+                      <span className="text-6xl md:text-7xl font-black font-heading tracking-tighter text-foreground">{plan.price}</span>
+                      <span className="text-muted-foreground font-bold ml-2 text-xl">{plan.duration}</span>
                     </div>
                   </CardHeader>
 
-                  <CardContent className="p-10 pt-0 flex-1">
-                    <div className="space-y-4">
-                      <p className="font-black text-xs uppercase tracking-widest text-muted-foreground mb-6">{isRtl ? "ماذا ستحصل:" : "What's included:"}</p>
+                  <CardContent className="p-12 pt-0 flex-1">
+                    <div className="space-y-6">
+                      <p className="font-black text-sm uppercase tracking-widest text-muted-foreground mb-8">{isRtl ? "ماذا ستحصل:" : "What's included:"}</p>
                       {plan.features.map((feature, i) => (
                         <FeatureItem key={i} text={feature} />
                       ))}
                     </div>
                   </CardContent>
 
-                  <CardFooter className="p-10 pt-0">
+                  <CardFooter className="p-12 pt-0">
                     <JoinDialog 
                       plan={plan.name} 
                       onSubmit={handleJoin} 
@@ -232,11 +235,11 @@ export default function Subscription() {
 
 function FeatureItem({ text }: { text: string }) {
   return (
-    <div className="flex items-center gap-2">
-      <div className="bg-primary/10 rounded-full p-1 shrink-0">
-        <Check className="w-4 h-4 text-primary" />
+    <div className="flex items-center gap-4">
+      <div className="bg-primary/10 rounded-full p-1.5 shrink-0">
+        <Check className="w-5 h-5 text-primary" />
       </div>
-      <span className="text-sm font-bold">{text}</span>
+      <span className="text-lg font-bold">{text}</span>
     </div>
   );
 }
@@ -250,65 +253,65 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation, buttonVariant =
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button size="lg" variant={buttonVariant} className={`w-full h-16 text-lg font-black rounded-2xl shadow-xl transition-all hover:scale-[1.02] active:scale-95 ${buttonVariant === 'default' ? 'shadow-primary/20' : ''}`}>
+        <Button size="lg" variant={buttonVariant} className={`w-full h-20 text-xl font-black rounded-3xl shadow-xl transition-all hover:scale-[1.05] active:scale-95 ${buttonVariant === 'default' ? 'shadow-primary/20' : ''}`}>
           {t('subscription.subscribe_now')}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto custom-scrollbar">
-        <DialogHeader>
-          <DialogTitle className="font-heading text-xl">{t('subscription.form_title', { plan })}</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto custom-scrollbar p-10 rounded-[3rem]">
+        <DialogHeader className="mb-8">
+          <DialogTitle className="font-heading text-3xl font-black">{t('subscription.form_title', { plan })}</DialogTitle>
+          <DialogDescription className="text-lg font-medium mt-2">
             {isRtl ? "سجل معلوماتك المهنية وابدأ في استقبال طلبات الزبائن فوراً" : "Register your professional info and start receiving customer requests immediately"}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={onSubmit} className="space-y-4 pt-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>{t('subscription.full_name')}</Label>
+        <form onSubmit={onSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <Label className="text-sm font-black uppercase tracking-widest opacity-70">{t('subscription.full_name')}</Label>
               <div className="relative">
-                <User className={`absolute ${isRtl ? 'right-3' : 'left-3'} top-2.5 h-4 w-4 text-muted-foreground`} />
-                <Input name="name" placeholder={isRtl ? "محمد علي" : "John Doe"} className={isRtl ? "pr-9" : "pl-9"} required />
+                <User className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground`} />
+                <Input name="name" placeholder={isRtl ? "محمد علي" : "John Doe"} className={`h-14 rounded-2xl text-lg ${isRtl ? "pr-12" : "pl-12"} bg-muted/30 border-none ring-1 ring-border focus-visible:ring-primary`} required />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>{t('subscription.email')}</Label>
+            <div className="space-y-3">
+              <Label className="text-sm font-black uppercase tracking-widest opacity-70">{t('subscription.email')}</Label>
               <div className="relative">
-                <Mail className={`absolute ${isRtl ? 'right-3' : 'left-3'} top-2.5 h-4 w-4 text-muted-foreground`} />
-                <Input name="email" type="email" placeholder="example@gmail.com" className={isRtl ? "pr-9" : "pl-9"} required />
+                <Mail className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground`} />
+                <Input name="email" type="email" placeholder="example@gmail.com" className={`h-14 rounded-2xl text-lg ${isRtl ? "pr-12" : "pl-12"} bg-muted/30 border-none ring-1 ring-border focus-visible:ring-primary`} required />
               </div>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>{isRtl ? "رقم الهاتف" : "Phone Number"}</Label>
+          <div className="space-y-3">
+            <Label className="text-sm font-black uppercase tracking-widest opacity-70">{isRtl ? "رقم الهاتف" : "Phone Number"}</Label>
             <div className="relative">
-              <Phone className={`absolute ${isRtl ? 'right-3' : 'left-3'} top-2.5 h-4 w-4 text-muted-foreground`} />
-              <Input name="phone" type="tel" placeholder="06XXXXXXXX" className={isRtl ? "pr-9" : "pl-9"} required />
+              <Phone className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground`} />
+              <Input name="phone" type="tel" placeholder="06XXXXXXXX" className={`h-14 rounded-2xl text-lg ${isRtl ? "pr-12" : "pl-12"} bg-muted/30 border-none ring-1 ring-border focus-visible:ring-primary`} required />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>{t('subscription.price_start')}</Label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <Label className="text-sm font-black uppercase tracking-widest opacity-70">{t('subscription.price_start')}</Label>
               <div className="relative">
-                <Banknote className={`absolute ${isRtl ? 'right-3' : 'left-3'} top-2.5 h-4 w-4 text-muted-foreground`} />
-                <Input name="priceStart" type="number" placeholder="1500" className={isRtl ? "pr-9" : "pl-9"} required />
+                <Banknote className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground`} />
+                <Input name="priceStart" type="number" placeholder="1500" className={`h-14 rounded-2xl text-lg ${isRtl ? "pr-12" : "pl-12"} bg-muted/30 border-none ring-1 ring-border focus-visible:ring-primary`} required />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>{t('subscription.exp_years')}</Label>
+            <div className="space-y-3">
+              <Label className="text-sm font-black uppercase tracking-widest opacity-70">{t('subscription.exp_years')}</Label>
               <div className="relative">
-                <Briefcase className={`absolute ${isRtl ? 'right-3' : 'left-3'} top-2.5 h-4 w-4 text-muted-foreground`} />
-                <Input name="yearsOfExperience" type="number" placeholder="5" className={isRtl ? "pr-9" : "pl-9"} required />
+                <Briefcase className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground`} />
+                <Input name="yearsOfExperience" type="number" placeholder="5" className={`h-14 rounded-2xl text-lg ${isRtl ? "pr-12" : "pl-12"} bg-muted/30 border-none ring-1 ring-border focus-visible:ring-primary`} required />
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>{t('subscription.category_label')}</Label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-3">
+              <Label className="text-sm font-black uppercase tracking-widest opacity-70">{t('subscription.category_label')}</Label>
               <Select name="category" dir={isRtl ? "rtl" : "ltr"} required>
-                <SelectTrigger className="h-9 text-xs px-2">
+                <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none ring-1 ring-border">
                   <SelectValue placeholder={t('subscription.category_placeholder')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -316,10 +319,10 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation, buttonVariant =
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>{isRtl ? "الولاية" : "Wilaya"}</Label>
+            <div className="space-y-3">
+              <Label className="text-sm font-black uppercase tracking-widest opacity-70">{isRtl ? "الولاية" : "Wilaya"}</Label>
               <Select dir={isRtl ? "rtl" : "ltr"} onValueChange={setSelectedWilaya} required>
-                <SelectTrigger className="h-9 text-xs px-2">
+                <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none ring-1 ring-border">
                   <SelectValue placeholder={isRtl ? "الولاية" : "Wilaya"} />
                 </SelectTrigger>
                 <SelectContent>
@@ -327,10 +330,10 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation, buttonVariant =
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>{isRtl ? "الدائرة" : "Daira"}</Label>
+            <div className="space-y-3">
+              <Label className="text-sm font-black uppercase tracking-widest opacity-70">{isRtl ? "الدائرة" : "Daira"}</Label>
               <Select name="daira" dir={isRtl ? "rtl" : "ltr"} disabled={!selectedWilaya} required>
-                <SelectTrigger className="h-9 text-xs px-2">
+                <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none ring-1 ring-border">
                   <SelectValue placeholder={isRtl ? "الدائرة" : "Daira"} />
                 </SelectTrigger>
                 <SelectContent>
@@ -342,8 +345,8 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation, buttonVariant =
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label className="font-bold">{t('subscription.portfolio')}</Label>
+          <div className="space-y-3">
+            <Label className="text-sm font-black uppercase tracking-widest opacity-70">{t('subscription.portfolio')}</Label>
             <input 
               type="file" 
               hidden 
@@ -355,20 +358,20 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation, buttonVariant =
             <Button 
               type="button" 
               variant="outline" 
-              className="w-full gap-2"
+              className="w-full h-14 rounded-2xl gap-3 border-dashed border-2 hover:bg-primary/5 hover:border-primary transition-all text-lg font-bold"
               onClick={() => portfolioRef.current?.click()}
             >
-              <ImageIcon className="h-4 w-4" />
+              <ImageIcon className="h-6 w-6 text-primary" />
               {portfolioCount > 0 ? t('subscription.portfolio_count', { count: portfolioCount }) : t('subscription.portfolio_select')}
             </Button>
           </div>
           
-          <div className="p-4 border-2 border-dashed rounded-xl bg-primary/5 text-center space-y-2">
-            <p className="text-sm font-bold text-primary">{isRtl ? "التسجيل مجاني لفترة محدودة" : "Registration is free for a limited time"}</p>
-            <p className="text-xs text-muted-foreground">{isRtl ? "لا يتطلب رفع وصل دفع حالياً" : "No payment receipt required at this time"}</p>
+          <div className="p-6 border-2 border-dashed rounded-[2rem] bg-primary/5 text-center space-y-2 border-primary/20">
+            <p className="text-lg font-black text-primary">{isRtl ? "التسجيل مجاني لفترة محدودة" : "Registration is free for a limited time"}</p>
+            <p className="text-sm text-muted-foreground font-medium">{isRtl ? "لا يتطلب رفع وصل دفع حالياً" : "No payment receipt required at this time"}</p>
           </div>
 
-          <Button type="submit" className="w-full h-12 text-lg font-bold mt-4" disabled={registerMutation.isPending}>
+          <Button type="submit" className="w-full h-20 text-2xl font-black mt-6 rounded-3xl shadow-2xl shadow-primary/30 active:scale-95 transition-all" disabled={registerMutation.isPending}>
             {registerMutation.isPending ? t('common.loading') : (isRtl ? "إتمام التسجيل" : "Complete Registration")}
           </Button>
         </form>

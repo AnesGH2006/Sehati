@@ -47,12 +47,12 @@ export function Navbar() {
       <div className="container flex h-16 items-center justify-between px-4 md:px-8">
         <div className="flex items-center gap-2">
           <Link href="/">
-            <a className="flex items-center gap-2">
+            <div className="flex items-center gap-2 cursor-pointer">
               <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-white font-bold">
                 ح
               </div>
               <span className="text-xl font-bold font-heading text-primary">حرفتي</span>
-            </a>
+            </div>
           </Link>
         </div>
 
@@ -60,13 +60,13 @@ export function Navbar() {
         <div className="hidden md:flex items-center gap-6">
           {navLinks.map((link) => (
             <Link key={link.href} href={link.href}>
-              <a
-                className={`text-sm font-medium transition-colors hover:text-primary ${
+              <span
+                className={`text-sm font-medium transition-colors hover:text-primary cursor-pointer ${
                   location === link.href ? "text-primary font-bold" : "text-muted-foreground"
                 }`}
               >
                 {link.label}
-              </a>
+              </span>
             </Link>
           ))}
         </div>
@@ -131,14 +131,14 @@ export function Navbar() {
               <div className="flex flex-col gap-4">
                 {navLinks.map((link) => (
                   <Link key={link.href} href={link.href}>
-                    <a
-                      className={`text-lg font-medium transition-colors hover:text-primary ${
+                    <span
+                      className={`text-lg font-medium transition-colors hover:text-primary cursor-pointer ${
                         location === link.href ? "text-primary font-bold" : "text-muted-foreground"
                       }`}
                       onClick={() => setIsOpen(false)}
                     >
                       {link.label}
-                    </a>
+                    </span>
                   </Link>
                 ))}
               </div>
