@@ -23,61 +23,70 @@ export default function Subscription() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [activePhase, setActivePhase] = useState<"basic" | "premium">("basic");
   const isRtl = i18n.language === 'ar';
 
-  const plans = [
-    {
-      id: "starter",
-      name: t('subscription.plan_starter'),
-      price: t('subscription.price_free'),
-      duration: t('subscription.duration_forever'),
-      description: isRtl ? "بداية مثالية للحرفيين الجدد" : "Perfect start for new artisans",
-      features: [
-        t('subscription.feat_profile'),
-        t('subscription.feat_portfolio'),
-        t('subscription.feat_chat'),
-        t('subscription.feat_search_basic'),
-        t('subscription.feat_support_basic'),
-      ],
-      color: "border-slate-200",
-      buttonVariant: "outline" as const
-    },
+  const basicPlan = {
+    id: "starter",
+    name: t('subscription.plan_starter'),
+    price: t('subscription.price_free'),
+    duration: t('subscription.duration_forever'),
+    description: isRtl ? "بداية مثالية للحرفيين الجدد" : "Perfect start for new artisans",
+    features: [
+      t('subscription.feat_profile'),
+      t('subscription.feat_portfolio'),
+      t('subscription.feat_chat'),
+      t('subscription.feat_search_basic'),
+    ],
+    color: "border-slate-200",
+    buttonVariant: "outline" as const
+  };
+
+  const premiumPlans = [
     {
       id: "standard",
       name: t('subscription.plan_standard'),
       price: t('subscription.price_standard'),
       duration: t('subscription.duration_month'),
-      description: isRtl ? "الخيار الأفضل للنمو السريع" : "The best choice for rapid growth",
-      popular: true,
+      description: isRtl ? "الخيار الأفضل للنمو" : "Best for growth",
       features: [
-        t('subscription.feat_profile'),
         t('subscription.feat_portfolio_unlimited'),
-        t('subscription.feat_chat'),
         t('subscription.feat_search_priority'),
         t('subscription.feat_badge_verified'),
         t('subscription.feat_stats'),
-        t('subscription.feat_support_priority'),
       ],
-      color: "border-primary ring-2 ring-primary/20 scale-105",
-      buttonVariant: "default" as const
+      color: "border-blue-500/30 ring-1 ring-blue-500/20",
+      buttonVariant: "outline" as const
     },
     {
       id: "pro",
       name: t('subscription.plan_pro'),
       price: t('subscription.price_pro'),
       duration: t('subscription.duration_month'),
-      description: isRtl ? "للمحترفين والشركات الكبيرة" : "For professionals and large businesses",
+      description: isRtl ? "للمحترفين" : "For professionals",
       features: [
-        t('subscription.feat_profile'),
         t('subscription.feat_portfolio_unlimited'),
-        t('subscription.feat_chat'),
         t('subscription.feat_search_top'),
         t('subscription.feat_badge_gold'),
-        t('subscription.feat_stats'),
         t('subscription.feat_ads'),
-        t('subscription.feat_sms'),
       ],
-      color: "border-amber-500/50 ring-2 ring-amber-500/10",
+      color: "border-amber-500/50 ring-1 ring-amber-500/10",
+      buttonVariant: "default" as const
+    },
+    {
+      id: "gold",
+      name: isRtl ? "ذهبي" : "Gold",
+      price: "5000 DA",
+      duration: t('subscription.duration_month'),
+      description: isRtl ? "الخطة الفاخرة المتميزة" : "Premium luxury plan",
+      popular: true,
+      features: [
+        isRtl ? "معرض أعمال غير محدود" : "Unlimited portfolio",
+        isRtl ? "الظهور الأول في البحث" : "Top search placement",
+        isRtl ? "شارة ذهبية حصرية" : "Exclusive gold badge",
+        isRtl ? "دعم أولوية 24/7" : "24/7 priority support",
+      ],
+      color: "border-yellow-400 ring-2 ring-yellow-400/30 scale-105",
       buttonVariant: "default" as const
     }
   ];
@@ -156,75 +165,76 @@ export default function Subscription() {
     <div className="min-h-screen flex flex-col bg-background font-sans selection:bg-primary/20">
       <Navbar />
       
-      <main className="flex-1 flex items-center justify-center py-12 md:py-24">
+      <main className="flex-1 flex items-center justify-center py-20 md:py-32">
         <div className="container max-w-[1920px] mx-auto px-4 md:px-8 xl:px-12">
-          <div className="text-center max-w-4xl mx-auto mb-16 md:mb-24 space-y-10">
+          {/* Header */}
+          <div className="text-center max-w-4xl mx-auto mb-20 space-y-8">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
             >
-              <h1 className="text-7xl md:text-9xl font-heading font-black tracking-tight leading-[1.1] mb-10 bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
+              <h1 className="text-6xl md:text-8xl font-heading font-black tracking-tight leading-[1.1] mb-8 bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
                 {t('subscription.title')}
               </h1>
-              <p className="text-2xl md:text-4xl text-muted-foreground font-medium max-w-4xl mx-auto leading-relaxed opacity-80">
+              <p className="text-xl md:text-3xl text-muted-foreground font-medium max-w-4xl mx-auto leading-relaxed opacity-80">
                 {t('subscription.subtitle')}
               </p>
             </motion.div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 lg:gap-16 max-w-[1600px] mx-auto items-stretch">
-            {plans.map((plan, index) => (
-              <motion.div
-                key={plan.id}
-                initial={{ opacity: 0, y: 50, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ 
-                  duration: 1, 
-                  delay: index * 0.2,
-                  ease: [0.23, 1, 0.32, 1] 
-                }}
-                className="flex"
-              >
-                <Card className={`relative h-full border-2 rounded-[3rem] overflow-hidden shadow-2xl flex flex-col transition-all duration-700 hover:-translate-y-4 hover:shadow-primary/10 ${plan.color}`}>
-                  {plan.popular && (
-                    <div className="absolute top-8 left-1/2 -translate-x-1/2 bg-primary text-white px-8 py-2 rounded-full text-sm font-black uppercase tracking-widest shadow-xl">
-                      {isRtl ? "الأكثر طلباً" : "Most Popular"}
-                    </div>
-                  )}
-                  
-                  <CardHeader className="p-8 pb-4 text-center">
-                    <CardTitle className="text-2xl font-black mb-2">{plan.name}</CardTitle>
-                    <CardDescription className="text-sm font-bold min-h-[40px] opacity-70">{plan.description}</CardDescription>
-                    <div className="mt-6">
-                      <span className="text-5xl font-black font-heading tracking-tighter text-foreground">{plan.price}</span>
-                      <span className="text-muted-foreground font-bold ml-1 text-lg">{plan.duration}</span>
-                    </div>
-                  </CardHeader>
+          {/* Phase 1: Basic */}
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="max-w-[1600px] mx-auto mb-20 md:mb-32"
+          >
+            <div className="flex justify-center">
+              <div className="w-full md:w-1/2 lg:w-2/5">
+                <PlanCard plan={basicPlan} onJoin={handleJoin} t={t} i18n={i18n} registerMutation={registerMutation} index={0} />
+              </div>
+            </div>
+          </motion.div>
 
-                  <CardContent className="p-8 pt-0 flex-1">
-                    <div className="space-y-4">
-                      <p className="font-black text-[10px] uppercase tracking-widest text-muted-foreground mb-4">{isRtl ? "ماذا ستحصل:" : "What's included:"}</p>
-                      {plan.features.map((feature, i) => (
-                        <FeatureItem key={i} text={feature} />
-                      ))}
-                    </div>
-                  </CardContent>
+          {/* Divider with animation */}
+          <motion.div
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ duration: 1, delay: 0.3 }}
+            className="h-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent mb-20 md:mb-32"
+          />
 
-                  <CardFooter className="p-8 pt-0">
-                    <JoinDialog 
-                      plan={plan.name} 
-                      onSubmit={handleJoin} 
-                      t={t} 
-                      i18n={i18n} 
-                      registerMutation={registerMutation}
-                      buttonVariant={plan.buttonVariant}
-                    />
-                  </CardFooter>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
+          {/* Phase 2: Premium Plans */}
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            className="max-w-[1600px] mx-auto"
+          >
+            <div className="text-center mb-16">
+              <h2 className="text-4xl md:text-5xl font-heading font-black text-foreground">
+                {isRtl ? "خطط متقدمة" : "Premium Plans"}
+              </h2>
+              <p className="text-muted-foreground font-medium mt-4">
+                {isRtl ? "اختر الخطة التي تناسب احتياجاتك" : "Choose the plan that suits your needs"}
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-10">
+              {premiumPlans.map((plan, index) => (
+                <PlanCard 
+                  key={plan.id}
+                  plan={plan} 
+                  onJoin={handleJoin} 
+                  t={t} 
+                  i18n={i18n} 
+                  registerMutation={registerMutation} 
+                  index={index + 1}
+                />
+              ))}
+            </div>
+          </motion.div>
         </div>
       </main>
 
@@ -233,14 +243,74 @@ export default function Subscription() {
   );
 }
 
-function FeatureItem({ text }: { text: string }) {
+function PlanCard({ plan, onJoin, t, i18n, registerMutation, index }: any) {
+  const isRtl = i18n.language === 'ar';
+  
   return (
-    <div className="flex items-center gap-3">
-      <div className="bg-primary/10 rounded-full p-1 shrink-0">
-        <Check className="w-4 h-4 text-primary" />
-      </div>
-      <span className="text-base font-bold">{text}</span>
-    </div>
+    <motion.div
+      initial={{ opacity: 0, y: 30, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ 
+        duration: 0.7, 
+        delay: index * 0.15,
+        ease: [0.23, 1, 0.32, 1] 
+      }}
+      whileHover={{ y: -8, transition: { duration: 0.3 } }}
+      className="h-full"
+    >
+      <Card className={`relative h-full border-2 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col transition-all duration-700 hover:shadow-primary/20 ${plan.color}`}>
+        {plan.popular && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: index * 0.15 + 0.2 }}
+            className="absolute top-6 left-1/2 -translate-x-1/2 bg-primary text-white px-6 py-1.5 rounded-full text-xs font-black uppercase tracking-widest shadow-xl z-10"
+          >
+            {isRtl ? "الأكثر طلباً" : "Most Popular"}
+          </motion.div>
+        )}
+        
+        <CardHeader className={`${plan.popular ? 'pt-16' : 'pt-8'} px-8 pb-4 text-center`}>
+          <CardTitle className="text-2xl font-black mb-1">{plan.name}</CardTitle>
+          <CardDescription className="text-xs font-bold opacity-70 h-8">{plan.description}</CardDescription>
+          <div className="mt-4 space-y-1">
+            <span className="text-4xl font-black font-heading tracking-tighter text-foreground">{plan.price}</span>
+            <span className="text-muted-foreground font-bold text-sm block">{plan.duration}</span>
+          </div>
+        </CardHeader>
+
+        <CardContent className="px-8 pb-4 flex-1">
+          <div className="space-y-3">
+            <p className="font-black text-[9px] uppercase tracking-widest text-muted-foreground mb-3">{isRtl ? "المميزات:" : "Features:"}</p>
+            {plan.features.map((feature: string, i: number) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: isRtl ? 20 : -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.15 + 0.1 + (i * 0.08) }}
+                className="flex items-center gap-2.5"
+              >
+                <div className="bg-primary/10 rounded-full p-0.5 shrink-0">
+                  <Check className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <span className="text-sm font-bold">{feature}</span>
+              </motion.div>
+            ))}
+          </div>
+        </CardContent>
+
+        <CardFooter className="px-8 pb-8 pt-0">
+          <JoinDialog 
+            plan={plan.name} 
+            onSubmit={onJoin} 
+            t={t} 
+            i18n={i18n} 
+            registerMutation={registerMutation}
+            buttonVariant={plan.buttonVariant}
+          />
+        </CardFooter>
+      </Card>
+    </motion.div>
   );
 }
 
@@ -253,7 +323,7 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation, buttonVariant =
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button size="lg" variant={buttonVariant} className={`w-full h-16 text-lg font-black rounded-2xl shadow-xl transition-all hover:scale-[1.05] active:scale-95 ${buttonVariant === 'default' ? 'shadow-primary/20' : ''}`}>
+        <Button size="lg" variant={buttonVariant} className={`w-full h-14 text-base font-black rounded-2xl shadow-xl transition-all hover:scale-[1.05] active:scale-95 ${buttonVariant === 'default' ? 'shadow-primary/20' : ''}`}>
           {t('subscription.subscribe_now')}
         </Button>
       </DialogTrigger>
