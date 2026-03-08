@@ -317,8 +317,60 @@ function PlanCard({ plan, onJoin, t, i18n, registerMutation, index }: any) {
 function JoinDialog({ plan, onSubmit, t, i18n, registerMutation, buttonVariant = "default" }: { plan: string, onSubmit: (e: any) => void, t: any, i18n: any, registerMutation: any, buttonVariant?: "default" | "outline" }) {
   const [portfolioCount, setPortfolioCount] = useState(0);
   const [selectedWilaya, setSelectedWilaya] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    category: "",
+    daira: "",
+    priceStart: "",
+    yearsOfExperience: "",
+    cardNumber: "",
+    cardHolder: "",
+    expiryMonth: "",
+    expiryYear: "",
+    cvv: ""
+  });
   const portfolioRef = useRef<HTMLInputElement>(null);
   const isRtl = i18n.language === 'ar';
+
+  const handleFormChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleNext = () => {
+    if (currentStep === 1) {
+      setCurrentStep(2);
+    }
+  };
+
+  const handleBack = () => {
+    if (currentStep === 2) {
+      setCurrentStep(1);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const data = {
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      category: formData.category,
+      daira: formData.daira,
+      priceStart: parseInt(formData.priceStart),
+      yearsOfExperience: parseInt(formData.yearsOfExperience),
+      description: isRtl ? "حرفي محترف في منصة حرفتي" : "Professional artisan on Herfati",
+      image: "https://images.unsplash.com/photo-1581244277943-fe4a9c777189?w=400&h=400&fit=crop",
+      isVerified: false,
+      rating: "5.0",
+      reviews: 0,
+      portfolioImages: [],
+      ownerId: "guest-" + Date.now(),
+    };
+    registerMutation.mutate(data);
+  };
 
   return (
     <Dialog>
@@ -329,121 +381,244 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation, buttonVariant =
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto custom-scrollbar p-10 rounded-[3rem]">
         <DialogHeader className="mb-8">
-          <DialogTitle className="font-heading text-3xl font-black">{t('subscription.form_title', { plan })}</DialogTitle>
+          <div className="flex items-center justify-between mb-4">
+            <DialogTitle className="font-heading text-3xl font-black">{t('subscription.form_title', { plan })}</DialogTitle>
+            <div className="flex gap-2">
+              <div className={`h-3 w-8 rounded-full transition-all ${currentStep === 1 ? 'bg-primary' : 'bg-muted'}`} />
+              <div className={`h-3 w-8 rounded-full transition-all ${currentStep === 2 ? 'bg-primary' : 'bg-muted'}`} />
+            </div>
+          </div>
           <DialogDescription className="text-lg font-medium mt-2">
-            {isRtl ? "سجل معلوماتك المهنية وابدأ في استقبال طلبات الزبائن فوراً" : "Register your professional info and start receiving customer requests immediately"}
+            {currentStep === 1 
+              ? (isRtl ? "الخطوة الأولى: معلوماتك الشخصية" : "Step 1: Personal Information")
+              : (isRtl ? "الخطوة الثانية: معلومات الدفع" : "Step 2: Payment Information")}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={onSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <Label className="text-sm font-black uppercase tracking-widest opacity-70">{t('subscription.full_name')}</Label>
-              <div className="relative">
-                <User className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground`} />
-                <Input name="name" placeholder={isRtl ? "محمد علي" : "John Doe"} className={`h-14 rounded-2xl text-lg ${isRtl ? "pr-12" : "pl-12"} bg-muted/30 border-none ring-1 ring-border focus-visible:ring-primary`} required />
-              </div>
-            </div>
-            <div className="space-y-3">
-              <Label className="text-sm font-black uppercase tracking-widest opacity-70">{t('subscription.email')}</Label>
-              <div className="relative">
-                <Mail className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground`} />
-                <Input name="email" type="email" placeholder="example@gmail.com" className={`h-14 rounded-2xl text-lg ${isRtl ? "pr-12" : "pl-12"} bg-muted/30 border-none ring-1 ring-border focus-visible:ring-primary`} required />
-              </div>
-            </div>
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <motion.div
+            initial={{ opacity: 0, x: isRtl ? 50 : -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: isRtl ? -50 : 50 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-6"
+          >
+            {currentStep === 1 ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <Label className="text-sm font-black uppercase tracking-widest opacity-70">{t('subscription.full_name')}</Label>
+                    <div className="relative">
+                      <User className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground`} />
+                      <Input 
+                        placeholder={isRtl ? "محمد علي" : "John Doe"} 
+                        value={formData.name}
+                        onChange={(e) => handleFormChange('name', e.target.value)}
+                        className={`h-14 rounded-2xl text-lg ${isRtl ? "pr-12" : "pl-12"} bg-muted/30 border-none ring-1 ring-border focus-visible:ring-primary`} 
+                        required 
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <Label className="text-sm font-black uppercase tracking-widest opacity-70">{t('subscription.email')}</Label>
+                    <div className="relative">
+                      <Mail className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground`} />
+                      <Input 
+                        type="email" 
+                        placeholder="example@gmail.com" 
+                        value={formData.email}
+                        onChange={(e) => handleFormChange('email', e.target.value)}
+                        className={`h-14 rounded-2xl text-lg ${isRtl ? "pr-12" : "pl-12"} bg-muted/30 border-none ring-1 ring-border focus-visible:ring-primary`} 
+                        required 
+                      />
+                    </div>
+                  </div>
+                </div>
 
-          <div className="space-y-3">
-            <Label className="text-sm font-black uppercase tracking-widest opacity-70">{isRtl ? "رقم الهاتف" : "Phone Number"}</Label>
-            <div className="relative">
-              <Phone className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground`} />
-              <Input name="phone" type="tel" placeholder="06XXXXXXXX" className={`h-14 rounded-2xl text-lg ${isRtl ? "pr-12" : "pl-12"} bg-muted/30 border-none ring-1 ring-border focus-visible:ring-primary`} required />
-            </div>
-          </div>
+                <div className="space-y-3">
+                  <Label className="text-sm font-black uppercase tracking-widest opacity-70">{isRtl ? "رقم الهاتف" : "Phone Number"}</Label>
+                  <div className="relative">
+                    <Phone className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground`} />
+                    <Input 
+                      type="tel" 
+                      placeholder="06XXXXXXXX" 
+                      value={formData.phone}
+                      onChange={(e) => handleFormChange('phone', e.target.value)}
+                      className={`h-14 rounded-2xl text-lg ${isRtl ? "pr-12" : "pl-12"} bg-muted/30 border-none ring-1 ring-border focus-visible:ring-primary`} 
+                      required 
+                    />
+                  </div>
+                </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <Label className="text-sm font-black uppercase tracking-widest opacity-70">{t('subscription.price_start')}</Label>
-              <div className="relative">
-                <Banknote className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground`} />
-                <Input name="priceStart" type="number" placeholder="1500" className={`h-14 rounded-2xl text-lg ${isRtl ? "pr-12" : "pl-12"} bg-muted/30 border-none ring-1 ring-border focus-visible:ring-primary`} required />
-              </div>
-            </div>
-            <div className="space-y-3">
-              <Label className="text-sm font-black uppercase tracking-widest opacity-70">{t('subscription.exp_years')}</Label>
-              <div className="relative">
-                <Briefcase className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground`} />
-                <Input name="yearsOfExperience" type="number" placeholder="5" className={`h-14 rounded-2xl text-lg ${isRtl ? "pr-12" : "pl-12"} bg-muted/30 border-none ring-1 ring-border focus-visible:ring-primary`} required />
-              </div>
-            </div>
-          </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <Label className="text-sm font-black uppercase tracking-widest opacity-70">{t('subscription.price_start')}</Label>
+                    <div className="relative">
+                      <Banknote className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground`} />
+                      <Input 
+                        type="number" 
+                        placeholder="1500" 
+                        value={formData.priceStart}
+                        onChange={(e) => handleFormChange('priceStart', e.target.value)}
+                        className={`h-14 rounded-2xl text-lg ${isRtl ? "pr-12" : "pl-12"} bg-muted/30 border-none ring-1 ring-border focus-visible:ring-primary`} 
+                        required 
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <Label className="text-sm font-black uppercase tracking-widest opacity-70">{t('subscription.exp_years')}</Label>
+                    <div className="relative">
+                      <Briefcase className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground`} />
+                      <Input 
+                        type="number" 
+                        placeholder="5" 
+                        value={formData.yearsOfExperience}
+                        onChange={(e) => handleFormChange('yearsOfExperience', e.target.value)}
+                        className={`h-14 rounded-2xl text-lg ${isRtl ? "pr-12" : "pl-12"} bg-muted/30 border-none ring-1 ring-border focus-visible:ring-primary`} 
+                        required 
+                      />
+                    </div>
+                  </div>
+                </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-3">
-              <Label className="text-sm font-black uppercase tracking-widest opacity-70">{t('subscription.category_label')}</Label>
-              <Select name="category" dir={isRtl ? "rtl" : "ltr"} required>
-                <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none ring-1 ring-border">
-                  <SelectValue placeholder={t('subscription.category_placeholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-3">
-              <Label className="text-sm font-black uppercase tracking-widest opacity-70">{isRtl ? "الولاية" : "Wilaya"}</Label>
-              <Select dir={isRtl ? "rtl" : "ltr"} onValueChange={setSelectedWilaya} required>
-                <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none ring-1 ring-border">
-                  <SelectValue placeholder={isRtl ? "الولاية" : "Wilaya"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {DAIRAS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-3">
-              <Label className="text-sm font-black uppercase tracking-widest opacity-70">{isRtl ? "الدائرة" : "Daira"}</Label>
-              <Select name="daira" dir={isRtl ? "rtl" : "ltr"} disabled={!selectedWilaya} required>
-                <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none ring-1 ring-border">
-                  <SelectValue placeholder={isRtl ? "الدائرة" : "Daira"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {selectedWilaya && (LOCATIONS as any)[selectedWilaya].map((d: string) => (
-                    <SelectItem key={d} value={d}>{d}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-3">
+                    <Label className="text-sm font-black uppercase tracking-widest opacity-70">{t('subscription.category_label')}</Label>
+                    <Select value={formData.category} onValueChange={(value) => handleFormChange('category', value)} dir={isRtl ? "rtl" : "ltr"} required>
+                      <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none ring-1 ring-border">
+                        <SelectValue placeholder={t('subscription.category_placeholder')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CATEGORIES.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-3">
+                    <Label className="text-sm font-black uppercase tracking-widest opacity-70">{isRtl ? "الولاية" : "Wilaya"}</Label>
+                    <Select value={selectedWilaya || ""} onValueChange={(val) => { setSelectedWilaya(val); handleFormChange('daira', (LOCATIONS as any)[val][0]); }} dir={isRtl ? "rtl" : "ltr"} required>
+                      <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none ring-1 ring-border">
+                        <SelectValue placeholder={isRtl ? "الولاية" : "Wilaya"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DAIRAS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-3">
+                    <Label className="text-sm font-black uppercase tracking-widest opacity-70">{isRtl ? "الدائرة" : "Daira"}</Label>
+                    <Select value={formData.daira} onValueChange={(value) => handleFormChange('daira', value)} dir={isRtl ? "rtl" : "ltr"} disabled={!selectedWilaya} required>
+                      <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none ring-1 ring-border">
+                        <SelectValue placeholder={isRtl ? "الدائرة" : "Daira"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectedWilaya && (LOCATIONS as any)[selectedWilaya].map((d: string) => (
+                          <SelectItem key={d} value={d}>{d}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="space-y-3">
+                  <Label className="text-sm font-black uppercase tracking-widest opacity-70">{isRtl ? "اسم صاحب البطاقة" : "Card Holder Name"}</Label>
+                  <Input 
+                    placeholder={isRtl ? "محمد علي" : "John Doe"} 
+                    value={formData.cardHolder}
+                    onChange={(e) => handleFormChange('cardHolder', e.target.value)}
+                    className={`h-14 rounded-2xl text-lg bg-muted/30 border-none ring-1 ring-border focus-visible:ring-primary`} 
+                    required 
+                  />
+                </div>
 
-          <div className="space-y-3">
-            <Label className="text-sm font-black uppercase tracking-widest opacity-70">{t('subscription.portfolio')}</Label>
-            <input 
-              type="file" 
-              hidden 
-              ref={portfolioRef} 
-              multiple 
-              accept="image/*" 
-              onChange={(e) => setPortfolioCount(e.target.files?.length || 0)} 
-            />
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="w-full h-14 rounded-2xl gap-3 border-dashed border-2 hover:bg-primary/5 hover:border-primary transition-all text-lg font-bold"
-              onClick={() => portfolioRef.current?.click()}
-            >
-              <ImageIcon className="h-6 w-6 text-primary" />
-              {portfolioCount > 0 ? t('subscription.portfolio_count', { count: portfolioCount }) : t('subscription.portfolio_select')}
-            </Button>
-          </div>
-          
-          <div className="p-6 border-2 border-dashed rounded-[2rem] bg-primary/5 text-center space-y-2 border-primary/20">
-            <p className="text-lg font-black text-primary">{isRtl ? "التسجيل مجاني لفترة محدودة" : "Registration is free for a limited time"}</p>
-            <p className="text-sm text-muted-foreground font-medium">{isRtl ? "لا يتطلب رفع وصل دفع حالياً" : "No payment receipt required at this time"}</p>
-          </div>
+                <div className="space-y-3">
+                  <Label className="text-sm font-black uppercase tracking-widest opacity-70">{isRtl ? "رقم البطاقة" : "Card Number"}</Label>
+                  <Input 
+                    placeholder="1234 5678 9012 3456" 
+                    value={formData.cardNumber}
+                    onChange={(e) => handleFormChange('cardNumber', e.target.value.replace(/\s/g, ''))}
+                    maxLength={16}
+                    className={`h-14 rounded-2xl text-lg bg-muted/30 border-none ring-1 ring-border focus-visible:ring-primary font-mono`} 
+                    required 
+                  />
+                </div>
 
-          <Button type="submit" className="w-full h-20 text-2xl font-black mt-6 rounded-3xl shadow-2xl shadow-primary/30 active:scale-95 transition-all" disabled={registerMutation.isPending}>
-            {registerMutation.isPending ? t('common.loading') : (isRtl ? "إتمام التسجيل" : "Complete Registration")}
-          </Button>
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <Label className="text-sm font-black uppercase tracking-widest opacity-70">{isRtl ? "انتهاء الصلاحية" : "Expiry Date"}</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Select value={formData.expiryMonth} onValueChange={(value) => handleFormChange('expiryMonth', value)} required>
+                        <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none ring-1 ring-border">
+                          <SelectValue placeholder={isRtl ? "الشهر" : "MM"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 12 }, (_, i) => `${String(i + 1).padStart(2, '0')}`).map(m => (
+                            <SelectItem key={m} value={m}>{m}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select value={formData.expiryYear} onValueChange={(value) => handleFormChange('expiryYear', value)} required>
+                        <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none ring-1 ring-border">
+                          <SelectValue placeholder={isRtl ? "السنة" : "YY"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 10 }, (_, i) => `${String(new Date().getFullYear() + i).slice(-2)}`).map(y => (
+                            <SelectItem key={y} value={y}>{y}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <Label className="text-sm font-black uppercase tracking-widest opacity-70">CVV</Label>
+                    <Input 
+                      placeholder="123" 
+                      value={formData.cvv}
+                      onChange={(e) => handleFormChange('cvv', e.target.value.replace(/\D/g, ''))}
+                      maxLength={3}
+                      className={`h-14 rounded-2xl text-lg bg-muted/30 border-none ring-1 ring-border focus-visible:ring-primary font-mono`} 
+                      required 
+                    />
+                  </div>
+                </div>
+
+                <div className="p-4 border-2 border-dashed rounded-[1.5rem] bg-primary/5 text-center space-y-1 border-primary/20">
+                  <p className="text-sm font-black text-primary">{isRtl ? "بيانات آمنة" : "Secure Payment"}</p>
+                  <p className="text-xs text-muted-foreground font-medium">{isRtl ? "معلوماتك محمية بالكامل" : "Your information is fully protected"}</p>
+                </div>
+              </>
+            )}
+          </motion.div>
+
+          <div className="flex gap-4 mt-8">
+            {currentStep === 2 && (
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="flex-1 h-14 font-black rounded-2xl transition-all active:scale-95"
+                onClick={handleBack}
+              >
+                {isRtl ? "رجوع" : "Back"}
+              </Button>
+            )}
+            {currentStep === 1 ? (
+              <Button 
+                type="button" 
+                className="flex-1 h-14 font-black rounded-2xl shadow-xl active:scale-95 transition-all"
+                onClick={handleNext}
+              >
+                {isRtl ? "التالي" : "Next"}
+              </Button>
+            ) : (
+              <Button 
+                type="submit" 
+                className="flex-1 h-14 font-black rounded-2xl shadow-xl shadow-primary/30 active:scale-95 transition-all" 
+                disabled={registerMutation.isPending}
+              >
+                {registerMutation.isPending ? t('common.loading') : (isRtl ? "إتمام التسجيل" : "Complete Registration")}
+              </Button>
+            )}
+          </div>
         </form>
       </DialogContent>
     </Dialog>
