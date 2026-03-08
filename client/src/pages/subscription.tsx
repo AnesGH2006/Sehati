@@ -362,12 +362,9 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation, buttonVariant =
       priceStart: parseInt(formData.priceStart),
       yearsOfExperience: parseInt(formData.yearsOfExperience),
       description: isRtl ? "حرفي محترف في منصة حرفتي" : "Professional artisan on Herfati",
-      image: "https://images.unsplash.com/photo-1581244277943-fe4a9c777189?w=400&h=400&fit=crop",
+      imageUrl: "https://images.unsplash.com/photo-1581244277943-fe4a9c777189?w=400&h=400&fit=crop",
       isVerified: false,
-      rating: "5.0",
-      reviews: 0,
       portfolioImages: [],
-      ownerId: "guest-" + Date.now(),
     };
     registerMutation.mutate(data);
   };
