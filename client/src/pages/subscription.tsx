@@ -478,7 +478,7 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation, buttonVariant =
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-3">
+                  <div className="space-y-3 md:col-span-3">
                     <Label className="text-sm font-black uppercase tracking-widest opacity-70">{t('subscription.category_label')}</Label>
                     <Select value={formData.category} onValueChange={(value) => handleFormChange('category', value)} dir={isRtl ? "rtl" : "ltr"} required>
                       <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none ring-1 ring-border">
@@ -488,12 +488,24 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation, buttonVariant =
                         {CATEGORIES.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
+                    {formData.category && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="p-4 bg-primary/5 border-l-4 border-primary rounded-lg"
+                      >
+                        <p className="text-sm font-bold text-foreground">
+                          {CATEGORIES.find(c => c.id === formData.category)?.description}
+                        </p>
+                      </motion.div>
+                    )}
                   </div>
                   <div className="space-y-3">
                     <Label className="text-sm font-black uppercase tracking-widest opacity-70">{isRtl ? "الولاية" : "Wilaya"}</Label>
                     <Select value={selectedWilaya || ""} onValueChange={(val) => { setSelectedWilaya(val); handleFormChange('daira', (LOCATIONS as any)[val][0]); }} dir={isRtl ? "rtl" : "ltr"} required>
                       <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none ring-1 ring-border">
-                        <SelectValue placeholder={isRtl ? "الولاية" : "Wilaya"} />
+                        <SelectValue placeholder={isRtl ? "اختر الولاية" : "Select Wilaya"} />
                       </SelectTrigger>
                       <SelectContent>
                         {DAIRAS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
@@ -503,8 +515,8 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation, buttonVariant =
                   <div className="space-y-3">
                     <Label className="text-sm font-black uppercase tracking-widest opacity-70">{isRtl ? "الدائرة" : "Daira"}</Label>
                     <Select value={formData.daira} onValueChange={(value) => handleFormChange('daira', value)} dir={isRtl ? "rtl" : "ltr"} disabled={!selectedWilaya} required>
-                      <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none ring-1 ring-border">
-                        <SelectValue placeholder={isRtl ? "الدائرة" : "Daira"} />
+                      <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none ring-1 ring-border disabled:opacity-50">
+                        <SelectValue placeholder={isRtl ? "اختر الدائرة" : "Select Daira"} />
                       </SelectTrigger>
                       <SelectContent>
                         {selectedWilaya && (LOCATIONS as any)[selectedWilaya].map((d: string) => (

@@ -34,15 +34,78 @@ export const LOCATIONS = {
 export const DAIRAS = Object.keys(LOCATIONS);
 
 export const CATEGORIES = [
-  { id: "carpentry", label: "نجارة", icon: "Hammer" },
-  { id: "plumbing", label: "سباكة", icon: "Wrench" },
-  { id: "electrical", label: "كهرباء", icon: "Zap" },
-  { id: "painting", label: "دهانات", icon: "Paintbrush" },
-  { id: "masonry", label: "بناء", icon: "BrickWall" },
-  { id: "mechanic", label: "ميكانيك", icon: "Car" },
-  { id: "welding", label: "تلحيم", icon: "Flame" },
-  { id: "gardening", label: "بستنة", icon: "Flower2" },
-  { id: "tailoring", label: "خياطة", icon: "Scissors" },
+  { 
+    id: "carpentry", 
+    label: "نجارة", 
+    description: "صنع وإصلاح الأثاث والأبواب والنوافذ والديكورات الخشبية",
+    icon: "Hammer" 
+  },
+  { 
+    id: "plumbing", 
+    label: "سباكة", 
+    description: "تركيب وصيانة أنابيب المياه والتدفئة والصرف الصحي",
+    icon: "Wrench" 
+  },
+  { 
+    id: "electrical", 
+    label: "كهرباء", 
+    description: "تركيب وصيانة التوصيلات الكهربائية والإضاءة والأجهزة الكهربائية",
+    icon: "Zap" 
+  },
+  { 
+    id: "painting", 
+    label: "دهانات", 
+    description: "دهان المباني والأثاث والديكورات بأنواع مختلفة من الدهانات",
+    icon: "Paintbrush" 
+  },
+  { 
+    id: "masonry", 
+    label: "بناء وحجر", 
+    description: "بناء الجدران والأساسات وتركيب الرخام والبلاط والحجر",
+    icon: "BrickWall" 
+  },
+  { 
+    id: "mechanic", 
+    label: "ميكانيك", 
+    description: "إصلاح وصيانة المحركات والسيارات والدراجات النارية",
+    icon: "Car" 
+  },
+  { 
+    id: "welding", 
+    label: "تلحيم وحديد", 
+    description: "تلحيم المعادن وصنع الأبواب والشبابيك والأسوار الحديدية",
+    icon: "Flame" 
+  },
+  { 
+    id: "gardening", 
+    label: "حدائق ونباتات", 
+    description: "تصميم وصيانة الحدائق وزراعة النباتات والأزهار",
+    icon: "Flower2" 
+  },
+  { 
+    id: "tailoring", 
+    label: "خياطة وتطريز", 
+    description: "خياطة الملابس التقليدية والعصرية والمفروشات والتطريز",
+    icon: "Scissors" 
+  },
+  {
+    id: "cleaning",
+    label: "تنظيف ومكافحة حشرات",
+    description: "تنظيف المنازل والمحلات ومكافحة الآفات والحشرات",
+    icon: "Spray"
+  },
+  {
+    id: "cooking",
+    label: "طبخ وحلويات",
+    description: "تحضير الوجبات والحلويات التقليدية والعصرية حسب الطلب",
+    icon: "ChefHat"
+  },
+  {
+    id: "hairdressing",
+    label: "حلاقة وتصفيف شعر",
+    description: "قص وتصفيف الشعر والعناية بالشعر للرجال والنساء",
+    icon: "Scissors"
+  },
 ];
 
 export const MOCK_ARTISANS = [
