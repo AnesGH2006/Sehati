@@ -42,14 +42,19 @@ export async function registerRoutes(
 
   app.post("/api/artisans", async (req, res) => {
     try {
+      console.log("Received artisan data:", req.body);
       const data = insertArtisanSchema.parse(req.body);
+      console.log("Validated data:", data);
       const artisan = await storage.createArtisan(data);
+      console.log("Created artisan:", artisan);
       res.status(201).json(artisan);
     } catch (error) {
+      console.error("Error creating artisan:", error);
       if (error instanceof z.ZodError) {
+        console.error("Validation errors:", error.errors);
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
-      res.status(500).json({ message: "Failed to create artisan" });
+      res.status(500).json({ message: "Failed to create artisan", error: error instanceof Error ? error.message : "Unknown error" });
     }
   });
 
