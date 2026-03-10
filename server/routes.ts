@@ -61,17 +61,20 @@ export async function registerRoutes(
   // Users API
   app.post("/api/users", async (req, res) => {
     try {
+      console.log("Received user registration data:", req.body);
       const data = insertUserSchema.parse(req.body);
       const existing = await storage.getUserByUsername(data.username);
       if (existing) return res.status(400).json({ message: "Username already exists" });
       
       const user = await storage.createUser(data);
+      console.log("User created successfully:", user.id);
       res.status(201).json(user);
     } catch (error) {
+      console.error("Error creating user:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
-      res.status(500).json({ message: "Failed to create user" });
+      res.status(500).json({ message: "Failed to create user", error: error instanceof Error ? error.message : "Unknown error" });
     }
   });
 

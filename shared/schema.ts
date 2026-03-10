@@ -47,6 +47,7 @@ export const artisans = pgTable("artisans", {
   languages: text("languages").array().default(["العربية"]),
   workingHours: jsonb("working_hours"),
   subscriptionType: text("subscription_type").default("free"),
+  subscriptionDuration: integer("subscription_duration").default(1),
   subscriptionExpiresAt: timestamp("subscription_expires_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

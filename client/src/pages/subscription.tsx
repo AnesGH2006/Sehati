@@ -127,7 +127,7 @@ export default function Subscription() {
       description: isRtl ? "حرفي محترف في منصة حرفتي" : "Professional artisan on Herfati",
       image: "https://images.unsplash.com/photo-1581244277943-fe4a9c777189?w=400&h=400&fit=crop",
       isVerified: false,
-      rating: "5.0",
+      rating: "0",
       reviews: 0,
       portfolioImages: [],
       ownerId: "guest-" + Date.now(),
@@ -326,6 +326,7 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation, buttonVariant =
     daira: "",
     priceStart: "",
     yearsOfExperience: "",
+    subscriptionDuration: "1",
     cardNumber: "",
     cardHolder: "",
     expiryMonth: "",
@@ -372,6 +373,8 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation, buttonVariant =
       daira: formData.daira.trim(),
       priceStart: parseInt(formData.priceStart) || 1000,
       yearsOfExperience: parseInt(formData.yearsOfExperience) || 1,
+      subscriptionType: plan.toLowerCase() === 'starter' ? 'free' : plan.toLowerCase(),
+      subscriptionDuration: parseInt(formData.subscriptionDuration) || 1,
       description: isRtl ? "حرفي محترف في منصة حرفتي" : "Professional artisan on Herfati",
       imageUrl: "https://images.unsplash.com/photo-1581244277943-fe4a9c777189?w=400&h=400&fit=crop",
       isVerified: false,
@@ -406,10 +409,11 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation, buttonVariant =
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6">
           <motion.div
-            initial={{ opacity: 0, x: isRtl ? 50 : -50 }}
+            key={currentStep}
+            initial={{ opacity: 0, x: isRtl ? 20 : -20 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: isRtl ? -50 : 50 }}
-            transition={{ duration: 0.3 }}
+            exit={{ opacity: 0, x: isRtl ? -20 : 20 }}
+            transition={{ duration: 0.2 }}
             className="space-y-6"
           >
             {currentStep === 1 ? (
@@ -590,6 +594,20 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation, buttonVariant =
                       required 
                     />
                   </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-sm font-black uppercase tracking-widest opacity-70">{isRtl ? "مدة الاشتراك" : "Subscription Duration"}</Label>
+                  <Select value={formData.subscriptionDuration} onValueChange={(value) => handleFormChange('subscriptionDuration', value)} required>
+                    <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none ring-1 ring-border">
+                      <SelectValue placeholder={isRtl ? "اختر المدة" : "Select Duration"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">{isRtl ? "شهر واحد" : "1 Month"}</SelectItem>
+                      <SelectItem value="3">{isRtl ? "3 أشهر" : "3 Months"}</SelectItem>
+                      <SelectItem value="6">{isRtl ? "6 أشهر" : "6 Months"}</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="p-4 border-2 border-dashed rounded-[1.5rem] bg-primary/5 text-center space-y-1 border-primary/20">
