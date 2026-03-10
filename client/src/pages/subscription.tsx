@@ -379,6 +379,7 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation, buttonVariant =
       imageUrl: "https://images.unsplash.com/photo-1581244277943-fe4a9c777189?w=400&h=400&fit=crop",
       isVerified: false,
       portfolioImages: [],
+      ownerId: "guest-" + Date.now(),
     };
     
     console.log("Submitting artisan data:", data);
@@ -413,7 +414,7 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation, buttonVariant =
             initial={{ opacity: 0, x: isRtl ? 20 : -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: isRtl ? -20 : 20 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
             className="space-y-6"
           >
             {currentStep === 1 ? (
@@ -562,7 +563,7 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation, buttonVariant =
                     <Label className="text-sm font-black uppercase tracking-widest opacity-70">{isRtl ? "انتهاء الصلاحية" : "Expiry Date"}</Label>
                     <div className="grid grid-cols-2 gap-3">
                       <Select value={formData.expiryMonth} onValueChange={(value) => handleFormChange('expiryMonth', value)} required>
-                        <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none ring-1 ring-border">
+                        <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none ring-1 ring-border focus:ring-primary">
                           <SelectValue placeholder={isRtl ? "الشهر" : "MM"} />
                         </SelectTrigger>
                         <SelectContent>
@@ -572,7 +573,7 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation, buttonVariant =
                         </SelectContent>
                       </Select>
                       <Select value={formData.expiryYear} onValueChange={(value) => handleFormChange('expiryYear', value)} required>
-                        <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none ring-1 ring-border">
+                        <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none ring-1 ring-border focus:ring-primary">
                           <SelectValue placeholder={isRtl ? "السنة" : "YY"} />
                         </SelectTrigger>
                         <SelectContent>
@@ -590,7 +591,7 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation, buttonVariant =
                       value={formData.cvv}
                       onChange={(e) => handleFormChange('cvv', e.target.value.replace(/\D/g, ''))}
                       maxLength={3}
-                      className={`h-14 rounded-2xl text-lg bg-muted/30 border-none ring-1 ring-border focus-visible:ring-primary font-mono`} 
+                      className={`h-14 rounded-2xl text-lg bg-muted/30 border-none ring-1 ring-border focus-visible:ring-primary font-mono text-center`} 
                       required 
                     />
                   </div>
