@@ -12,8 +12,6 @@ import {
   messages,
   conversations
 } from "@shared/schema";
-import { db } from "./db";
-import { eq, and, or, desc, ilike, inArray, sql } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -40,28 +38,41 @@ export interface IStorage {
   markMessagesAsRead(conversationId: string, userId: string): Promise<void>;
 }
 
-export class DatabaseStorage implements IStorage {
+export class MemStorage implements IStorage {
+  private users: Map<string, User> = new Map();
+  private artisanList: Artisan[] = [];
+  private artisanIdCounter = 1;
+  private conversationMap: Map<string, Conversation> = new Map();
+  private messageList: Message[] = [];
+  private messageIdCounter = 1;
+
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
+    return this.users.get(id);
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user || undefined;
+    return Array.from(this.users.values()).find(u => u.username === username);
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(insertUser)
-      .returning();
+    const id = `user-${Date.now()}`;
+    const user: User = {
+      id,
+      username: insertUser.username,
+      password: insertUser.password,
+      name: insertUser.name || null,
+      email: insertUser.email || null,
+      phone: insertUser.phone || null,
+      role: insertUser.role || "customer",
+      showPassword: false,
+      createdAt: new Date(),
+    };
+    this.users.set(id, user);
     return user;
   }
 
   async getArtisan(id: number): Promise<Artisan | undefined> {
-    const [artisan] = await db.select().from(artisans).where(eq(artisans.id, id));
-    return artisan || undefined;
+    return this.artisanList.find(a => a.id === id);
   }
 
   async getArtisans(filters?: {
@@ -71,127 +82,119 @@ export class DatabaseStorage implements IStorage {
     minPrice?: number;
     maxPrice?: number;
   }): Promise<Artisan[]> {
-    let query = db.select().from(artisans);
-    
-    const conditions = [];
-    
+    let result = [...this.artisanList];
     if (filters?.category) {
-      conditions.push(eq(artisans.category, filters.category));
+      result = result.filter(a => a.category === filters.category);
     }
-    
     if (filters?.daira) {
-      conditions.push(eq(artisans.daira, filters.daira));
+      result = result.filter(a => a.daira === filters.daira);
     }
-    
     if (filters?.search) {
-      conditions.push(
-        or(
-          ilike(artisans.name, `%${filters.search}%`),
-          ilike(artisans.description, `%${filters.search}%`)
-        )
+      const s = filters.search.toLowerCase();
+      result = result.filter(a => 
+        a.name.toLowerCase().includes(s) || 
+        (a.description && a.description.toLowerCase().includes(s))
       );
     }
-    
     if (filters?.minPrice !== undefined) {
-      conditions.push(sql`${artisans.priceStart} >= ${filters.minPrice}`);
+      result = result.filter(a => a.priceStart >= filters.minPrice!);
     }
-    
     if (filters?.maxPrice !== undefined) {
-      conditions.push(sql`${artisans.priceStart} <= ${filters.maxPrice}`);
+      result = result.filter(a => a.priceStart <= filters.maxPrice!);
     }
-    
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions)) as any;
-    }
-    
-    const result = await query.orderBy(desc(artisans.rating));
     return result;
   }
 
   async createArtisan(insertArtisan: InsertArtisan): Promise<Artisan> {
-    const [artisan] = await db
-      .insert(artisans)
-      .values(insertArtisan)
-      .returning();
+    const artisan: Artisan = {
+      id: this.artisanIdCounter++,
+      userId: insertArtisan.userId || null,
+      name: insertArtisan.name,
+      email: insertArtisan.email,
+      phone: insertArtisan.phone,
+      category: insertArtisan.category,
+      wilaya: insertArtisan.wilaya || "الجزائر",
+      daira: insertArtisan.daira,
+      description: insertArtisan.description || null,
+      priceStart: insertArtisan.priceStart || 1000,
+      rating: 0,
+      reviewCount: 0,
+      isVerified: insertArtisan.isVerified || false,
+      yearsOfExperience: insertArtisan.yearsOfExperience || 0,
+      imageUrl: insertArtisan.imageUrl || null,
+      portfolioImages: insertArtisan.portfolioImages || [],
+      languages: insertArtisan.languages || ["العربية"],
+      workingHours: insertArtisan.workingHours || null,
+      subscriptionType: insertArtisan.subscriptionType || "free",
+      subscriptionDuration: insertArtisan.subscriptionDuration || 1,
+      subscriptionExpiresAt: insertArtisan.subscriptionExpiresAt || null,
+      createdAt: new Date(),
+    };
+    this.artisanList.push(artisan);
     return artisan;
   }
 
   async updateArtisan(id: number, updates: Partial<InsertArtisan>): Promise<Artisan | undefined> {
-    const [artisan] = await db
-      .update(artisans)
-      .set(updates)
-      .where(eq(artisans.id, id))
-      .returning();
-    return artisan || undefined;
+    const idx = this.artisanList.findIndex(a => a.id === id);
+    if (idx === -1) return undefined;
+    this.artisanList[idx] = { ...this.artisanList[idx], ...updates } as Artisan;
+    return this.artisanList[idx];
   }
 
   async getConversation(id: string): Promise<Conversation | undefined> {
-    const [conversation] = await db
-      .select()
-      .from(conversations)
-      .where(eq(conversations.id, id));
-    return conversation || undefined;
+    return this.conversationMap.get(id);
   }
 
   async getConversationsByUser(userId: string, role: 'artisan' | 'customer'): Promise<Conversation[]> {
-    const result = await db
-      .select()
-      .from(conversations)
-      .where(
-        role === 'customer' 
-          ? eq(conversations.customerId, userId)
-          : sql`${conversations.artisanId}::text = ${userId}`
-      )
-      .orderBy(desc(conversations.lastMessageAt));
-    return result;
+    return Array.from(this.conversationMap.values()).filter(c =>
+      role === 'customer' ? c.customerId === userId : String(c.artisanId) === userId
+    );
   }
 
   async createConversation(insertConversation: InsertConversation): Promise<Conversation> {
-    const [conversation] = await db
-      .insert(conversations)
-      .values(insertConversation)
-      .returning();
+    const conversation: Conversation = {
+      id: insertConversation.id,
+      artisanId: insertConversation.artisanId,
+      customerId: insertConversation.customerId,
+      lastMessageAt: new Date(),
+      lastMessage: insertConversation.lastMessage || null,
+      createdAt: new Date(),
+    };
+    this.conversationMap.set(conversation.id, conversation);
     return conversation;
   }
 
   async getMessages(conversationId: string): Promise<Message[]> {
-    const result = await db
-      .select()
-      .from(messages)
-      .where(eq(messages.conversationId, conversationId))
-      .orderBy(messages.createdAt);
-    return result;
+    return this.messageList.filter(m => m.conversationId === conversationId);
   }
 
   async createMessage(insertMessage: InsertMessage): Promise<Message> {
-    const [message] = await db
-      .insert(messages)
-      .values(insertMessage)
-      .returning();
-    
-    await db
-      .update(conversations)
-      .set({
-        lastMessageAt: new Date(),
-        lastMessage: insertMessage.content,
-      })
-      .where(eq(conversations.id, insertMessage.conversationId));
-    
+    const message: Message = {
+      id: this.messageIdCounter++,
+      conversationId: insertMessage.conversationId,
+      senderId: insertMessage.senderId,
+      receiverId: insertMessage.receiverId,
+      senderType: insertMessage.senderType,
+      content: insertMessage.content,
+      isRead: false,
+      createdAt: new Date(),
+    };
+    this.messageList.push(message);
+    const conv = this.conversationMap.get(insertMessage.conversationId);
+    if (conv) {
+      conv.lastMessageAt = new Date();
+      conv.lastMessage = insertMessage.content;
+    }
     return message;
   }
 
   async markMessagesAsRead(conversationId: string, userId: string): Promise<void> {
-    await db
-      .update(messages)
-      .set({ isRead: true })
-      .where(
-        and(
-          eq(messages.conversationId, conversationId),
-          eq(messages.receiverId, userId),
-          eq(messages.isRead, false)
-        )
-      );
+    this.messageList.forEach(m => {
+      if (m.conversationId === conversationId && m.receiverId === userId) {
+        m.isRead = true;
+      }
+    });
   }
 }
 
-export const storage = new DatabaseStorage();
+export const storage = new MemStorage();

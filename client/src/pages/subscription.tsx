@@ -342,6 +342,31 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation, buttonVariant =
 
   const handleNext = () => {
     if (currentStep === 1) {
+      if (!formData.name.trim() || !formData.email.trim() || !formData.phone.trim() || !formData.category || !selectedWilaya || !formData.daira.trim() || !formData.priceStart || !formData.yearsOfExperience) {
+        toast({
+          title: isRtl ? "تنبيه" : "Warning",
+          description: isRtl ? "الرجاء ملء جميع الحقول المطلوبة قبل المتابعة" : "Please fill all required fields before continuing",
+          variant: "destructive",
+        });
+        return;
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email.trim())) {
+        toast({
+          title: isRtl ? "خطأ" : "Error",
+          description: isRtl ? "الرجاء إدخال بريد إلكتروني صحيح" : "Please enter a valid email",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (formData.phone.trim().length < 10) {
+        toast({
+          title: isRtl ? "خطأ" : "Error",
+          description: isRtl ? "الرجاء إدخال رقم هاتف صحيح" : "Please enter a valid phone number",
+          variant: "destructive",
+        });
+        return;
+      }
       setCurrentStep(2);
     }
   };
