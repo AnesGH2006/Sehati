@@ -16,20 +16,76 @@ import {
   Clock,
   MapPin,
   Save,
-  BadgeCheck
+  BadgeCheck,
+  LogOut,
+  Trash2
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { LOCATIONS, DAIRAS } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 
 export default function ArtisanDashboard() {
   const { toast } = useToast();
+  const { t, i18n } = useTranslation();
+  const { artisan, isLoggedIn, logout } = useAuth();
+  const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
+  const isRtl = i18n.language === 'ar';
   const [isEditingLocation, setIsEditingLocation] = useState(false);
-  const [wilaya, setWilaya] = useState("الجزائر");
-  const [daira, setDaira] = useState("Algiers");
+  const [wilaya, setWilaya] = useState(artisan?.wilaya || "الجزائر");
+  const [daira, setDaira] = useState(artisan?.daira || "");
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/artisans/${artisan?.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
+      return res.json();
+    },
+    onSuccess: () => {
+      logout();
+      queryClient.invalidateQueries({ queryKey: ["/api/artisans"] });
+      toast({
+        title: isRtl ? "تم حذف الحساب" : "Account Deleted",
+        description: isRtl ? "تم حذف حسابك بنجاح" : "Your account has been deleted successfully",
+      });
+      setLocation("/");
+    },
+    onError: () => {
+      toast({
+        title: isRtl ? "خطأ" : "Error",
+        description: isRtl ? "فشل حذف الحساب" : "Failed to delete account",
+        variant: "destructive",
+      });
+    },
+  });
+
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#050505] text-white font-sans">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center space-y-6"
+          >
+            <h2 className="text-3xl font-heading font-bold">{isRtl ? "يجب تسجيل الدخول أولاً" : "Please login first"}</h2>
+            <p className="text-muted-foreground">{isRtl ? "سجّل كحرفي للوصول إلى لوحة التحكم" : "Register as an artisan to access the dashboard"}</p>
+            <Button onClick={() => setLocation("/subscription")} className="bg-primary hover:bg-primary/90">
+              {isRtl ? "انضم كحرفي" : "Join as Artisan"}
+            </Button>
+          </motion.div>
+        </main>
+      </div>
+    );
+  }
 
   const handleSaveLocation = () => {
     setIsEditingLocation(false);
@@ -66,7 +122,7 @@ export default function ArtisanDashboard() {
                 لوحة التحكم الاحترافية
               </div>
               <h1 className="text-6xl md:text-7xl font-heading font-black tracking-tighter bg-gradient-to-l from-white via-white to-white/40 bg-clip-text text-transparent">
-                أهلاً بك، <span className="text-primary italic">يا فنان</span>
+                أهلاً بك، <span className="text-primary italic">{artisan?.name || "يا فنان"}</span>
               </h1>
               <p className="text-muted-foreground font-medium text-lg max-w-md leading-relaxed">
                 تتبع أداء أعمالك، تواصل مع زبائنك، وقم بإدارة متجرك الإلكتروني من مكان واحد.

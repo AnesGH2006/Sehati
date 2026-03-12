@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ export default function Subscription() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { login } = useAuth();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [activePhase, setActivePhase] = useState<"basic" | "premium">("basic");
   const isRtl = i18n.language === 'ar';
@@ -96,16 +98,27 @@ export default function Subscription() {
       const res = await apiRequest("POST", "/api/artisans", data);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       setIsSubmitted(true);
+      login({
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        category: data.category,
+        wilaya: data.wilaya,
+        daira: data.daira,
+        subscriptionType: data.subscriptionType,
+        imageUrl: data.imageUrl,
+      });
       toast({
         title: isRtl ? "تم التسجيل بنجاح" : "Registration Successful",
-        description: isRtl ? "أهلاً بك في عائلة حرفتي! حسابك مفعل الآن. جاري التوجيه..." : "Welcome to Herfati! Your account is now active. Redirecting...",
+        description: isRtl ? "أهلاً بك في عائلة حرفتي! جاري التوجيه للوحة التحكم..." : "Welcome to Herfati! Redirecting to dashboard...",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/artisans"] });
       setTimeout(() => {
-        setLocation("/artisans");
-      }, 2000);
+        setLocation("/artisan/dashboard");
+      }, 1500);
     },
     onError: (error: Error) => {
       toast({

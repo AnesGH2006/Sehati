@@ -15,6 +15,7 @@ import About from "@/pages/about";
 import { ThemeProvider } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import { AuthProvider } from "@/lib/auth";
 
 function PageTransition({ children }: { children: React.ReactNode }) {
   return (
@@ -113,10 +114,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light">
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );
