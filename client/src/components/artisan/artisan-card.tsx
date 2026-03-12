@@ -19,9 +19,10 @@ interface ArtisanCardProps {
   image: string;
   isVerified: boolean;
   portfolioImages?: string[];
+  isNew?: boolean;
 }
 
-export function ArtisanCard({ id, name, category, daira, phone, rating, reviews, priceStart, yearsOfExperience = 7, image, isVerified, portfolioImages = [] }: ArtisanCardProps) {
+export function ArtisanCard({ id, name, category, daira, phone, rating, reviews, priceStart, yearsOfExperience = 7, image, isVerified, portfolioImages = [], isNew = false }: ArtisanCardProps) {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === 'ar';
 
@@ -39,6 +40,15 @@ export function ArtisanCard({ id, name, category, daira, phone, rating, reviews,
           <Badge className="bg-primary/20 hover:bg-primary/30 text-primary backdrop-blur-2xl border border-primary/20 shadow-2xl font-black px-3 py-1 rounded-xl text-[10px] uppercase tracking-wider">
             {category}
           </Badge>
+          {isNew && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-yellow-500/20 text-yellow-400 text-[9px] px-2 py-1 rounded-xl flex items-center gap-1.5 backdrop-blur-2xl border border-yellow-500/30 shadow-2xl font-black"
+            >
+              <span>{isRtl ? "جديد ✨" : "New ✨"}</span>
+            </motion.div>
+          )}
           {isVerified && (
             <motion.div 
               initial={{ opacity: 0, x: isRtl ? 20 : -20 }}

@@ -100,9 +100,12 @@ export default function Subscription() {
       setIsSubmitted(true);
       toast({
         title: isRtl ? "تم التسجيل بنجاح" : "Registration Successful",
-        description: isRtl ? "أهلاً بك في عائلة حرفتي! حسابك مفعل الآن." : "Welcome to Herfati! Your account is now active.",
+        description: isRtl ? "أهلاً بك في عائلة حرفتي! حسابك مفعل الآن. جاري التوجيه..." : "Welcome to Herfati! Your account is now active. Redirecting...",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/artisans"] });
+      setTimeout(() => {
+        setLocation("/artisans");
+      }, 2000);
     },
     onError: (error: Error) => {
       toast({
@@ -480,7 +483,7 @@ function JoinDialog({ plan, onSubmit, t, i18n, registerMutation, buttonVariant =
                     <Phone className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground`} />
                     <Input 
                       type="tel" 
-                      placeholder="06XXXXXXXX" 
+                      placeholder="06XXXXXXXX"
                       value={formData.phone}
                       onChange={(e) => handleFormChange('phone', e.target.value)}
                       className={`h-14 rounded-2xl text-lg ${isRtl ? "pr-12" : "pl-12"} bg-muted/30 border-none ring-1 ring-border focus-visible:ring-primary`} 

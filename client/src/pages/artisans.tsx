@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
 
 export default function Artisans() {
   const { t, i18n } = useTranslation();
@@ -24,15 +25,46 @@ export default function Artisans() {
   const [selectedDairas, setSelectedDairas] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState([10000]);
 
+  const { data: apiArtisans = [] } = useQuery({
+    queryKey: ["/api/artisans"],
+    queryFn: async () => {
+      const res = await fetch("/api/artisans");
+      if (!res.ok) return [];
+      return res.json();
+    },
+    refetchInterval: 5000,
+  });
+
+  const allArtisans = useMemo(() => {
+    const apiMapped = apiArtisans.map((a: any) => ({
+      id: a.id + 10000,
+      name: a.name,
+      category: a.category,
+      daira: a.daira,
+      wilaya: a.wilaya,
+      phone: a.phone || "06XXXXXXXX",
+      description: a.description || "",
+      rating: a.rating || 0,
+      reviews: a.reviewCount || 0,
+      priceStart: a.priceStart,
+      yearsOfExperience: a.yearsOfExperience || 1,
+      image: a.imageUrl || "https://images.unsplash.com/photo-1581244277943-fe4a9c777189?w=400&h=400&fit=crop",
+      isVerified: a.isVerified || false,
+      portfolioImages: a.portfolioImages || [],
+      isNew: true,
+    }));
+    return [...apiMapped, ...MOCK_ARTISANS];
+  }, [apiArtisans]);
+
   const filteredArtisans = useMemo(() => {
-    return MOCK_ARTISANS.filter(artisan => {
-      const matchesSearch = artisan.name.includes(searchQuery) || artisan.description.includes(searchQuery);
+    return allArtisans.filter((artisan: any) => {
+      const matchesSearch = artisan.name.includes(searchQuery) || (artisan.description && artisan.description.includes(searchQuery));
       const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(artisan.category);
       const matchesDaira = selectedDairas.length === 0 || selectedDairas.includes(artisan.daira);
       const matchesPrice = artisan.priceStart <= priceRange[0];
       return matchesSearch && matchesCategory && matchesDaira && matchesPrice;
     });
-  }, [searchQuery, selectedCategories, selectedDairas, priceRange]);
+  }, [allArtisans, searchQuery, selectedCategories, selectedDairas, priceRange]);
 
   const toggleCategory = (cat: string) => {
     setSelectedCategories(prev => 
@@ -182,6 +214,7 @@ export default function Artisans() {
                       image={artisan.image}
                       isVerified={artisan.isVerified}
                       portfolioImages={artisan.portfolioImages}
+                      isNew={artisan.isNew}
                     />
                   </motion.div>
                 ))}
