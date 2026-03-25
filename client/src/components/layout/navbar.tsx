@@ -32,7 +32,7 @@ export function Navbar() {
     { href: "/", label: t('nav.home') },
     { href: "/artisans", label: t('nav.artisans') },
     { href: "/subscription", label: t('nav.subscriptions') },
-    { href: "/about", label: t('nav.about') || "من نحن" },
+    { href: "https://portfolio-builder--alaagh23alg.replit.app", label: t('nav.about') || "من نحن" },
   ];
 
   const languages = [
