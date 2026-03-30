@@ -1,0 +1,34 @@
+{
+  "artisans": [
+    {
+      "id": 1,
+      "userId": null,
+      "name": "NHHH",
+      "email": "alaagh23dz@gmail.com",
+      "phone": "0699524576",
+      "category": "mechanic",
+      "wilaya": "الجزائر",
+      "daira": "الدار البيضاء",
+      "description": "حرفي محترف في منصة حرفتي",
+      "priceStart": 9000,
+      "rating": 0,
+      "reviewCount": 0,
+      "isVerified": false,
+      "yearsOfExperience": 6,
+      "imageUrl": "https://ui-avatars.com/api/?name=NHHH&background=2DD4BF&color=fff&size=400",
+      "portfolioImages": [],
+      "languages": [
+        "العربية"
+      ],
+      "workingHours": null,
+      "subscriptionType": "free",
+      "subscriptionDuration": 1,
+      "subscriptionExpiresAt": null,
+      "createdAt": "2026-03-30T19:56:23.592Z"
+    }
+  ],
+  "artisanIdCounter": 2,
+  "conversations": [],
+  "messages": [],
+  "messageIdCounter": 1
+}

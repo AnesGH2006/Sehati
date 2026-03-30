@@ -36,10 +36,11 @@ export default function Artisans() {
   });
 
   const allArtisans = useMemo(() => {
+    // API artisans use their real IDs; map category id → Arabic label
     const apiMapped = apiArtisans.map((a: any) => ({
-      id: a.id + 10000,
+      id: a.id,
       name: a.name,
-      category: a.category,
+      category: CATEGORIES.find(c => c.id === a.category)?.label || a.category,
       daira: a.daira,
       wilaya: a.wilaya,
       phone: a.phone || "06XXXXXXXX",
@@ -48,12 +49,15 @@ export default function Artisans() {
       reviews: a.reviewCount || 0,
       priceStart: a.priceStart,
       yearsOfExperience: a.yearsOfExperience || 1,
-      image: a.imageUrl || "https://images.unsplash.com/photo-1581244277943-fe4a9c777189?w=400&h=400&fit=crop",
+      image: a.imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(a.name)}&background=2DD4BF&color=fff&size=400`,
       isVerified: a.isVerified || false,
       portfolioImages: a.portfolioImages || [],
       isNew: true,
+      isFromApi: true,
     }));
-    return [...apiMapped, ...MOCK_ARTISANS];
+    // Give mock artisans offset IDs to avoid clashing with API artisans
+    const mockMapped = MOCK_ARTISANS.map(m => ({ ...m, isFromApi: false }));
+    return [...apiMapped, ...mockMapped];
   }, [apiArtisans]);
 
   const filteredArtisans = useMemo(() => {

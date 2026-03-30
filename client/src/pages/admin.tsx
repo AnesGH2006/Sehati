@@ -99,7 +99,7 @@ export default function Admin() {
             <div className="h-16 w-16 rounded-2xl bg-primary/20 flex items-center justify-center mx-auto">
               <Shield className="h-8 w-8 text-primary" />
             </div>
-            <h1 className="text-3xl font-heading font-black text-white">لوحة الأدمن</h1>
+            <h1 className="text-3xl font-heading font-black text-white">لوحة الادارة</h1>
             <p className="text-zinc-400 text-sm">أدخل كلمة المرور للوصول</p>
           </div>
           <div className="space-y-4">
