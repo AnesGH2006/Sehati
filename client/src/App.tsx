@@ -12,6 +12,7 @@ import Subscription from "@/pages/subscription";
 import Auth from "@/pages/auth";
 import ArtisanDashboard from "@/pages/artisan-dashboard";
 import About from "@/pages/about";
+import Admin from "@/pages/admin";
 import { ThemeProvider } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -98,6 +99,9 @@ function Router() {
             <PageTransition>
               <About />
             </PageTransition>
+          </Route>
+          <Route path="/admin">
+            <Admin />
           </Route>
           <Route>
             <PageTransition>

@@ -7,17 +7,45 @@ import {
   type InsertMessage,
   type Conversation,
   type InsertConversation,
-  users,
-  artisans,
-  messages,
-  conversations
 } from "@shared/schema";
+import fs from "fs";
+import path from "path";
+
+const DATA_FILE = path.join(process.cwd(), "data.json");
+
+interface DataStore {
+  artisans: Artisan[];
+  artisanIdCounter: number;
+  conversations: Conversation[];
+  messages: Message[];
+  messageIdCounter: number;
+}
+
+function loadData(): DataStore {
+  try {
+    if (fs.existsSync(DATA_FILE)) {
+      const raw = fs.readFileSync(DATA_FILE, "utf-8");
+      return JSON.parse(raw);
+    }
+  } catch {}
+  return {
+    artisans: [],
+    artisanIdCounter: 1,
+    conversations: [],
+    messages: [],
+    messageIdCounter: 1,
+  };
+}
+
+function saveData(store: DataStore) {
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(store, null, 2), "utf-8");
+  } catch (e) {
+    console.error("Failed to save data:", e);
+  }
+}
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
-  
   getArtisan(id: number): Promise<Artisan | undefined>;
   getArtisans(filters?: {
     category?: string;
@@ -27,52 +55,33 @@ export interface IStorage {
     maxPrice?: number;
   }): Promise<Artisan[]>;
   createArtisan(artisan: InsertArtisan): Promise<Artisan>;
-  updateArtisan(id: number, updates: Partial<InsertArtisan>): Promise<Artisan | undefined>;
-  
+  updateArtisan(id: number, updates: Partial<Artisan>): Promise<Artisan | undefined>;
+  deleteArtisan(id: number): Promise<boolean>;
+
   getConversation(id: string): Promise<Conversation | undefined>;
+  getAllConversations(): Promise<Conversation[]>;
   getConversationsByUser(userId: string, role: 'artisan' | 'customer'): Promise<Conversation[]>;
   createConversation(conversation: InsertConversation): Promise<Conversation>;
   
   getMessages(conversationId: string): Promise<Message[]>;
+  getAllMessages(): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
   markMessagesAsRead(conversationId: string, userId: string): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User> = new Map();
-  private artisanList: Artisan[] = [];
-  private artisanIdCounter = 1;
-  private conversationMap: Map<string, Conversation> = new Map();
-  private messageList: Message[] = [];
-  private messageIdCounter = 1;
+export class FileStorage implements IStorage {
+  private store: DataStore;
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  constructor() {
+    this.store = loadData();
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(u => u.username === username);
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = `user-${Date.now()}`;
-    const user: User = {
-      id,
-      username: insertUser.username,
-      password: insertUser.password,
-      name: insertUser.name || null,
-      email: insertUser.email || null,
-      phone: insertUser.phone || null,
-      role: insertUser.role || "customer",
-      showPassword: false,
-      createdAt: new Date(),
-    };
-    this.users.set(id, user);
-    return user;
+  private save() {
+    saveData(this.store);
   }
 
   async getArtisan(id: number): Promise<Artisan | undefined> {
-    return this.artisanList.find(a => a.id === id);
+    return this.store.artisans.find(a => a.id === id);
   }
 
   async getArtisans(filters?: {
@@ -82,13 +91,9 @@ export class MemStorage implements IStorage {
     minPrice?: number;
     maxPrice?: number;
   }): Promise<Artisan[]> {
-    let result = [...this.artisanList];
-    if (filters?.category) {
-      result = result.filter(a => a.category === filters.category);
-    }
-    if (filters?.daira) {
-      result = result.filter(a => a.daira === filters.daira);
-    }
+    let result = [...this.store.artisans];
+    if (filters?.category) result = result.filter(a => a.category === filters.category);
+    if (filters?.daira) result = result.filter(a => a.daira === filters.daira);
     if (filters?.search) {
       const s = filters.search.toLowerCase();
       result = result.filter(a => 
@@ -96,18 +101,14 @@ export class MemStorage implements IStorage {
         (a.description && a.description.toLowerCase().includes(s))
       );
     }
-    if (filters?.minPrice !== undefined) {
-      result = result.filter(a => a.priceStart >= filters.minPrice!);
-    }
-    if (filters?.maxPrice !== undefined) {
-      result = result.filter(a => a.priceStart <= filters.maxPrice!);
-    }
+    if (filters?.minPrice !== undefined) result = result.filter(a => a.priceStart >= filters.minPrice!);
+    if (filters?.maxPrice !== undefined) result = result.filter(a => a.priceStart <= filters.maxPrice!);
     return result;
   }
 
   async createArtisan(insertArtisan: InsertArtisan): Promise<Artisan> {
     const artisan: Artisan = {
-      id: this.artisanIdCounter++,
+      id: this.store.artisanIdCounter++,
       userId: insertArtisan.userId || null,
       name: insertArtisan.name,
       email: insertArtisan.email,
@@ -130,28 +131,43 @@ export class MemStorage implements IStorage {
       subscriptionExpiresAt: insertArtisan.subscriptionExpiresAt || null,
       createdAt: new Date(),
     };
-    this.artisanList.push(artisan);
+    this.store.artisans.push(artisan);
+    this.save();
     return artisan;
   }
 
-  async updateArtisan(id: number, updates: Partial<InsertArtisan>): Promise<Artisan | undefined> {
-    const idx = this.artisanList.findIndex(a => a.id === id);
+  async updateArtisan(id: number, updates: Partial<Artisan>): Promise<Artisan | undefined> {
+    const idx = this.store.artisans.findIndex(a => a.id === id);
     if (idx === -1) return undefined;
-    this.artisanList[idx] = { ...this.artisanList[idx], ...updates } as Artisan;
-    return this.artisanList[idx];
+    this.store.artisans[idx] = { ...this.store.artisans[idx], ...updates };
+    this.save();
+    return this.store.artisans[idx];
+  }
+
+  async deleteArtisan(id: number): Promise<boolean> {
+    const before = this.store.artisans.length;
+    this.store.artisans = this.store.artisans.filter(a => a.id !== id);
+    this.save();
+    return this.store.artisans.length < before;
   }
 
   async getConversation(id: string): Promise<Conversation | undefined> {
-    return this.conversationMap.get(id);
+    return this.store.conversations.find(c => c.id === id);
+  }
+
+  async getAllConversations(): Promise<Conversation[]> {
+    return [...this.store.conversations];
   }
 
   async getConversationsByUser(userId: string, role: 'artisan' | 'customer'): Promise<Conversation[]> {
-    return Array.from(this.conversationMap.values()).filter(c =>
+    return this.store.conversations.filter(c =>
       role === 'customer' ? c.customerId === userId : String(c.artisanId) === userId
     );
   }
 
   async createConversation(insertConversation: InsertConversation): Promise<Conversation> {
+    const existing = this.store.conversations.find(c => c.id === insertConversation.id);
+    if (existing) return existing;
     const conversation: Conversation = {
       id: insertConversation.id,
       artisanId: insertConversation.artisanId,
@@ -160,17 +176,22 @@ export class MemStorage implements IStorage {
       lastMessage: insertConversation.lastMessage || null,
       createdAt: new Date(),
     };
-    this.conversationMap.set(conversation.id, conversation);
+    this.store.conversations.push(conversation);
+    this.save();
     return conversation;
   }
 
   async getMessages(conversationId: string): Promise<Message[]> {
-    return this.messageList.filter(m => m.conversationId === conversationId);
+    return this.store.messages.filter(m => m.conversationId === conversationId);
+  }
+
+  async getAllMessages(): Promise<Message[]> {
+    return [...this.store.messages];
   }
 
   async createMessage(insertMessage: InsertMessage): Promise<Message> {
     const message: Message = {
-      id: this.messageIdCounter++,
+      id: this.store.messageIdCounter++,
       conversationId: insertMessage.conversationId,
       senderId: insertMessage.senderId,
       receiverId: insertMessage.receiverId,
@@ -179,22 +200,24 @@ export class MemStorage implements IStorage {
       isRead: false,
       createdAt: new Date(),
     };
-    this.messageList.push(message);
-    const conv = this.conversationMap.get(insertMessage.conversationId);
+    this.store.messages.push(message);
+    const conv = this.store.conversations.find(c => c.id === insertMessage.conversationId);
     if (conv) {
       conv.lastMessageAt = new Date();
       conv.lastMessage = insertMessage.content;
     }
+    this.save();
     return message;
   }
 
   async markMessagesAsRead(conversationId: string, userId: string): Promise<void> {
-    this.messageList.forEach(m => {
+    this.store.messages.forEach(m => {
       if (m.conversationId === conversationId && m.receiverId === userId) {
         m.isRead = true;
       }
     });
+    this.save();
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new FileStorage();
