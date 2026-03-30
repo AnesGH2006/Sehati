@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
-import { MOCK_ARTISANS } from "@/lib/constants";
-import { MapPin, Star, MessageCircle, Share2, Heart, CheckCircle2, Clock, Globe, X, Phone, User } from "lucide-react";
+import { MOCK_ARTISANS, CATEGORIES } from "@/lib/constants";
+import { MapPin, Star, MessageCircle, Share2, Heart, CheckCircle2, Clock, Globe, Phone, User, Briefcase, Banknote } from "lucide-react";
 import { Link, useRoute, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -30,11 +30,22 @@ export default function Profile() {
   });
 
   const mockArtisan = MOCK_ARTISANS.find(a => a.id === id) || MOCK_ARTISANS[0];
-  const artisan = apiArtisan || {
+  const raw = apiArtisan || null;
+  // Map category id → label if needed
+  const categoryLabel = raw
+    ? (CATEGORIES.find(c => c.id === raw.category)?.label || raw.category)
+    : mockArtisan.category;
+
+  const artisan = raw ? {
+    ...raw,
+    category: categoryLabel,
+    imageUrl: raw.imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(raw.name)}&background=2DD4BF&color=fff&size=400`,
+  } : {
     id: mockArtisan.id,
     name: mockArtisan.name,
     category: mockArtisan.category,
     daira: mockArtisan.daira,
+    wilaya: "",
     imageUrl: mockArtisan.image,
     rating: mockArtisan.rating,
     reviewCount: mockArtisan.reviews,
@@ -42,6 +53,8 @@ export default function Profile() {
     isVerified: mockArtisan.isVerified,
     portfolioImages: [],
     yearsOfExperience: 5,
+    priceStart: mockArtisan.priceStart,
+    phone: mockArtisan.phone,
   };
 
   const handleContactClick = () => {
@@ -162,21 +175,43 @@ export default function Profile() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-6 mt-4 pt-4 border-t border-border/50 flex-wrap">
+                <div className="flex items-center gap-4 mt-4 pt-4 border-t border-border/50 flex-wrap">
                   <div className="flex items-center gap-1">
                     <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                    <span className="font-bold text-lg">{artisan.rating || mockArtisan.rating}</span>
-                    <span className="text-muted-foreground">({artisan.reviewCount || mockArtisan.reviews} تقييم)</span>
+                    <span className="font-bold text-lg">{artisan.rating || mockArtisan.rating || 0}</span>
+                    <span className="text-muted-foreground text-sm">({artisan.reviewCount || mockArtisan.reviews || 0} تقييم)</span>
                   </div>
-                  <div className="w-px h-6 bg-border hidden md:block"></div>
-                  <div className="flex items-center gap-2 text-sm">
+                  {artisan.yearsOfExperience && artisan.yearsOfExperience > 0 && (
+                    <>
+                      <div className="w-px h-5 bg-border hidden md:block" />
+                      <div className="flex items-center gap-1.5 text-sm">
+                        <Briefcase className="w-4 h-4 text-muted-foreground" />
+                        <span>{artisan.yearsOfExperience} سنوات خبرة</span>
+                      </div>
+                    </>
+                  )}
+                  {artisan.priceStart && (
+                    <>
+                      <div className="w-px h-5 bg-border hidden md:block" />
+                      <div className="flex items-center gap-1.5 text-sm">
+                        <Banknote className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-bold text-primary">من {artisan.priceStart} دج</span>
+                      </div>
+                    </>
+                  )}
+                  {artisan.phone && (
+                    <>
+                      <div className="w-px h-5 bg-border hidden md:block" />
+                      <div className="flex items-center gap-1.5 text-sm">
+                        <Phone className="w-4 h-4 text-muted-foreground" />
+                        <span dir="ltr">{artisan.phone}</span>
+                      </div>
+                    </>
+                  )}
+                  <div className="w-px h-5 bg-border hidden md:block" />
+                  <div className="flex items-center gap-1.5 text-sm">
                     <Clock className="w-4 h-4 text-muted-foreground" />
                     <span>يرد خلال ساعة</span>
-                  </div>
-                  <div className="w-px h-6 bg-border hidden md:block"></div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Globe className="w-4 h-4 text-muted-foreground" />
-                    <span>يتحدث العربية، الفرنسية</span>
                   </div>
                 </div>
               </div>

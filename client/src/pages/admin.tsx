@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trash2, MessageSquare, ChevronDown, ChevronUp, Shield, LogOut, Eye, Users } from "lucide-react";
+import { Trash2, MessageSquare, ChevronDown, ChevronUp, Shield, LogOut, Eye, EyeOff, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const ADMIN_STORAGE_KEY = "herfati_admin_session";
@@ -17,6 +17,7 @@ export default function Admin() {
     try { return !!localStorage.getItem(ADMIN_STORAGE_KEY); } catch { return false; }
   });
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
   const [expandedConv, setExpandedConv] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"artisans" | "chats">("artisans");
@@ -103,14 +104,23 @@ export default function Admin() {
             <p className="text-zinc-400 text-sm">أدخل كلمة المرور للوصول</p>
           </div>
           <div className="space-y-4">
-            <Input
-              type="password"
-              placeholder="كلمة المرور"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleLogin()}
-              className="h-14 rounded-2xl bg-white/5 border-white/10 text-white placeholder:text-zinc-500 text-center text-xl tracking-widest"
-            />
+            <div className="relative">
+              <Input
+                type={showPassword ? "text" : "password"}
+                placeholder="كلمة المرور"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleLogin()}
+                className="h-14 rounded-2xl bg-white/5 border-white/10 text-white placeholder:text-zinc-500 text-center text-xl pr-12"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(p => !p)}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            </div>
             <Button
               onClick={handleLogin}
               disabled={loginLoading || !password}
