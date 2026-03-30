@@ -140,7 +140,7 @@ export function Navbar() {
           ) : (
             <>
               <Link href="/subscription">
-                <Button className="bg-primary hover:bg-primary/90">{isRtl ? "انضم كحرفي" : "Join as Artisan"}</Button>
+                <Button className="bg-primary hover:bg-primary/90">{isRtl ? "انضم كحرفي" : "Join as Artisan" }</Button>
               </Link>
             </>
           )}
