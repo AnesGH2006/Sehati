@@ -98,9 +98,17 @@ export default function Chat() {
   }, [messages]);
 
   const handleSend = () => {
-    const text = selectedImage ? (inputText || "📷 صورة") : inputText;
-    if (!text.trim()) return;
-    sendMutation.mutate(text);
+    if (!inputText.trim() && !selectedImage) return;
+    // If image selected, send it as the message content (as data URL)
+    if (selectedImage) {
+      sendMutation.mutate(selectedImage);
+      if (inputText.trim()) {
+        // Also send text as a separate message
+        setTimeout(() => sendMutation.mutate(inputText), 100);
+      }
+    } else {
+      sendMutation.mutate(inputText);
+    }
     setInputText("");
     setSelectedImage(null);
     setShowEmoji(false);
@@ -244,13 +252,22 @@ export default function Chat() {
                       <div className={`max-w-[70%] relative`}>
                         <div
                           onDoubleClick={() => toggleLike(msg.id)}
-                          className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed cursor-default select-text transition-all ${
+                          className={`rounded-2xl text-sm leading-relaxed cursor-default select-text transition-all overflow-hidden ${
                             isMe
                               ? 'bg-gradient-to-br from-primary to-primary/80 text-white rounded-br-md'
                               : 'bg-muted text-foreground rounded-bl-md'
-                          }`}
+                          } ${(msg.content?.startsWith("data:image") || msg.content?.startsWith("http")) ? 'p-1' : 'px-4 py-2.5'}`}
                         >
-                          {msg.content}
+                          {(msg.content?.startsWith("data:image") || (msg.content?.startsWith("http") && !msg.content?.includes(" "))) ? (
+                            <img
+                              src={msg.content}
+                              alt="صورة"
+                              className="max-w-[240px] max-h-[300px] rounded-xl object-cover block"
+                              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                            />
+                          ) : (
+                            msg.content
+                          )}
                         </div>
                         {likedMsgs.has(msg.id) && (
                           <motion.div
