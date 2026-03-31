@@ -1,11 +1,15 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertArtisanSchema, insertMessageSchema, insertConversationSchema } from "@shared/schema";
+import { insertArtisanSchema, insertMessageSchema, insertConversationSchema, insertReviewSchema } from "@shared/schema";
 import { z } from "zod";
+import fs from "fs";
+import path from "path";
 
 const ADMIN_PASSWORD = "AlaaGH_RoadTo1M$";
 const adminSessions = new Set<string>();
+const UPLOADS_DIR = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 function getClientIp(req: Request): string {
   const forwarded = req.headers["x-forwarded-for"];
@@ -18,6 +22,28 @@ function isAdmin(req: Request): boolean {
 }
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
+
+  // ─── Static Uploads ────────────────────────────────────────────────────────
+  const express = (await import("express")).default;
+  app.use("/uploads", express.static(UPLOADS_DIR));
+
+  // ─── File Upload ───────────────────────────────────────────────────────────
+  app.post("/api/upload", (req: Request, res: Response) => {
+    try {
+      const { data, filename } = req.body as { data: string; filename: string };
+      if (!data || !data.startsWith("data:image")) {
+        return res.status(400).json({ message: "Invalid image data" });
+      }
+      const base64 = data.split(",")[1];
+      const ext = data.includes("image/png") ? "png" : data.includes("image/webp") ? "webp" : "jpg";
+      const name = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const filePath = path.join(UPLOADS_DIR, name);
+      fs.writeFileSync(filePath, Buffer.from(base64, "base64"));
+      res.json({ url: `/uploads/${name}` });
+    } catch (e) {
+      res.status(500).json({ message: "Upload failed" });
+    }
+  });
 
   // ─── Admin Auth ─────────────────────────────────────────────────────────────
   app.post("/api/admin/login", (req: Request, res: Response) => {
@@ -39,7 +65,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json({ success: true });
   });
 
-  // ─── Admin: all conversations + messages ───────────────────────────────────
   app.get("/api/admin/conversations", async (req: Request, res: Response) => {
     if (!isAdmin(req)) return res.status(403).json({ message: "Forbidden" });
     const convs = await storage.getAllConversations();
@@ -102,8 +127,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const artisan = await storage.updateArtisan(id, req.body);
       if (!artisan) return res.status(404).json({ message: "Artisan not found" });
       res.json(artisan);
-    } catch {
-      res.status(500).json({ message: "Failed to update artisan" });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to update artisan", error: err instanceof Error ? err.message : "Unknown" });
     }
   });
 
@@ -115,6 +140,31 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.json({ success: true });
     } catch {
       res.status(500).json({ message: "Failed to delete artisan" });
+    }
+  });
+
+  // ─── Reviews ────────────────────────────────────────────────────────────────
+  app.get("/api/artisans/:id/reviews", async (req: Request, res: Response) => {
+    try {
+      const reviews = await storage.getReviewsByArtisan(parseInt(req.params.id));
+      res.json(reviews);
+    } catch {
+      res.status(500).json({ message: "Failed to fetch reviews" });
+    }
+  });
+
+  app.post("/api/reviews", async (req: Request, res: Response) => {
+    try {
+      const data = insertReviewSchema.parse(req.body);
+      const alreadyReviewed = await storage.hasReviewed(data.artisanId, data.customerId);
+      if (alreadyReviewed) return res.status(409).json({ message: "لقد قيّمت هذا الحرفي من قبل" });
+      const review = await storage.createReview(data);
+      res.status(201).json(review);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create review" });
     }
   });
 

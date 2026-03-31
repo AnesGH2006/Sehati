@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, serial, text, varchar, integer, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, varchar, integer, timestamp, boolean, jsonb, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -38,7 +38,7 @@ export const artisans = pgTable("artisans", {
   daira: text("daira").notNull(),
   description: text("description"),
   priceStart: integer("price_start").notNull().default(1000),
-  rating: integer("rating").default(0),
+  rating: real("rating").default(0),
   reviewCount: integer("review_count").default(0),
   isVerified: boolean("is_verified").default(false),
   yearsOfExperience: integer("years_of_experience").default(0),
@@ -86,6 +86,7 @@ export const conversations = pgTable("conversations", {
   id: text("id").primaryKey(),
   artisanId: integer("artisan_id").notNull(),
   customerId: varchar("customer_id").notNull(),
+  customerName: text("customer_name"),
   lastMessageAt: timestamp("last_message_at").defaultNow().notNull(),
   lastMessage: text("last_message"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -98,3 +99,21 @@ export const insertConversationSchema = createInsertSchema(conversations).omit({
 
 export type InsertConversation = z.infer<typeof insertConversationSchema>;
 export type Conversation = typeof conversations.$inferSelect;
+
+export const reviews = pgTable("reviews", {
+  id: serial("id").primaryKey(),
+  artisanId: integer("artisan_id").notNull(),
+  customerId: text("customer_id").notNull(),
+  customerName: text("customer_name").notNull(),
+  rating: integer("rating").notNull(),
+  comment: text("comment"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertReviewSchema = createInsertSchema(reviews).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertReview = z.infer<typeof insertReviewSchema>;
+export type Review = typeof reviews.$inferSelect;

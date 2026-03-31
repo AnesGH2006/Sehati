@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import {
   MessageSquare, Star, Eye, Image as ImageIcon,
-  Clock, MapPin, Save, BadgeCheck, Trash2, Upload, X, Phone, Mail, Briefcase, Banknote, Send, ArrowRight
+  Clock, MapPin, Save, BadgeCheck, Trash2, Upload, X, Phone, Mail, Briefcase, Banknote, Send, ArrowRight, Quote
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
@@ -56,6 +56,13 @@ export default function ArtisanDashboard() {
   });
 
   const realArtisan = serverArtisan || artisan;
+
+  const { data: reviews = [] } = useQuery<any[]>({
+    queryKey: ["/api/artisans", artisan?.id, "reviews"],
+    queryFn: () => fetch(`/api/artisans/${artisan?.id}/reviews`).then(r => r.json()),
+    enabled: !!artisan?.id,
+    refetchInterval: 30000,
+  });
 
   const { data: conversations = [] } = useQuery<any[]>({
     queryKey: ["/api/conversations", String(artisan?.id)],
@@ -126,14 +133,25 @@ export default function ArtisanDashboard() {
     sendReplyMutation.mutate(replyText);
   };
 
+  const uploadImage = async (base64: string): Promise<string> => {
+    const r = await fetch("/api/upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data: base64 }),
+    });
+    const data = await r.json();
+    return data.url || base64;
+  };
+
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onloadend = () => {
-      const imageUrl = reader.result as string;
+    reader.onloadend = async () => {
+      const base64 = reader.result as string;
+      const imageUrl = await uploadImage(base64);
       const currentPortfolio = serverArtisan?.portfolioImages || portfolioImages;
-      const newPortfolio = [imageUrl, ...currentPortfolio.slice(0, 4)];
+      const newPortfolio = [imageUrl, ...currentPortfolio.filter((x: string) => x !== imageUrl).slice(0, 4)];
       updateMutation.mutate({ imageUrl, portfolioImages: newPortfolio });
       setPortfolioImages(newPortfolio);
     };
@@ -144,8 +162,9 @@ export default function ArtisanDashboard() {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onloadend = () => {
-      const imageUrl = reader.result as string;
+    reader.onloadend = async () => {
+      const base64 = reader.result as string;
+      const imageUrl = await uploadImage(base64);
       const currentPortfolio = serverArtisan?.portfolioImages || portfolioImages;
       const newPortfolio = [...currentPortfolio, imageUrl];
       updateMutation.mutate({ portfolioImages: newPortfolio });
@@ -385,6 +404,46 @@ export default function ArtisanDashboard() {
                 )}
               </AnimatePresence>
             </div>
+
+            {/* Reviews Section */}
+            {reviews.length > 0 && (
+              <Card className="bg-white/[0.03] border-white/10 rounded-3xl overflow-hidden">
+                <CardHeader className="p-5 border-b border-white/10">
+                  <CardTitle className="flex items-center gap-3 text-lg font-heading font-black">
+                    <Star className="h-5 w-5 text-amber-400 fill-amber-400" />
+                    {isRtl ? "تقييمات الزبائن" : "Customer Reviews"}
+                    <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-sm">
+                      {(reviews.reduce((s: number, r: any) => s + r.rating, 0) / reviews.length).toFixed(1)} ★ ({reviews.length})
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {reviews.slice(0, 5).map((review: any) => (
+                    <div key={review.id} className="p-4 border-b border-white/5 last:border-0">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-black text-sm">
+                            {review.customerName?.[0] || "؟"}
+                          </div>
+                          <span className="font-bold text-sm">{review.customerName}</span>
+                        </div>
+                        <div className="flex gap-0.5">
+                          {[1,2,3,4,5].map(s => (
+                            <Star key={s} className={`h-3.5 w-3.5 ${s <= review.rating ? 'text-amber-400 fill-amber-400' : 'text-zinc-600'}`} />
+                          ))}
+                        </div>
+                      </div>
+                      {review.comment && (
+                        <p className="text-zinc-400 text-xs leading-relaxed flex gap-1.5">
+                          <Quote className="h-3 w-3 shrink-0 mt-0.5 text-zinc-600" />
+                          {review.comment}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
           </motion.div>
         )}
 
