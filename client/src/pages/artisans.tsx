@@ -87,7 +87,7 @@ export default function Artisans() {
     setSelectedCategories([]);
     setSelectedWilaya(null);
     setSelectedDairas([]);
-    setPriceRange([10000]);
+    setPriceRange([50000]);
   };
 
   const isRtl = i18n.language === 'ar';
