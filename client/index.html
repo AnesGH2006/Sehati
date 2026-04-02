@@ -2,27 +2,68 @@
 <html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
-    <meta property="og:title" content="Herfati - منصة الحرفيين في الجزائر" />
-    <meta property="og:description" content="أفضل منصة للتواصل مع الحرفيين المهرة في الجزائر. خدمات متميزة، اشتراكات مرنة، ونظام محادثة متطور." />
+    <!-- PWA Core -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#7c3aed" />
+
+    <!-- iOS PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Herfati" />
+    <link rel="apple-touch-icon" href="/loogo.PNG" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/loogo.PNG" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/loogo.PNG" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/loogo.PNG" />
+
+    <!-- Android / Chrome -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Herfati" />
+
+    <!-- Windows / Edge -->
+    <meta name="msapplication-TileColor" content="#7c3aed" />
+    <meta name="msapplication-TileImage" content="/loogo.PNG" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/loogo.PNG" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Herfati - حرفتي" />
+    <meta property="og:description" content="تطبيق يهدف الى تسهيل عمل الحرفيين وزيادة دخلهم" />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://replit.com/public/images/opengraph.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@replit" />
-    <meta name="twitter:title" content="Herfati - منصة الحرفيين في الجزائر" />
-    <meta name="twitter:description" content="أفضل منصة للتواصل مع الحرفيين المهرة في الجزائر." />
+    <meta name="twitter:title" content="Herfati - حرفتي" />
+    <meta name="twitter:description" content="تطبيق يهدف الى تسهيل عمل الحرفيين وزيادة دخلهم" />
     <meta name="twitter:image" content="https://replit.com/public/images/opengraph.png" />
 
-    <link rel="icon" type="image/png" href="/loogo.png" />
-    
-    <!-- Fonts: Cairo for headings, Tajawal for body text -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;500;700&display=swap" rel="stylesheet" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("/sw.js").then((reg) => {
+            reg.addEventListener("updatefound", () => {
+              const sw = reg.installing;
+              if (sw) {
+                sw.addEventListener("statechange", () => {
+                  if (sw.state === "installed" && navigator.serviceWorker.controller) {
+                    sw.postMessage({ type: "SKIP_WAITING" });
+                  }
+                });
+              }
+            });
+          }).catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>

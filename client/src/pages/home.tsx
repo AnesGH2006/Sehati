@@ -54,28 +54,28 @@ export default function Home() {
           
           <div className="container px-4 md:px-8">
             <div className="max-w-3xl mx-auto text-center mb-16 space-y-4">
-              <h2 className="text-3xl md:text-5xl font-heading font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">لماذا تختار منصة حرفتي؟</h2>
+              <h2 className="items-center text-3xl md:text-5xl font-heading font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">لماذا تختار منصة حرفتي؟</h2>
               <p className="text-lg text-muted-foreground">نحن نغير الطريقة التي يتواصل بها الناس مع الحرفيين، بجعلها أكثر أماناً، سرعة، واحترافية.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            <div className="items-center grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
               <FeatureCard 
                 icon={<ShieldCheck className="h-10 w-10" />}
                 title="موثوقية تامة"
                 description="نقوم بالتحقق من هوية الحرفيين وخلفيتهم المهنية لضمان راحة بالك."
-                delay={0.1}
+                delay={0.2}
               />
               <FeatureCard 
                 icon={<MessageSquare className="h-10 w-10" />}
                 title="تواصل مباشر"
                 description="نظام محادثة مدمج يتيح لك الاتفاق على كل التفاصيل وإرسال الصور بكل سهولة."
-                delay={0.2}
+                delay={0.4}
               />
               <FeatureCard 
                 icon={<Star className="h-10 w-10" />}
                 title="نظام تقييم شفاف"
                 description="ساعد الآخرين باختيار الأفضل من خلال قراءة تقييمات الزبائن السابقين."
-                delay={0.3}
+                delay={0.6}
               />
             </div>
           </div>

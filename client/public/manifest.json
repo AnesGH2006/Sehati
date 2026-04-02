@@ -1,0 +1,52 @@
+{
+  "name": "Herfati",
+  "short_name": "Herafi",
+  "description": "تطبيق يهدف الى تسهيل عمل الحرفيين وزيادة دخلهم",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#0f1117",
+  "theme_color": "#7c3aed",
+  "orientation": "portrait-primary",
+  "lang": "ar",
+  "dir": "rtl",
+  "categories": ["Home", "Artisans", "Subscription"],
+  "icons": [
+    {
+      "src": "/loogo.PNG",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/loogo.PNG",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/loogo.PNG",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "حرفيين",
+      "short_name": "حرفيين",
+      "description": "عرض الحرفيين",
+      "url": "/artisans",
+      "icons": [{ "src": "/loogo.PNG", "sizes": "192x192" }]
+    },
+    {
+      "name": "الاشتراكات",
+      "short_name": "اشتراك",
+      "description": "تسجيل كحرفي",
+      "url": "/subscription",
+      "icons": [{ "src": "/loogo.PNG", "sizes": "192x192" }]
+    }
+  ],
+  "prefer_related_applications": false
+  }
