@@ -4,6 +4,7 @@ import { Footer } from "@/components/layout/footer";
 import { ShieldCheck, Users, Sparkles, MapPin, Search, MessageSquare, Star } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import { install-prompt } from "@/components/install-prompt";
 
 export default function Home() {
   const { t } = useTranslation();
