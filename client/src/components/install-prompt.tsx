@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { Download, X, Smartphone } from "lucide-react";
-
+import { useLang } from "@/contexts/language.context"
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
@@ -13,6 +13,7 @@ export function InstallPrompt() {
   const [dismissed, setDismissed] = useState(false);
   const [isIos, setIsIos] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const { lang } = useLang();
 
   useEffect(() => {
     // Already installed (standalone)
@@ -67,7 +68,7 @@ export function InstallPrompt() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 120, opacity: 0 }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className="md:hidden fixed bottom-24 left-3 right-3 z-[60]"
+          className="fixed bottom-24 left-3 right-3 z-[60] md:left-auto md:right-6 md:w-80"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
           <div className="p-4 rounded-2xl bg-card border border-primary/30 shadow-2xl shadow-primary/10 backdrop-blur-xl">
