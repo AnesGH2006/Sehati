@@ -36,7 +36,6 @@ export function Navbar() {
 
   const languages = [
     { code: 'ar', label: 'العربية' },
-    { code: 'fr', label: 'Français' },
     { code: 'en', label: 'English' },
   ];
 
