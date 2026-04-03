@@ -123,6 +123,8 @@ function App() {
       <ThemeProvider attribute="class" defaultTheme="light">
         <AuthProvider>
           <TooltipProvider>
+            <SplashScreen />        {/* ← أضف هنا */}
+            <InstallPrompt />       {/* ← وهنا */}
             <Toaster />
             <Router />
           </TooltipProvider>
