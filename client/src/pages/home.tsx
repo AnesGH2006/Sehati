@@ -5,6 +5,7 @@ import { ShieldCheck, Users, Sparkles, MapPin, Search, MessageSquare, Star } fro
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLang } from "@/contexts/language.context"
+import  SplashScreen  from "@/components/splashscreen.tsx"
 import { useState, useEffect } from "react";
 import { Download, X, Smartphone } from "lucide-react";
 import { InstallPrompt } from "@/components/install-prompt"
