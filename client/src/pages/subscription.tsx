@@ -321,7 +321,3 @@ function JoinDialog({ isRtl, registerMutation, t, i18n }: any) {
     </Dialog>
   );
 }
-   document.addEventListener("DOMContentLoaded", () => {
-     const badge = document.getElementById("replit-badge");
-     if (badge) badge.remove();
-   });

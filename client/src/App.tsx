@@ -17,6 +17,9 @@ import { ThemeProvider } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { AuthProvider } from "@/lib/auth";
+import SplashScreen from "@/components/splashscreen";
+import { InstallPrompt } from "@/components/install-prompt";  
+import { useEffect } from "react";
 
 function PageTransition({ children }: { children: React.ReactNode }) {
   return (
