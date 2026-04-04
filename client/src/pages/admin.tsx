@@ -4,8 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trash2, MessageSquare, ChevronDown, ChevronUp, Shield, LogOut, Eye, EyeOff, Users } from "lucide-react";
+import { Trash2, MessageSquare, ChevronDown, ChevronUp, Shield, LogOut, Eye, EyeOff, Users, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const ADMIN_STORAGE_KEY = "herfati_admin_session";
@@ -20,16 +19,14 @@ export default function Admin() {
   const [showPassword, setShowPassword] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
   const [expandedConv, setExpandedConv] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"artisans" | "chats">("artisans");
+  const [activeTab, setActiveTab] = useState<"artisans" | "chats" | "reviews">("artisans");
 
-  // Check server-side admin auth on mount
   useEffect(() => {
     if (isAuthed) {
       fetch("/api/admin/check")
         .then(r => r.json())
         .then(d => {
           if (!d.isAdmin) {
-            // Try to re-login from stored password
             setIsAuthed(false);
             localStorage.removeItem(ADMIN_STORAGE_KEY);
           }
@@ -79,6 +76,25 @@ export default function Admin() {
     refetchInterval: 5000,
   });
 
+  // Fetch all reviews across all artisans
+  const { data: allReviews = [], isLoading: reviewsLoading } = useQuery({
+    queryKey: ["/api/admin/reviews"],
+    queryFn: async () => {
+      const artisanList = await fetch("/api/artisans").then(r => r.json());
+      const reviewArrays = await Promise.all(
+        artisanList.map((a: any) =>
+          fetch(`/api/artisans/${a.id}/reviews`)
+            .then(r => r.ok ? r.json() : [])
+            .then((reviews: any[]) => reviews.map(rv => ({ ...rv, artisanName: a.name })))
+            .catch(() => [])
+        )
+      );
+      return reviewArrays.flat().sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    },
+    enabled: isAuthed && activeTab === "reviews",
+    refetchInterval: 10000,
+  });
+
   const deleteArtisanMutation = useMutation({
     mutationFn: (id: number) => fetch(`/api/artisans/${id}`, { method: "DELETE" }).then(r => r.json()),
     onSuccess: () => {
@@ -86,6 +102,19 @@ export default function Admin() {
       toast({ title: "تم حذف الحرفي بنجاح" });
     },
     onError: () => toast({ title: "فشل الحذف", variant: "destructive" }),
+  });
+
+  const deleteReviewMutation = useMutation({
+    mutationFn: (id: number) =>
+      fetch(`/api/reviews/${id}`, { method: "DELETE" }).then(r => {
+        if (!r.ok) throw new Error("فشل الحذف");
+        return r.json();
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/reviews"] });
+      toast({ title: "✅ تم حذف التقييم" });
+    },
+    onError: () => toast({ title: "فشل حذف التقييم", variant: "destructive" }),
   });
 
   if (!isAuthed) {
@@ -146,6 +175,7 @@ export default function Admin() {
           <div className="flex gap-4 text-sm font-bold">
             <span className="text-zinc-400">{artisans.length} <span className="text-white">حرفي</span></span>
             <span className="text-zinc-400">{conversations.length} <span className="text-white">محادثة</span></span>
+            <span className="text-zinc-400">{allReviews.length} <span className="text-white">تقييم</span></span>
           </div>
           <Button variant="ghost" size="sm" onClick={handleLogout} className="gap-2 text-zinc-400 hover:text-white">
             <LogOut className="h-4 w-4" />
@@ -156,7 +186,7 @@ export default function Admin() {
 
       <div className="max-w-6xl mx-auto p-6 space-y-6">
         {/* Tabs */}
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
           <Button
             variant={activeTab === "artisans" ? "default" : "outline"}
             onClick={() => setActiveTab("artisans")}
@@ -173,31 +203,31 @@ export default function Admin() {
             <MessageSquare className="h-4 w-4" />
             المحادثات ({conversations.length})
           </Button>
+          <Button
+            variant={activeTab === "reviews" ? "default" : "outline"}
+            onClick={() => setActiveTab("reviews")}
+            className="gap-2 rounded-2xl font-black"
+          >
+            <Star className="h-4 w-4" />
+            التقييمات ({allReviews.length})
+          </Button>
         </div>
 
         {/* Artisans Tab */}
         {activeTab === "artisans" && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-4"
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
             {artisans.length === 0 ? (
               <div className="text-center py-20 text-zinc-500">لا يوجد حرفيون مسجلون</div>
             ) : (
               artisans.map((artisan: any) => (
                 <motion.div
-                  key={artisan.id}
-                  layout
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
+                  key={artisan.id} layout
+                  initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
                   className="flex items-center gap-4 p-5 bg-zinc-900 rounded-2xl border border-white/10 hover:border-primary/30 transition-colors"
                 >
                   <img
                     src={artisan.imageUrl || `https://ui-avatars.com/api/?name=${artisan.name}&background=2DD4BF&color=fff`}
-                    alt={artisan.name}
-                    className="w-14 h-14 rounded-2xl object-cover"
+                    alt={artisan.name} className="w-14 h-14 rounded-2xl object-cover"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -209,14 +239,8 @@ export default function Admin() {
                     <p className="text-zinc-500 text-xs">{artisan.wilaya} - {artisan.daira} • {artisan.priceStart} دج</p>
                   </div>
                   <Button
-                    size="sm"
-                    variant="destructive"
-                    className="gap-2 rounded-xl shrink-0"
-                    onClick={() => {
-                      if (confirm(`هل تريد حذف الحرفي "${artisan.name}"؟`)) {
-                        deleteArtisanMutation.mutate(artisan.id);
-                      }
-                    }}
+                    size="sm" variant="destructive" className="gap-2 rounded-xl shrink-0"
+                    onClick={() => { if (confirm(`هل تريد حذف الحرفي "${artisan.name}"؟`)) deleteArtisanMutation.mutate(artisan.id); }}
                     disabled={deleteArtisanMutation.isPending}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -230,22 +254,90 @@ export default function Admin() {
 
         {/* Chats Tab */}
         {activeTab === "chats" && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-4"
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
             {conversations.length === 0 ? (
               <div className="text-center py-20 text-zinc-500">لا توجد محادثات</div>
             ) : (
               conversations.map((conv: any) => (
                 <ConversationItem
-                  key={conv.id}
-                  conversation={conv}
+                  key={conv.id} conversation={conv}
                   isExpanded={expandedConv === conv.id}
                   onToggle={() => setExpandedConv(expandedConv === conv.id ? null : conv.id)}
                 />
               ))
+            )}
+          </motion.div>
+        )}
+
+        {/* Reviews Tab */}
+        {activeTab === "reviews" && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+            {reviewsLoading ? (
+              <div className="space-y-3">
+                {[1,2,3].map(i => <div key={i} className="h-24 bg-zinc-900 rounded-2xl animate-pulse border border-white/10" />)}
+              </div>
+            ) : allReviews.length === 0 ? (
+              <div className="text-center py-20 text-zinc-500">
+                <Star className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                <p>لا توجد تقييمات بعد</p>
+              </div>
+            ) : (
+              <AnimatePresence>
+                {allReviews.map((review: any) => (
+                  <motion.div
+                    key={review.id} layout
+                    initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20, height: 0 }}
+                    className="flex items-start gap-4 p-5 bg-zinc-900 rounded-2xl border border-white/10 hover:border-red-500/20 transition-colors"
+                  >
+                    {/* Customer Avatar */}
+                    <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center font-black text-primary text-lg shrink-0">
+                      {review.customerName?.[0] || "؟"}
+                    </div>
+
+                    {/* Review Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold">{review.customerName}</span>
+                        <span className="text-zinc-500 text-xs">←</span>
+                        <Badge variant="outline" className="text-xs border-primary/30 text-primary">
+                          {review.artisanName}
+                        </Badge>
+                        <span className="text-zinc-600 text-xs mr-auto">
+                          {new Date(review.createdAt).toLocaleDateString('ar-DZ', { year: 'numeric', month: 'long', day: 'numeric' })}
+                        </span>
+                      </div>
+
+                      {/* Stars */}
+                      <div className="flex gap-0.5 mt-1.5">
+                        {[1,2,3,4,5].map(s => (
+                          <Star key={s} className={`w-4 h-4 ${s <= review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-zinc-700'}`} />
+                        ))}
+                        <span className="text-xs text-zinc-400 mr-1 self-center">
+                          {['','ضعيف','مقبول','جيد','جيد جداً','ممتاز'][review.rating]}
+                        </span>
+                      </div>
+
+                      {review.comment && (
+                        <p className="text-zinc-400 text-sm mt-2 leading-relaxed">"{review.comment}"</p>
+                      )}
+                    </div>
+
+                    {/* Delete Button */}
+                    <Button
+                      size="sm" variant="destructive"
+                      className="gap-1.5 rounded-xl shrink-0 opacity-70 hover:opacity-100 transition-opacity"
+                      onClick={() => {
+                        if (confirm(`هل تريد حذف تقييم "${review.customerName}"؟`))
+                          deleteReviewMutation.mutate(review.id);
+                      }}
+                      disabled={deleteReviewMutation.isPending}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      حذف
+                    </Button>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             )}
           </motion.div>
         )}
@@ -290,9 +382,7 @@ function ConversationItem({ conversation, isExpanded, onToggle }: { conversation
       <AnimatePresence>
         {isExpanded && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
+            initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
             <div className="px-5 pb-5 space-y-3 border-t border-white/10 pt-4 max-h-80 overflow-y-auto">
