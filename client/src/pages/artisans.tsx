@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { ArtisanCard } from "@/components/artisan/artisan-card";
-import { MOCK_ARTISANS, DAIRAS, CATEGORIES, LOCATIONS } from "@/lib/constants";
+import { DAIRAS, CATEGORIES, LOCATIONS, MOCK_ARTISANS } from "@/lib/constants";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
