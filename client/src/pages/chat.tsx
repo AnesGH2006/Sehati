@@ -77,7 +77,7 @@
       localVideoRef, remoteVideoRef,
       startCall, acceptCall, rejectCall, endCall,
       toggleMute, toggleCamera,
-    } = useCall({ myId, myName });
+    } = ({ myId, myName });
 
     // Target ID for call (artisan's ID as string, or customer ID)
     const callTargetId = isArtisan ? "customer-chat" : String(activeArtisanId);
