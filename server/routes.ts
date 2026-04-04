@@ -6,7 +6,7 @@ import { z } from "zod";
 import fs from "fs";
 import path from "path";
 
-const ADMIN_PASSWORD = "AlaaGH_RoadToGoodLife";
+const ADMIN_PASSWORD = "AlaaGH_Mil";
 const adminSessions = new Set<string>();
 const UPLOADS_DIR = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });

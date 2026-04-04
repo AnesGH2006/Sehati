@@ -52,12 +52,12 @@ export const MOCK_ARTISANS = [
     category: "نجارة",
     daira: "الجزائر",
     rating: 4.8,
-    reviews: 2,
+    reviews: 124,
     priceStart: 4000,
     phone: "0550123456",
     image: "https://images.unsplash.com/photo-1581244277943-fe4a9c777189?w=400&h=400&fit=crop",
     isVerified: true,
-    description: "خبرة 15 سنة في النجارة العصرية والتقليدية. صناعة الأثاث والأبواب والنوافذ."
+    description: "Test"
   },
 ];
 
