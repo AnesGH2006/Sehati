@@ -7,7 +7,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Artisans from "@/pages/artisans";
 import Profile from "@/pages/profile";
-import chat from "@/pages/chat";
+import Chat from "@/pages/chat";
 import Subscription from "@/pages/subscription";
 import Auth from "@/pages/auth";
 import ArtisanDashboard from "@/pages/artisan-dashboard";
@@ -120,7 +120,7 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="light">
+      <ThemeProvider attribute="class" defaultTheme="dark">
         <AuthProvider>
           <TooltipProvider>
             <SplashScreen />        {/* ← أضف هنا */}
