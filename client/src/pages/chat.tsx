@@ -10,6 +10,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useCall } from "@/hooks/useCall";
+import { CallUI } from "@/components/CallUI";
 
 const EMOJI_LIST = ["😊","😂","❤️","😍","🥰","👍","🙏","🔥","✨","💯","😎","🤝","👋","🎉","💪","🤔","😭","😤","🥺","💬"];
 const FINISH_SIGNAL = "__CHAT_FINISHED__";
@@ -69,6 +71,18 @@ export default function Chat() {
   const myId = isArtisan ? String(authArtisan?.id) : (customer?.id || "guest");
   const myName = isArtisan ? (authArtisan?.name || "حرفي") : (customer?.name || "زبون");
   const myType: "artisan" | "customer" = isArtisan ? "artisan" : "customer";
+
+  // ── WebRTC Call ────────────────────────────────────────────────────────
+  const {
+    callState, callType, remoteName,
+    isMuted, isCamOff,
+    localVideoRef, remoteVideoRef,
+    startCall, acceptCall, rejectCall, endCall,
+    toggleMute, toggleCamera,
+  } = useCall({ myId, myName });
+
+  // Target ID for call (artisan's ID as string, or customer ID)
+  const callTargetId = isArtisan ? "customer-chat" : String(activeArtisanId);
 
   // Fetch artisan info
   const { data: apiArtisan } = useQuery<any>({
@@ -396,10 +410,12 @@ export default function Chat() {
                   </span>
                 )}
 
-                <button className="p-2 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-primary">
+                <button className="p-2 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-primary"
+                  onClick={() => startCall(callTargetId, activeArtisan.name, "audio")}>
                   <Phone className="h-5 w-5" />
                 </button>
-                <button className="p-2 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-primary">
+                <button className="p-2 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-primary"
+                  onClick={() => startCall(callTargetId, activeArtisan.name, "video")}>
                   <Video className="h-5 w-5" />
                 </button>
               </div>
@@ -575,6 +591,23 @@ export default function Chat() {
           </div>
         )}
       </div>
+
+      {/* ── Call UI ─────────────────────────────────────────────────────── */}
+      <CallUI
+        callState={callState}
+        callType={callType}
+        remoteName={remoteName || activeArtisan?.name || ""}
+        remoteImage={activeArtisan?.image}
+        isMuted={isMuted}
+        isCamOff={isCamOff}
+        localVideoRef={localVideoRef}
+        remoteVideoRef={remoteVideoRef}
+        onAccept={acceptCall}
+        onReject={rejectCall}
+        onEnd={endCall}
+        onToggleMute={toggleMute}
+        onToggleCamera={toggleCamera}
+      />
 
       {/* Rating Dialog */}
       <Dialog open={showRating} onOpenChange={setShowRating}>
