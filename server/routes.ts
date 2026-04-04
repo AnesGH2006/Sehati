@@ -167,7 +167,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.status(500).json({ message: "Failed to create review" });
     }
   });
-
+  app.delete("/api/reviews/:id", async (req, res) => {
+   if (!isAdmin(req)) return res.status(403).json({ message: "Forbidden" });
+    try {
+     const deleted = await storage.deleteReview(parseInt(req.params.id));
+     if (!deleted) return res.status(404).json({ message: "Review not found" });
+     res.json({ success: true });
+  } catch {
+    res.status(500).json({ message: "Failed to delete review" });
+  }
+});
   // ─── Conversations ──────────────────────────────────────────────────────────
   app.get("/api/conversations/:userId", async (req: Request, res: Response) => {
     try {

@@ -54,7 +54,6 @@ function loadData(): DataStore {
 
 function saveData(store: DataStore) {
   try {
-    // Never store base64 images in the JSON file — only file paths / URLs
     const toSave: DataStore = {
       ...store,
       artisans: store.artisans.map(a => ({
@@ -95,6 +94,7 @@ export interface IStorage {
   createReview(review: InsertReview): Promise<Review>;
   getReviewsByArtisan(artisanId: number): Promise<Review[]>;
   hasReviewed(artisanId: number, customerId: string): Promise<boolean>;
+  deleteReview(id: number): Promise<boolean>;
 }
 
 class FileStorage implements IStorage {
@@ -172,6 +172,9 @@ class FileStorage implements IStorage {
   async deleteArtisan(id: number): Promise<boolean> {
     const before = this.store.artisans.length;
     this.store.artisans = this.store.artisans.filter(a => a.id !== id);
+    // Also delete related reviews and conversations
+    this.store.reviews = this.store.reviews.filter(r => r.artisanId !== id);
+    this.store.conversations = this.store.conversations.filter(c => c.artisanId !== id);
     this.save();
     return this.store.artisans.length < before;
   }
@@ -193,7 +196,6 @@ class FileStorage implements IStorage {
   async createConversation(insertConversation: InsertConversation): Promise<Conversation> {
     const existing = this.store.conversations.find(c => c.id === insertConversation.id);
     if (existing) {
-      // Update customerName if now known
       if (insertConversation.customerName && !existing.customerName) {
         existing.customerName = insertConversation.customerName;
         this.save();
@@ -261,14 +263,7 @@ class FileStorage implements IStorage {
       createdAt: new Date(),
     };
     this.store.reviews.push(review);
-    // Recompute artisan rating
-    const artisanReviews = this.store.reviews.filter(r => r.artisanId === insertReview.artisanId);
-    const avg = artisanReviews.reduce((s, r) => s + r.rating, 0) / artisanReviews.length;
-    const artIdx = this.store.artisans.findIndex(a => a.id === insertReview.artisanId);
-    if (artIdx !== -1) {
-      this.store.artisans[artIdx].rating = Math.round(avg * 10) / 10;
-      this.store.artisans[artIdx].reviewCount = artisanReviews.length;
-    }
+    this._recalcRating(insertReview.artisanId);
     this.save();
     return review;
   }
@@ -281,6 +276,31 @@ class FileStorage implements IStorage {
 
   async hasReviewed(artisanId: number, customerId: string): Promise<boolean> {
     return this.store.reviews.some(r => r.artisanId === artisanId && r.customerId === customerId);
+  }
+
+  // ── NEW: Delete review & recalculate artisan rating ──────────────────────
+  async deleteReview(id: number): Promise<boolean> {
+    const review = this.store.reviews.find(r => r.id === id);
+    if (!review) return false;
+    this.store.reviews = this.store.reviews.filter(r => r.id !== id);
+    this._recalcRating(review.artisanId);
+    this.save();
+    return true;
+  }
+
+  // Helper: recalculate rating & reviewCount for an artisan
+  private _recalcRating(artisanId: number) {
+    const artisanReviews = this.store.reviews.filter(r => r.artisanId === artisanId);
+    const artIdx = this.store.artisans.findIndex(a => a.id === artisanId);
+    if (artIdx === -1) return;
+    if (artisanReviews.length === 0) {
+      this.store.artisans[artIdx].rating = 0;
+      this.store.artisans[artIdx].reviewCount = 0;
+    } else {
+      const avg = artisanReviews.reduce((s, r) => s + r.rating, 0) / artisanReviews.length;
+      this.store.artisans[artIdx].rating = Math.round(avg * 10) / 10;
+      this.store.artisans[artIdx].reviewCount = artisanReviews.length;
+    }
   }
 }
 
