@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Navbar } from "@/components/layout/navbar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MOCK_ARTISANS } from "@/lib/constants";
-import { Send, Image as ImageIcon, Smile, X, ArrowRight, Phone, Video, Info, Heart, Star } from "lucide-react";
+import { MOCK_ARTISANS, CATEGORIES } from "@/lib/constants";
+import { Send, Image as ImageIcon, Smile, X, ArrowRight, Phone, Video, Star, Heart, CheckCheck } from "lucide-react";
 import { useRoute, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
 const EMOJI_LIST = ["😊","😂","❤️","😍","🥰","👍","🙏","🔥","✨","💯","😎","🤝","👋","🎉","💪","🤔","😭","😤","🥺","💬"];
+const FINISH_SIGNAL = "__CHAT_FINISHED__";
 
 function formatTime(date: Date | string) {
   const d = typeof date === "string" ? new Date(date) : date;
@@ -23,26 +24,22 @@ function getConversationId(artisanId: number, customerId: string) {
 }
 
 function isImageUrl(content: string) {
-  return content?.startsWith("data:image") || content?.startsWith("/uploads/") || content?.startsWith("http");
+  return content?.startsWith("data:image") || content?.startsWith("/uploads/") || (content?.startsWith("http") && !content?.includes("__"));
 }
 
-// Star Rating Component
 function StarRating({ value, onChange, size = 32 }: { value: number; onChange?: (v: number) => void; size?: number }) {
   const [hovered, setHovered] = useState(0);
   return (
     <div className="flex gap-1">
       {[1, 2, 3, 4, 5].map(star => (
-        <button
-          key={star}
-          type="button"
+        <button key={star} type="button"
           onMouseEnter={() => onChange && setHovered(star)}
           onMouseLeave={() => onChange && setHovered(0)}
           onClick={() => onChange && onChange(star)}
-          className="transition-transform hover:scale-110"
           style={{ cursor: onChange ? "pointer" : "default" }}
+          className="transition-transform hover:scale-110"
         >
-          <Star
-            style={{ width: size, height: size }}
+          <Star style={{ width: size, height: size }}
             className={`transition-colors ${(hovered || value) >= star ? 'text-amber-400 fill-amber-400' : 'text-zinc-600'}`}
           />
         </button>
@@ -69,19 +66,17 @@ export default function Chat() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Determine who we are
   const myId = isArtisan ? String(authArtisan?.id) : (customer?.id || "guest");
   const myName = isArtisan ? (authArtisan?.name || "حرفي") : (customer?.name || "زبون");
   const myType: "artisan" | "customer" = isArtisan ? "artisan" : "customer";
 
-  // Fetch artisan info from API (for real artisans)
+  // Fetch artisan info
   const { data: apiArtisan } = useQuery<any>({
     queryKey: ["/api/artisans", activeArtisanId],
     queryFn: () => activeArtisanId ? fetch(`/api/artisans/${activeArtisanId}`).then(r => r.ok ? r.json() : null).catch(() => null) : null,
     enabled: !!activeArtisanId,
   });
 
-  // Find artisan (API first, then mock)
   const mockArtisan = activeArtisanId ? MOCK_ARTISANS.find(a => a.id === activeArtisanId) : null;
   const activeArtisan = activeArtisanId ? {
     id: activeArtisanId,
@@ -94,7 +89,21 @@ export default function Chat() {
     ? getConversationId(activeArtisanId, isArtisan ? "customer-chat" : myId)
     : null;
 
-  // Create conversation when opening chat
+  // ── Fetch real conversations for sidebar ─────────────────────────────────
+  const { data: myConversations = [] } = useQuery<any[]>({
+    queryKey: ["/api/conversations", myId, myType],
+    queryFn: () => fetch(`/api/conversations/${myId}?role=${myType}`).then(r => r.ok ? r.json() : []).catch(() => []),
+    enabled: !!myId,
+    refetchInterval: 3000,
+  });
+
+  // Fetch all artisans to map IDs to names in sidebar
+  const { data: allArtisans = [] } = useQuery<any[]>({
+    queryKey: ["/api/artisans"],
+    queryFn: () => fetch("/api/artisans").then(r => r.json()),
+  });
+
+  // Create conversation
   const createConvMutation = useMutation({
     mutationFn: () => fetch("/api/conversations", {
       method: "POST",
@@ -120,6 +129,9 @@ export default function Chat() {
     refetchInterval: 2000,
   });
 
+  // ── Check if artisan finished the chat ──────────────────────────────────
+  const chatFinished = messages.some((m: any) => m.content === FINISH_SIGNAL && m.senderType === "artisan");
+
   // Check if already reviewed
   const { data: hasReviewed } = useQuery<boolean>({
     queryKey: ["/api/reviews/check", activeArtisanId, myId],
@@ -131,7 +143,6 @@ export default function Chat() {
     enabled: !!activeArtisanId && !isArtisan,
   });
 
-  // Upload image to server, get URL
   const uploadMutation = useMutation({
     mutationFn: async (base64: string) => {
       const r = await fetch("/api/upload", {
@@ -155,7 +166,29 @@ export default function Chat() {
         content,
       }),
     }).then(r => r.json()),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/conversations", convId, "messages"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", convId, "messages"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", myId, myType] });
+    },
+  });
+
+  // ── Artisan: finish chat ─────────────────────────────────────────────────
+  const finishChatMutation = useMutation({
+    mutationFn: () => fetch("/api/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        conversationId: convId,
+        senderId: myId,
+        receiverId: "customer-chat",
+        senderType: "artisan",
+        content: FINISH_SIGNAL,
+      }),
+    }).then(r => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", convId, "messages"] });
+      toast({ title: "✅ تم إنهاء المحادثة", description: "يمكن للزبون الآن تقييمك" });
+    },
   });
 
   const reviewMutation = useMutation({
@@ -191,11 +224,10 @@ export default function Chat() {
   const handleSend = async () => {
     if (!inputText.trim() && !selectedImage) return;
     if (selectedImage) {
-      // Upload image to server first, then send URL
       try {
         const result = await uploadMutation.mutateAsync(selectedImage);
         if (result.url) sendMutation.mutate(result.url);
-        else sendMutation.mutate(selectedImage); // fallback
+        else sendMutation.mutate(selectedImage);
       } catch {
         sendMutation.mutate(selectedImage);
       }
@@ -221,44 +253,78 @@ export default function Chat() {
     setLikedMsgs(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   };
 
+  // Get artisan info for a conversation (for sidebar)
+  const getArtisanForConv = (conv: any) => {
+    const found = allArtisans.find((a: any) => a.id === conv.artisanId);
+    if (found) return {
+      id: found.id,
+      name: found.name,
+      image: found.imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(found.name)}&background=2DD4BF&color=fff`,
+      category: CATEGORIES.find(c => c.id === found.category)?.label || found.category,
+    };
+    const mock = MOCK_ARTISANS.find(a => a.id === conv.artisanId);
+    if (mock) return { id: mock.id, name: mock.name, image: mock.image, category: mock.category };
+    return { id: conv.artisanId, name: `حرفي #${conv.artisanId}`, image: "", category: "" };
+  };
+
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden" dir="rtl">
       <Navbar />
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar */}
+        {/* ── Sidebar ─────────────────────────────────────────────────────── */}
         <div className="w-[300px] border-l bg-card hidden md:flex flex-col shrink-0">
           <div className="p-4 border-b">
             <h2 className="font-heading font-bold text-lg mb-3">الرسائل</h2>
             <input className="w-full h-9 rounded-full bg-muted/50 border-none px-4 text-sm focus:outline-none" placeholder="بحث..." />
           </div>
           <div className="flex-1 overflow-y-auto">
-            {MOCK_ARTISANS.map(artisan => (
-              <button
-                key={artisan.id}
-                onClick={() => setLocation(`/chat/${artisan.id}`)}
-                className={`w-full p-3 flex items-center gap-3 hover:bg-muted/40 transition-colors text-right ${activeArtisanId === artisan.id ? 'bg-primary/5 border-r-2 border-primary' : ''}`}
-              >
-                <div className="relative shrink-0">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={artisan.image} />
-                    <AvatarFallback className="bg-primary/20 text-primary font-bold">{artisan.name[0]}</AvatarFallback>
-                  </Avatar>
-                  <span className="absolute bottom-0 left-0 w-3 h-3 bg-green-500 border-2 border-card rounded-full" />
-                </div>
-                <div className="flex-1 min-w-0 text-right">
-                  <p className="font-bold text-sm truncate">{artisan.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">{artisan.category}</p>
-                </div>
-              </button>
-            ))}
+            {myConversations.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground text-sm px-4">
+                <Send className="h-8 w-8 mx-auto mb-3 opacity-20" />
+                لا توجد محادثات بعد
+              </div>
+            ) : (
+              myConversations.map((conv: any) => {
+                const artisan = isArtisan ? null : getArtisanForConv(conv);
+                const displayName = isArtisan ? (conv.customerName || "زبون") : artisan?.name;
+                const displayImage = isArtisan ? "" : artisan?.image;
+                const displaySub = isArtisan ? conv.customerId?.slice(0, 12) : artisan?.category;
+                const convArtisanId = conv.artisanId;
+                const isActive = activeArtisanId === convArtisanId;
+
+                return (
+                  <button
+                    key={conv.id}
+                    onClick={() => setLocation(`/chat/${convArtisanId}`)}
+                    className={`w-full p-3 flex items-center gap-3 hover:bg-muted/40 transition-colors text-right ${isActive ? 'bg-primary/5 border-r-2 border-primary' : ''}`}
+                  >
+                    <div className="relative shrink-0">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={displayImage} />
+                        <AvatarFallback className="bg-primary/20 text-primary font-bold text-lg">
+                          {displayName?.[0] || "؟"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="absolute bottom-0 left-0 w-3 h-3 bg-green-500 border-2 border-card rounded-full" />
+                    </div>
+                    <div className="flex-1 min-w-0 text-right">
+                      <p className="font-bold text-sm truncate">{displayName}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {conv.lastMessage === FINISH_SIGNAL ? "✅ تم إنهاء المحادثة" : (conv.lastMessage || displaySub)}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })
+            )}
           </div>
         </div>
 
-        {/* Main Chat */}
+        {/* ── Main Chat ───────────────────────────────────────────────────── */}
         {activeArtisan ? (
           <div className="flex-1 flex flex-col bg-background overflow-hidden">
-            {/* Chat Header */}
+            {/* Header */}
             <div className="h-16 border-b flex items-center justify-between px-4 bg-card/80 backdrop-blur-sm shrink-0">
               <div className="flex items-center gap-3">
                 <button onClick={() => setLocation("/chat")} className="md:hidden p-1">
@@ -273,17 +339,42 @@ export default function Chat() {
                 </div>
                 <div>
                   <p className="font-bold text-sm">{activeArtisan.name}</p>
-                  <p className="text-xs text-green-500 font-medium">متصل الآن</p>
+                  <p className="text-xs text-green-500 font-medium">
+                    {chatFinished ? "✅ تم إنهاء المحادثة" : "متصل الآن"}
+                  </p>
                 </div>
               </div>
-              <div className="flex items-center gap-1">
-                {/* Show current user name */}
+
+              <div className="flex items-center gap-2">
                 <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground ml-2 border-l pl-3">
                   <span>أنت:</span>
                   <span className="font-bold text-foreground">{myName}</span>
                 </div>
-                {/* Rate button for customers */}
-                {!isArtisan && messages.length > 0 && !hasReviewed && (
+
+                {/* Artisan: finish chat button */}
+                {isArtisan && !chatFinished && messages.length > 0 && (
+                  <button
+                    onClick={() => {
+                      if (confirm("هل تريد إنهاء هذه المحادثة؟ سيتمكن الزبون بعدها من تقييمك.")) {
+                        finishChatMutation.mutate();
+                      }
+                    }}
+                    disabled={finishChatMutation.isPending}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-500/10 text-green-600 hover:bg-green-500/20 transition-colors text-xs font-bold border border-green-500/20"
+                  >
+                    <CheckCheck className="h-3.5 w-3.5" />
+                    إنهاء المحادثة
+                  </button>
+                )}
+
+                {isArtisan && chatFinished && (
+                  <span className="flex items-center gap-1 text-xs text-green-600/70 px-3">
+                    <CheckCheck className="h-3.5 w-3.5" /> تم الإنهاء
+                  </span>
+                )}
+
+                {/* Customer: rate button - only after artisan finishes */}
+                {!isArtisan && chatFinished && !hasReviewed && (
                   <button
                     onClick={() => setShowRating(true)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors text-xs font-bold border border-amber-500/20"
@@ -292,11 +383,19 @@ export default function Chat() {
                     قيّم الحرفي
                   </button>
                 )}
+
+                {!isArtisan && !chatFinished && messages.length > 0 && !hasReviewed && (
+                  <span className="text-xs text-muted-foreground px-2">
+                    انتظر إنهاء الحرفي للمحادثة
+                  </span>
+                )}
+
                 {!isArtisan && hasReviewed && (
                   <span className="flex items-center gap-1 text-xs text-amber-500/70 px-3">
                     <Star className="h-3 w-3 fill-amber-400" /> تم التقييم
                   </span>
                 )}
+
                 <button className="p-2 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-primary">
                   <Phone className="h-5 w-5" />
                 </button>
@@ -306,7 +405,7 @@ export default function Chat() {
               </div>
             </div>
 
-            {/* Messages Area */}
+            {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-1" ref={scrollRef}>
               <div className="flex items-center gap-3 my-4">
                 <div className="flex-1 h-px bg-border/50" />
@@ -330,14 +429,27 @@ export default function Chat() {
 
               <AnimatePresence initial={false}>
                 {messages.map((msg: any, i: number) => {
+                  // Hide the finish signal message — show a banner instead
+                  if (msg.content === FINISH_SIGNAL) {
+                    return (
+                      <motion.div key={msg.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                        className="flex items-center gap-3 my-4">
+                        <div className="flex-1 h-px bg-green-500/20" />
+                        <span className="text-xs font-bold text-green-600 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20 flex items-center gap-1">
+                          <CheckCheck className="h-3 w-3" /> أنهى الحرفي المحادثة
+                        </span>
+                        <div className="flex-1 h-px bg-green-500/20" />
+                      </motion.div>
+                    );
+                  }
+
                   const isMe = msg.senderId === myId || msg.senderType === myType;
                   const showAvatar = !isMe && (i === 0 || messages[i-1]?.senderId !== msg.senderId);
-                  // Name label for first message in group
                   const senderName = isMe ? myName : (msg.senderType === "artisan" ? activeArtisan.name : "زبون");
                   const showName = i === 0 || messages[i-1]?.senderType !== msg.senderType;
+
                   return (
-                    <motion.div
-                      key={msg.id}
+                    <motion.div key={msg.id}
                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       transition={{ duration: 0.2 }}
@@ -359,8 +471,7 @@ export default function Chat() {
                             {senderName}
                           </p>
                         )}
-                        <div
-                          onDoubleClick={() => toggleLike(msg.id)}
+                        <div onDoubleClick={() => toggleLike(msg.id)}
                           className={`rounded-2xl text-sm leading-relaxed cursor-default select-text transition-all overflow-hidden ${
                             isMe
                               ? 'bg-gradient-to-br from-primary to-primary/80 text-white rounded-br-md'
@@ -368,22 +479,15 @@ export default function Chat() {
                           } ${isImageUrl(msg.content) ? 'p-1' : 'px-4 py-2.5'}`}
                         >
                           {isImageUrl(msg.content) ? (
-                            <img
-                              src={msg.content}
-                              alt="صورة"
+                            <img src={msg.content} alt="صورة"
                               className="max-w-[240px] max-h-[300px] rounded-xl object-cover block"
                               onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
                             />
-                          ) : (
-                            msg.content
-                          )}
+                          ) : msg.content}
                         </div>
                         {likedMsgs.has(msg.id) && (
-                          <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            className={`absolute -bottom-2 ${isMe ? 'left-2' : 'right-2'} text-sm`}
-                          >❤️</motion.div>
+                          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
+                            className={`absolute -bottom-2 ${isMe ? 'left-2' : 'right-2'} text-sm`}>❤️</motion.div>
                         )}
                         <span className={`text-[10px] text-muted-foreground mt-1 block ${isMe ? 'text-right' : 'text-left'} opacity-0 group-hover:opacity-100 transition-opacity`}>
                           {formatTime(msg.createdAt || new Date())}
@@ -395,7 +499,7 @@ export default function Chat() {
               </AnimatePresence>
             </div>
 
-            {/* Input Bar */}
+            {/* Input */}
             <div className="px-4 pb-4 pt-2 bg-card/80 backdrop-blur-sm border-t shrink-0">
               <AnimatePresence>
                 {selectedImage && (
@@ -424,7 +528,7 @@ export default function Chat() {
               <div className="flex items-center gap-2">
                 <button onClick={() => setShowEmoji(p => !p)}
                   className={`p-2.5 rounded-full transition-colors shrink-0 ${showEmoji ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-primary hover:bg-muted/50'}`}>
-                  <Smile className="h-5 w-5" />
+                  <Star className="h-5 w-5" />
                 </button>
                 <button onClick={() => fileInputRef.current?.click()}
                   className="p-2.5 rounded-full text-muted-foreground hover:text-primary hover:bg-muted/50 transition-colors shrink-0">
@@ -433,26 +537,26 @@ export default function Chat() {
                 <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleFile} />
 
                 <div className="flex-1 flex items-center gap-2 bg-muted/50 rounded-full px-4 py-2 border border-border/50 focus-within:ring-1 focus-within:ring-primary/30">
-                  <input
-                    type="text"
+                  <input type="text"
                     className="flex-1 bg-transparent border-none focus:outline-none text-sm"
-                    placeholder={`رسالة لـ ${activeArtisan.name}...`}
+                    placeholder={chatFinished ? "تم إنهاء المحادثة" : `رسالة لـ ${activeArtisan.name}...`}
                     value={inputText}
+                    disabled={chatFinished}
                     onChange={e => setInputText(e.target.value)}
                     onKeyDown={e => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSend())}
                   />
                 </div>
 
                 {(inputText.trim() || selectedImage) ? (
-                  <button
-                    onClick={handleSend}
-                    disabled={sendMutation.isPending || uploadMutation.isPending}
-                    className="p-2.5 bg-primary text-white rounded-full shrink-0 hover:bg-primary/90 transition-all active:scale-95 shadow-md shadow-primary/30 disabled:opacity-60"
-                  >
+                  <button onClick={handleSend}
+                    disabled={sendMutation.isPending || uploadMutation.isPending || chatFinished}
+                    className="p-2.5 bg-primary text-white rounded-full shrink-0 hover:bg-primary/90 transition-all active:scale-95 shadow-md shadow-primary/30 disabled:opacity-60">
                     <Send className="h-5 w-5" />
                   </button>
                 ) : (
-                  <button onClick={() => sendMutation.mutate("❤️")} className="p-2.5 text-primary shrink-0 hover:scale-110 transition-transform">
+                  <button onClick={() => !chatFinished && sendMutation.mutate("❤️")}
+                    disabled={chatFinished}
+                    className="p-2.5 text-primary shrink-0 hover:scale-110 transition-transform disabled:opacity-40">
                     <Heart className="h-5 w-5 fill-primary" />
                   </button>
                 )}
@@ -506,14 +610,10 @@ export default function Chat() {
             />
 
             <div className="flex gap-3 w-full">
-              <Button variant="outline" className="flex-1" onClick={() => setShowRating(false)}>
-                إلغاء
-              </Button>
-              <Button
-                className="flex-1 gap-2"
+              <Button variant="outline" className="flex-1" onClick={() => setShowRating(false)}>إلغاء</Button>
+              <Button className="flex-1 gap-2"
                 disabled={ratingValue === 0 || reviewMutation.isPending}
-                onClick={() => reviewMutation.mutate()}
-              >
+                onClick={() => reviewMutation.mutate()}>
                 <Star className="h-4 w-4 fill-white" />
                 {reviewMutation.isPending ? "جاري الإرسال..." : "إرسال التقييم"}
               </Button>
