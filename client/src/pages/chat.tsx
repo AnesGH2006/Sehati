@@ -91,9 +91,15 @@ export default function Chat() {
   const mockArtisan = activeArtisanId ? MOCK_ARTISANS.find(a => a.id === activeArtisanId) : null;
   const activeArtisan = activeArtisanId ? {
     id: activeArtisanId,
-    name: apiArtisan?.name || mockArtisan?.name || "حرفي",
-    image: apiArtisan?.imageUrl || mockArtisan?.image || "",
-    category: apiArtisan?.category || mockArtisan?.category || "",
+    name: isArtisan && authArtisan?.id === activeArtisanId
+      ? (authArtisan?.name || "حرفي")
+      : (apiArtisan?.name || mockArtisan?.name || "حرفي"),
+    image: isArtisan && authArtisan?.id === activeArtisanId
+      ? (authArtisan?.imageUrl || `https://ui-avatars.com/api/?name=${authArtisan?.name}&background=2DD4BF&color=fff`)
+      : (apiArtisan?.imageUrl || mockArtisan?.image || ""),
+    category: isArtisan && authArtisan?.id === activeArtisanId
+      ? (authArtisan?.category || "")
+      : (apiArtisan?.category || mockArtisan?.category || ""),
   } : null;
 
   const convId = activeArtisanId
@@ -306,12 +312,14 @@ export default function Chat() {
                 const displayImage = isArtisan ? "" : artisan?.image;
                 const displaySub = isArtisan ? conv.customerId?.slice(0, 12) : artisan?.category;
                 const convArtisanId = conv.artisanId;
-                const isActive = activeArtisanId === convArtisanId;
+                const isActive = isArtisan 
+                  ? activeArtisanId === authArtisan?.id
+                  : activeArtisanId === convArtisanId;
 
                 return (
                   <button
                     key={conv.id}
-                    onClick={() => setLocation(`/chat/${convArtisanId}`)}
+                    onClick={() => setLocation(`/chat/${isArtisan ? authArtisan?.id : convArtisanId}`)}
                     className={`w-full p-3 flex items-center gap-3 hover:bg-muted/40 transition-colors text-right ${isActive ? 'bg-primary/5 border-r-2 border-primary' : ''}`}
                   >
                     <div className="relative shrink-0">
