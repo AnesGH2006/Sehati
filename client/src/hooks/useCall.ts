@@ -125,6 +125,17 @@ export function useCall({ myId, myName }: UseCallProps) {
     socketRef.current?.emit("rtc:offer", { to: remoteId, offer });
   };
 
+  const cleanup = () => {
+    localStreamRef.current?.getTracks().forEach(t => t.stop());
+    localStreamRef.current = null;
+    pcRef.current?.close();
+    pcRef.current = null;
+    if (localVideoRef.current) localVideoRef.current.srcObject = null;
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+    setIsMuted(false);
+    setIsCamOff(false);
+  };
+
   const startCall = useCallback(async (targetId: string, targetName: string, type: CallType) => {
     if (!socketRef.current) {
       alert("خدمة المكالمات غير متاحة حالياً. تأكد من تثبيت socket.io-client");
@@ -175,17 +186,6 @@ export function useCall({ myId, myName }: UseCallProps) {
     localStreamRef.current?.getVideoTracks().forEach(t => { t.enabled = !t.enabled; });
     setIsCamOff(p => !p);
   }, []);
-
-  const cleanup = () => {
-    localStreamRef.current?.getTracks().forEach(t => t.stop());
-    localStreamRef.current = null;
-    pcRef.current?.close();
-    pcRef.current = null;
-    if (localVideoRef.current) localVideoRef.current.srcObject = null;
-    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
-    setIsMuted(false);
-    setIsCamOff(false);
-  };
 
   return {
     callState, callType, remoteId, remoteName,
