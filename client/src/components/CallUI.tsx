@@ -115,7 +115,7 @@ export function CallUI({
           )}
 
           {/* Active audio call - show name at top */}
-          {callState === "active" && callType === "video" && (
+          {(callState === "calling" || callState === "incoming" || (callState === "active" && callType === "audio")) && (
             <div className="absolute top-6 right-6 text-white font-bold text-sm bg-black/40 px-3 py-1.5 rounded-full backdrop-blur">
               {remoteName}
             </div>

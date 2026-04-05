@@ -10,8 +10,21 @@ import {
 } from "@shared/schema";
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 
 const DATA_FILE = path.join(process.cwd(), "data.json");
+
+// ── User types ───────────────────────────────────────────────────────────────
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  passwordHash: string;
+  phone?: string;
+  role: "customer" | "artisan";
+  artisanId?: number;
+  createdAt: string;
+}
 
 interface DataStore {
   artisans: Artisan[];
@@ -21,6 +34,11 @@ interface DataStore {
   messageIdCounter: number;
   reviews: Review[];
   reviewIdCounter: number;
+  users: User[];
+}
+
+function hashPassword(password: string): string {
+  return crypto.createHash("sha256").update(password + "herfati_salt").digest("hex");
 }
 
 function loadData(): DataStore {
@@ -36,6 +54,7 @@ function loadData(): DataStore {
         messageIdCounter: data.messageIdCounter || 1,
         reviews: data.reviews || [],
         reviewIdCounter: data.reviewIdCounter || 1,
+        users: data.users || [],
       };
     }
   } catch (e) {
@@ -49,6 +68,7 @@ function loadData(): DataStore {
     messageIdCounter: 1,
     reviews: [],
     reviewIdCounter: 1,
+    users: [],
   };
 }
 
@@ -69,6 +89,12 @@ function saveData(store: DataStore) {
 }
 
 export interface IStorage {
+  // ── Auth ──────────────────────────────────────────────────────────────────
+  registerUser(name: string, email: string, password: string, phone?: string): Promise<User | null>;
+  loginUser(email: string, password: string): Promise<User | null>;
+  getUserById(id: string): Promise<User | null>;
+  linkUserToArtisan(userId: string, artisanId: number): Promise<void>;
+
   getArtisan(id: number): Promise<Artisan | undefined>;
   getArtisans(filters?: {
     category?: string;
@@ -106,6 +132,49 @@ class FileStorage implements IStorage {
 
   private save() {
     saveData(this.store);
+  }
+
+  // ── Auth ───────────────────────────────────────────────────────────────────
+
+  async registerUser(name: string, email: string, password: string, phone?: string): Promise<User | null> {
+    const exists = this.store.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (exists) return null;
+    const user: User = {
+      id: `user-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      name,
+      email: email.toLowerCase(),
+      passwordHash: hashPassword(password),
+      phone,
+      role: "customer",
+      createdAt: new Date().toISOString(),
+    };
+    this.store.users.push(user);
+    this.save();
+    return user;
+  }
+
+  async loginUser(email: string, password: string): Promise<User | null> {
+    const user = this.store.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (!user) return null;
+    if (user.passwordHash !== hashPassword(password)) return null;
+    return user;
+  }
+
+  async getUserById(id: string): Promise<User | null> {
+    return this.store.users.find(u => u.id === id) || null;
+  }
+
+  async linkUserToArtisan(userId: string, artisanId: number): Promise<void> {
+    const userIdx = this.store.users.findIndex(u => u.id === userId);
+    if (userIdx !== -1) {
+      this.store.users[userIdx].role = "artisan";
+      this.store.users[userIdx].artisanId = artisanId;
+    }
+    const artisanIdx = this.store.artisans.findIndex(a => a.id === artisanId);
+    if (artisanIdx !== -1) {
+      this.store.artisans[artisanIdx].userId = userId;
+    }
+    this.save();
   }
 
   async getArtisan(id: number): Promise<Artisan | undefined> {
