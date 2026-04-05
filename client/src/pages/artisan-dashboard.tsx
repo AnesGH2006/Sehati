@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import {
   MessageSquare, Star, Eye, Image as ImageIcon,
-  Clock, MapPin, Save, BadgeCheck, Trash2, Upload, X, Phone, Mail, Briefcase, Banknote, Send, ArrowRight, Quote
+  Clock, MapPin, Save, BadgeCheck, Trash2, Upload, X, Phone, Mail, Briefcase, Banknote, Send, ArrowRight, Quote, Video, ExternalLink, CheckCheck
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
@@ -18,6 +18,10 @@ import { useAuth } from "@/lib/auth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useCall } from "@/hooks/useCall";
+import { CallUI } from "@/components/CallUI";
+
+const FINISH_SIGNAL = "__CHAT_FINISHED__";
 
 function isImageContent(content: string) {
   return content?.startsWith("data:image") || content?.startsWith("http");
@@ -44,6 +48,18 @@ export default function ArtisanDashboard() {
   const [selectedConv, setSelectedConv] = useState<any>(null);
   const [replyText, setReplyText] = useState("");
   const chatScrollRef = useRef<HTMLDivElement>(null);
+
+  const myId = String(artisan?.id || "");
+  const myName = artisan?.name || "حرفي";
+
+  // ── WebRTC Calls ─────────────────────────────────────────────────────────
+  const {
+    callState, callType, remoteName,
+    isMuted, isCamOff,
+    localVideoRef, remoteVideoRef,
+    startCall, acceptCall, rejectCall, endCall,
+    toggleMute, toggleCamera,
+  } = useCall({ myId, myName });
 
   const { data: serverArtisan, refetch } = useQuery<any>({
     queryKey: ["/api/artisans", artisan?.id],
@@ -77,6 +93,9 @@ export default function ArtisanDashboard() {
     enabled: !!selectedConv?.id,
     refetchInterval: 2000,
   });
+
+  // Check if selected conv is finished
+  const chatFinished = convMessages.some((m: any) => m.content === FINISH_SIGNAL && m.senderType === "artisan");
 
   useEffect(() => {
     if (chatScrollRef.current) {
@@ -128,8 +147,27 @@ export default function ArtisanDashboard() {
     },
   });
 
+  // ── Finish chat mutation ──────────────────────────────────────────────────
+  const finishChatMutation = useMutation({
+    mutationFn: () => fetch("/api/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        conversationId: selectedConv?.id,
+        senderId: String(artisan?.id),
+        receiverId: selectedConv?.customerId,
+        senderType: "artisan",
+        content: FINISH_SIGNAL,
+      }),
+    }).then(r => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", selectedConv?.id, "messages"] });
+      toast({ title: "✅ تم إنهاء المحادثة", description: "يمكن للزبون الآن تقييمك" });
+    },
+  });
+
   const handleSendReply = () => {
-    if (!replyText.trim()) return;
+    if (!replyText.trim() || chatFinished) return;
     sendReplyMutation.mutate(replyText);
   };
 
@@ -279,9 +317,8 @@ export default function ArtisanDashboard() {
               <InfoItem icon={<BadgeCheck />} label={isRtl ? "المهنة" : "Category"} value={realArtisan?.category || artisan?.category || "–"} />
             </div>
 
-            {/* Conversations with inline chat */}
+            {/* Conversations */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Conversation List */}
               <Card className="bg-white/[0.03] border-white/10 rounded-3xl overflow-hidden">
                 <CardHeader className="p-5 border-b border-white/10">
                   <CardTitle className="flex items-center gap-3 text-lg font-heading font-black">
@@ -297,7 +334,6 @@ export default function ArtisanDashboard() {
                     <div className="p-8 text-center text-zinc-500">
                       <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-20" />
                       <p>{isRtl ? "لا توجد محادثات بعد" : "No conversations yet"}</p>
-                      <p className="text-xs mt-1 opacity-60">{isRtl ? "ستظهر هنا رسائل الزبائن" : "Customer messages will appear here"}</p>
                     </div>
                   ) : (
                     conversations.map((conv: any) => (
@@ -312,10 +348,12 @@ export default function ArtisanDashboard() {
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
-                          <p className="font-bold text-sm">زبون #{conv.customerId?.slice(-6)}</p>
+                          <p className="font-bold text-sm">
+                            {conv.customerName || `زبون #${conv.customerId?.slice(-6)}`}
+                          </p>
                           {conv.lastMessage && (
-                            <p className={`text-xs truncate mt-0.5 ${isImageContent(conv.lastMessage) ? 'text-primary/60' : 'text-zinc-400'}`}>
-                              {isImageContent(conv.lastMessage) ? "📷 صورة" : conv.lastMessage}
+                            <p className="text-xs truncate mt-0.5 text-zinc-400">
+                              {conv.lastMessage === FINISH_SIGNAL ? "✅ تم إنهاء المحادثة" : isImageContent(conv.lastMessage) ? "📷 صورة" : conv.lastMessage}
                             </p>
                           )}
                         </div>
@@ -329,11 +367,7 @@ export default function ArtisanDashboard() {
               {/* Inline Chat Panel */}
               <AnimatePresence>
                 {selectedConv && (
-                  <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                  >
+                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
                     <Card className="bg-white/[0.03] border-white/10 rounded-3xl overflow-hidden flex flex-col h-[480px]">
                       <CardHeader className="p-4 border-b border-white/10 flex-row items-center justify-between space-y-0">
                         <div className="flex items-center gap-3">
@@ -343,13 +377,62 @@ export default function ArtisanDashboard() {
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-bold text-sm">زبون #{selectedConv.customerId?.slice(-6)}</p>
-                            <p className="text-xs text-green-400">متصل</p>
+                            <p className="font-bold text-sm">
+                              {selectedConv.customerName || `زبون #${selectedConv.customerId?.slice(-6)}`}
+                            </p>
+                            <p className="text-xs text-green-400">
+                              {chatFinished ? "✅ تم إنهاء المحادثة" : "متصل"}
+                            </p>
                           </div>
                         </div>
-                        <Button size="icon" variant="ghost" className="rounded-full h-8 w-8 text-zinc-400" onClick={() => setSelectedConv(null)}>
-                          <X className="h-4 w-4" />
-                        </Button>
+
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-1.5">
+                          {/* Audio call */}
+                          <button
+                            onClick={() => startCall(selectedConv.customerId, selectedConv.customerName || "زبون", "audio")}
+                            className="p-1.5 rounded-full bg-white/5 hover:bg-primary/20 text-zinc-400 hover:text-primary transition-colors"
+                            title="مكالمة صوتية"
+                          >
+                            <Phone className="h-4 w-4" />
+                          </button>
+                          {/* Video call */}
+                          <button
+                            onClick={() => startCall(selectedConv.customerId, selectedConv.customerName || "زبون", "video")}
+                            className="p-1.5 rounded-full bg-white/5 hover:bg-primary/20 text-zinc-400 hover:text-primary transition-colors"
+                            title="مكالمة بالكاميرا"
+                          >
+                            <Video className="h-4 w-4" />
+                          </button>
+                          {/* Open in full chat page */}
+                          <button
+                            onClick={() => setLocation(`/chat/${selectedConv.artisanId}`)}
+                            className="p-1.5 rounded-full bg-white/5 hover:bg-blue-500/20 text-zinc-400 hover:text-blue-400 transition-colors"
+                            title="فتح في صفحة كاملة"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </button>
+                          {/* Finish chat */}
+                          {!chatFinished && convMessages.length > 0 && (
+                            <button
+                              onClick={() => { if (confirm("هل تريد إنهاء هذه المحادثة؟ سيتمكن الزبون بعدها من تقييمك.")) finishChatMutation.mutate(); }}
+                              disabled={finishChatMutation.isPending}
+                              className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors text-xs font-bold border border-green-500/20"
+                              title="إنهاء المحادثة"
+                            >
+                              <CheckCheck className="h-3.5 w-3.5" />
+                              إنهاء
+                            </button>
+                          )}
+                          {chatFinished && (
+                            <span className="text-xs text-green-500/60 flex items-center gap-1">
+                              <CheckCheck className="h-3 w-3" /> منتهية
+                            </span>
+                          )}
+                          <Button size="icon" variant="ghost" className="rounded-full h-8 w-8 text-zinc-400" onClick={() => setSelectedConv(null)}>
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </CardHeader>
 
                       {/* Messages */}
@@ -358,6 +441,17 @@ export default function ArtisanDashboard() {
                           <div className="h-full flex items-center justify-center text-zinc-500 text-sm">لا توجد رسائل</div>
                         ) : (
                           convMessages.map((msg: any) => {
+                            if (msg.content === FINISH_SIGNAL) {
+                              return (
+                                <div key={msg.id} className="flex items-center gap-2 my-2">
+                                  <div className="flex-1 h-px bg-green-500/20" />
+                                  <span className="text-xs text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20 flex items-center gap-1">
+                                    <CheckCheck className="h-3 w-3" /> أنهيت المحادثة
+                                  </span>
+                                  <div className="flex-1 h-px bg-green-500/20" />
+                                </div>
+                              );
+                            }
                             const isMe = msg.senderType === "artisan";
                             return (
                               <div key={msg.id} className={`flex ${isMe ? 'justify-start' : 'justify-end'}`}>
@@ -368,9 +462,7 @@ export default function ArtisanDashboard() {
                                 }`}>
                                   {isImageContent(msg.content) ? (
                                     <img src={msg.content} alt="" className="max-w-full rounded-xl max-h-40 object-cover" />
-                                  ) : (
-                                    <p>{msg.content}</p>
-                                  )}
+                                  ) : <p>{msg.content}</p>}
                                   <span className="text-[10px] opacity-60 mt-0.5 block">{formatTime(msg.createdAt)}</span>
                                 </div>
                               </div>
@@ -381,23 +473,27 @@ export default function ArtisanDashboard() {
 
                       {/* Reply Input */}
                       <div className="p-3 border-t border-white/10">
-                        <div className="flex items-center gap-2 bg-white/5 rounded-2xl px-3 py-2 border border-white/10">
-                          <input
-                            type="text"
-                            className="flex-1 bg-transparent border-none focus:outline-none text-sm text-white placeholder:text-zinc-500"
-                            placeholder={isRtl ? "اكتب ردك..." : "Type your reply..."}
-                            value={replyText}
-                            onChange={e => setReplyText(e.target.value)}
-                            onKeyDown={e => e.key === "Enter" && handleSendReply()}
-                          />
-                          <button
-                            onClick={handleSendReply}
-                            disabled={!replyText.trim() || sendReplyMutation.isPending}
-                            className="p-1.5 bg-primary rounded-full text-white disabled:opacity-40 transition-all hover:bg-primary/80 active:scale-95"
-                          >
-                            <Send className="h-4 w-4" />
-                          </button>
-                        </div>
+                        {chatFinished ? (
+                          <p className="text-center text-xs text-zinc-500 py-1">تم إنهاء المحادثة</p>
+                        ) : (
+                          <div className="flex items-center gap-2 bg-white/5 rounded-2xl px-3 py-2 border border-white/10">
+                            <input
+                              type="text"
+                              className="flex-1 bg-transparent border-none focus:outline-none text-sm text-white placeholder:text-zinc-500"
+                              placeholder={isRtl ? "اكتب ردك..." : "Type your reply..."}
+                              value={replyText}
+                              onChange={e => setReplyText(e.target.value)}
+                              onKeyDown={e => e.key === "Enter" && handleSendReply()}
+                            />
+                            <button
+                              onClick={handleSendReply}
+                              disabled={!replyText.trim() || sendReplyMutation.isPending}
+                              className="p-1.5 bg-primary rounded-full text-white disabled:opacity-40 transition-all hover:bg-primary/80 active:scale-95"
+                            >
+                              <Send className="h-4 w-4" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </Card>
                   </motion.div>
@@ -405,7 +501,7 @@ export default function ArtisanDashboard() {
               </AnimatePresence>
             </div>
 
-            {/* Reviews Section */}
+            {/* Reviews */}
             {reviews.length > 0 && (
               <Card className="bg-white/[0.03] border-white/10 rounded-3xl overflow-hidden">
                 <CardHeader className="p-5 border-b border-white/10">
@@ -468,34 +564,22 @@ export default function ArtisanDashboard() {
               <label className="flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-3xl py-20 text-zinc-500 cursor-pointer hover:border-primary/30 hover:text-zinc-300 transition-all">
                 <ImageIcon className="h-14 w-14 mb-4 opacity-20" />
                 <p className="font-bold text-lg">{isRtl ? "أضف أول صورة لأعمالك" : "Add your first work photo"}</p>
-                <p className="text-sm opacity-60 mt-2">{isRtl ? "صورة ملفك الشخصي تُضاف تلقائياً" : "Your profile photo is auto-added"}</p>
                 <input type="file" accept="image/*" className="hidden" onChange={handleAddPortfolioPhoto} />
               </label>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {displayPortfolio.map((img: string, i: number) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: i * 0.05 }}
-                    className="aspect-square rounded-2xl overflow-hidden relative group border border-white/10 cursor-pointer"
-                  >
+                  <motion.div key={i} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.05 }}
+                    className="aspect-square rounded-2xl overflow-hidden relative group border border-white/10 cursor-pointer">
                     <img src={img} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                      {i === 0 && (
-                        <span className="text-xs font-bold text-white bg-primary/80 px-2 py-1 rounded-full">{isRtl ? "الصورة الرئيسية" : "Main Photo"}</span>
-                      )}
-                      <button
-                        className="h-9 w-9 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-colors"
-                        onClick={() => handleRemovePortfolioPhoto(i)}
-                      >
+                      {i === 0 && <span className="text-xs font-bold text-white bg-primary/80 px-2 py-1 rounded-full">{isRtl ? "الصورة الرئيسية" : "Main Photo"}</span>}
+                      <button className="h-9 w-9 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-colors" onClick={() => handleRemovePortfolioPhoto(i)}>
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   </motion.div>
                 ))}
-                {/* Add more button */}
                 <label className="aspect-square rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-primary/30 transition-colors text-zinc-500 hover:text-zinc-300">
                   <Upload className="h-6 w-6 mb-2" />
                   <span className="text-xs font-bold">{isRtl ? "إضافة" : "Add"}</span>
@@ -503,11 +587,6 @@ export default function ArtisanDashboard() {
                 </label>
               </div>
             )}
-            <p className="text-zinc-600 text-xs">
-              {isRtl
-                ? "الصورة الأولى تظهر كصورتك الرئيسية في ملفك الشخصي وبطاقتك في قائمة الحرفيين"
-                : "The first photo appears as your main photo in your profile and artisan card"}
-            </p>
           </motion.div>
         )}
 
@@ -550,12 +629,9 @@ export default function ArtisanDashboard() {
 
             <div className="pt-4 border-t border-white/10">
               <h3 className="text-lg font-black text-red-400 mb-4">{isRtl ? "منطقة الخطر" : "Danger Zone"}</h3>
-              <Button
-                variant="destructive"
-                className="gap-2 rounded-xl"
+              <Button variant="destructive" className="gap-2 rounded-xl"
                 onClick={() => { if (confirm(isRtl ? "هل أنت متأكد من حذف حسابك نهائياً؟" : "Delete your account permanently?")) deleteMutation.mutate(); }}
-                disabled={deleteMutation.isPending}
-              >
+                disabled={deleteMutation.isPending}>
                 <Trash2 className="h-4 w-4" />
                 {isRtl ? "حذف حسابي نهائياً" : "Delete My Account"}
               </Button>
@@ -564,6 +640,22 @@ export default function ArtisanDashboard() {
         )}
       </main>
       <Footer />
+
+      {/* ── Call UI ────────────────────────────────────────────────────────── */}
+      <CallUI
+        callState={callState}
+        callType={callType}
+        remoteName={remoteName}
+        isMuted={isMuted}
+        isCamOff={isCamOff}
+        localVideoRef={localVideoRef}
+        remoteVideoRef={remoteVideoRef}
+        onAccept={acceptCall}
+        onReject={rejectCall}
+        onEnd={endCall}
+        onToggleMute={toggleMute}
+        onToggleCamera={toggleCamera}
+      />
     </div>
   );
 }
@@ -579,9 +671,7 @@ function StatCard({ icon, label, value, color }: any) {
     <motion.div whileHover={{ y: -4 }}>
       <Card className="bg-white/[0.03] border-white/10 rounded-2xl">
         <CardContent className="p-5">
-          <div className={`w-9 h-9 rounded-xl flex items-center justify-center border mb-3 ${colorMap[color]}`}>
-            {icon}
-          </div>
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center border mb-3 ${colorMap[color]}`}>{icon}</div>
           <div className="text-3xl font-black font-heading">{value}</div>
           <div className="text-xs font-black text-zinc-500 uppercase tracking-widest mt-1">{label}</div>
         </CardContent>
