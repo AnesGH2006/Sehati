@@ -64,15 +64,5 @@
     }
   ],
   "reviewIdCounter": 2,
-  "users": [
-    {
-      "id": "user-1775411791603-abnwhqm4miu",
-      "name": "alaa",
-      "email": "alaagh23dz@gmail.com",
-      "passwordHash": "7130323d623da57db92767d0024955680e77bd8ace0846d09b4c9e58bded1e30",
-      "phone": "0699055708",
-      "role": "customer",
-      "createdAt": "2026-04-05T17:56:31.603Z"
-    }
-  ]
+  "users": []
 }
