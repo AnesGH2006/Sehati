@@ -72,6 +72,11 @@ export default function Chat() {
   const myName = isArtisan ? (authArtisan?.name || "حرفي") : (customer?.name || "زبون");
   const myType: "artisan" | "customer" = isArtisan ? "artisan" : "customer";
 
+  // Redirect artisan to dashboard — chat is for customers only
+  useEffect(() => {
+    if (isArtisan) setLocation("/artisan/dashboard");
+  }, [isArtisan]);
+
   // ── WebRTC Call ────────────────────────────────────────────────────────
   const {
     callState, callType, remoteName,
