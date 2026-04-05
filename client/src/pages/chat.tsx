@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useCall } from "@/hooks/useCall";
-import { CallUI } from "@/components/CallUI"
+import { CallUI } from "@/components/CallUI";
 
 const EMOJI_LIST = ["😊","😂","❤️","😍","🥰","👍","🙏","🔥","✨","💯","😎","🤝","👋","🎉","💪","🤔","😭","😤","🥺","💬"];
 const FINISH_SIGNAL = "__CHAT_FINISHED__";
@@ -81,9 +81,6 @@ export default function Chat() {
     toggleMute, toggleCamera,
   } = useCall({ myId, myName });
 
-  // Target ID for call (artisan's ID as string, or customer ID)
-  const callTargetId = isArtisan ? "customer-chat" : String(activeArtisanId);
-
   // Fetch artisan info
   const { data: apiArtisan } = useQuery<any>({
     queryKey: ["/api/artisans", activeArtisanId],
@@ -145,6 +142,10 @@ export default function Chat() {
 
   // ── Check if artisan finished the chat ──────────────────────────────────
   const chatFinished = messages.some((m: any) => m.content === FINISH_SIGNAL && m.senderType === "artisan");
+
+  // ── Real call target ID — resolved from actual messages ─────────────────
+  const customerIdFromMessages = messages.find((m: any) => m.senderType === "customer")?.senderId;
+  const callTargetId = isArtisan ? (customerIdFromMessages || "customer-chat") : (activeArtisanId ? String(activeArtisanId) : "");
 
   // Check if already reviewed
   const { data: hasReviewed } = useQuery<boolean>({
