@@ -468,7 +468,7 @@ export default function Chat() {
                     );
                   }
 
-                  const isMe = msg.senderId === myId || msg.senderType === myType;
+                  const isMe = msg.senderId === myId;
                   const showAvatar = !isMe && (i === 0 || messages[i-1]?.senderId !== msg.senderId);
                   const senderName = isMe ? myName : (msg.senderType === "artisan" ? activeArtisan.name : "زبون");
                   const showName = i === 0 || messages[i-1]?.senderType !== msg.senderType;
