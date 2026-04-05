@@ -86,7 +86,7 @@ export function CallUI({
         <div className="relative z-20 flex flex-col items-center gap-6 p-8 w-full max-w-sm">
 
           {/* Caller info */}
-          {(callState === "calling" || callState === "incoming" || callState === "active" && callType === "audio") && (
+          {(callState === "calling" || callState === "incoming" || (callState === "active" && callType === "audio")) && (
             <div className="flex flex-col items-center gap-4">
               <div className="relative">
                 <Avatar className="h-28 w-28 border-4 border-white/20">
