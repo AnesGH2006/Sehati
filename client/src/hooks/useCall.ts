@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from 'react';
 
-export type CallState = "idle" | "calling" | "incoming" | "active" | "ended";
-export type CallType = "audio" | "video";
+export type CallState = 'idle' | 'calling' | 'incoming' | 'active' | 'ended';
+export type CallType = 'audio' | 'video';
 
 interface UseCallProps {
   myId: string;
@@ -9,69 +9,43 @@ interface UseCallProps {
 }
 
 export function useCall({ myId, myName }: UseCallProps) {
-  const [callState, setCallState] = useState<CallState>("idle");
-  const [callType, setCallType] = useState<CallType>("audio");
+  const [callState, setCallState] = useState<CallState>('idle');
+  const [callType, setCallType] = useState<CallType>('audio');
   const [remoteId, setRemoteId] = useState<string | null>(null);
-  const [remoteName, setRemoteName] = useState<string>("");
+  const [remoteName, setRemoteName] = useState<string>('');
   const [isMuted, setIsMuted] = useState(false);
   const [isCamOff, setIsCamOff] = useState(false);
-
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
-  const localVideoRef = useRef<HTMLVideoElement | null>(null);
-  const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const socketRef = useRef<any>(null);
+  const remoteIdRef = useRef<string | null>(null);
+
+  useEffect(() => { remoteIdRef.current = remoteId; }, [remoteId]);
 
   useEffect(() => {
-    if (!myId) return;
-
-    // Lazy load socket.io-client to avoid crash if not installed
-    import("socket.io-client").then(({ io }) => {
-      const socket = io(window.location.origin, {
-        query: { userId: myId },
-        path: "/socket.io",
-      });
+    import('socket.io-client').then(({ io }) => {
+      const socket = io(window.location.origin, { query: { userId: myId }, path: '/socket.io' });
       socketRef.current = socket;
-
-      socket.on("call:incoming", ({ from, fromName, callType: ct }: any) => {
-        setRemoteId(from);
-        setRemoteName(fromName);
-        setCallType(ct);
-        setCallState("incoming");
+      socket.on('call:incoming', ({ from, fromName, callType: ct }: any) => {
+        setRemoteId(from); remoteIdRef.current = from; setRemoteName(fromName); setCallType(ct); setCallState('incoming');
       });
-
-      socket.on("call:accepted", async () => {
-        setCallState("active");
-        await createAndSendOffer(from => socket.emit("rtc:offer", { to: from, offer: {} }));
-      });
-
-      socket.on("call:rejected", () => { cleanup(); setCallState("ended"); setTimeout(() => setCallState("idle"), 2000); });
-      socket.on("call:ended", () => { cleanup(); setCallState("ended"); setTimeout(() => setCallState("idle"), 2000); });
-
-      socket.on("rtc:offer", async ({ from, offer }: any) => {
+      socket.on('call:accepted', async () => { setCallState('active'); await setupAndOffer(); });
+      socket.on('call:rejected', () => { cleanup(); setCallState('ended'); setTimeout(() => setCallState('idle'), 2000); });
+      socket.on('call:ended', () => { cleanup(); setCallState('ended'); setTimeout(() => setCallState('idle'), 2000); });
+      socket.on('rtc:offer', async ({ from, offer }: any) => {
         await setupPeerConnection(from);
-        await pcRef.current!.setRemoteDescription(new RTCSessionDescription(offer));
-        const answer = await pcRef.current!.createAnswer();
-        await pcRef.current!.setLocalDescription(answer);
-        socket.emit("rtc:answer", { to: from, answer });
+        socket.emit('rtc:answer', { to: from, answer });
       });
-
-      socket.on("rtc:answer", async ({ answer }: any) => {
-        await pcRef.current?.setRemoteDescription(new RTCSessionDescription(answer));
-      });
-
-      socket.on("rtc:ice", async ({ candidate }: any) => {
-        try { await pcRef.current?.addIceCandidate(new RTCIceCandidate(candidate)); } catch {}
-      });
-    }).catch(() => {
-      console.warn("socket.io-client not available — calls disabled");
-    });
-
+      socket.on('rtc:answer', async ({ answer }: any) => { await pcRef.current?.setRemoteDescription(new RTCSessionDescription(answer)); });
+      socket.on('rtc:ice', async ({ candidate }: any) => { try { await pcRef.current?.addIceCandidate(new RTCIceCandidate(candidate)); } catch {} });
+    }).catch(() => console.warn('socket.io-client not available'));
     return () => { socketRef.current?.disconnect(); };
   }, [myId]);
 
   const getMedia = async (type: CallType) => {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === "video" });
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
     localStreamRef.current = stream;
     if (localVideoRef.current) localVideoRef.current.srcObject = stream;
     return stream;
@@ -79,95 +53,54 @@ export function useCall({ myId, myName }: UseCallProps) {
 
   const setupPeerConnection = async (targetId?: string) => {
     const pc = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }, { urls: "stun:stun1.l.google.com:19302" }],
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:openrelay.metered.ca:80' },
+        { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+        { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+      ],
     });
     pcRef.current = pc;
-    localStreamRef.current?.getTracks().forEach(track => pc.addTrack(track, localStreamRef.current!));
     pc.onicecandidate = (e) => {
-      if (e.candidate && (targetId || remoteId)) {
-        socketRef.current?.emit("rtc:ice", { to: targetId || remoteId, candidate: e.candidate });
-      }
+      if (e.candidate && (targetId || remoteIdRef.current))
+        socketRef.current?.emit('rtc:ice', { to: targetId || remoteIdRef.current, candidate: e.candidate });
     };
     pc.ontrack = (e) => {
-      if (remoteVideoRef.current) remoteVideoRef.current.srcObject = e.streams[0];
+      console.log('Remote track:', e.track.kind);
+      if (remoteVideoRef.current) { remoteVideoRef.current.srcObject = e.streams[0]; remoteVideoRef.current.play().catch(() => {}); }
     };
+    pc.onconnectionstatechange = () => console.log('Connection:', pc.connectionState);
+    pc.oniceconnectionstatechange = () => console.log('ICE:', pc.iceConnectionState);
     return pc;
   };
 
-  const createAndSendOffer = async (onOffer?: (to: string) => void) => {
+  const setupAndOffer = async () => {
     await setupPeerConnection();
-    const offer = await pcRef.current!.createOffer();
-    await pcRef.current!.setLocalDescription(offer);
-    socketRef.current?.emit("rtc:offer", { to: remoteId, offer });
+    socketRef.current?.emit('rtc:offer', { to: remoteIdRef.current, offer });
   };
 
   const startCall = useCallback(async (targetId: string, targetName: string, type: CallType) => {
-    if (!socketRef.current) {
-      alert("خدمة المكالمات غير متاحة حالياً. تأكد من تثبيت socket.io-client");
-      return;
-    }
-    setRemoteId(targetId);
-    setRemoteName(targetName);
-    setCallType(type);
-    setCallState("calling");
-    try {
-      await getMedia(type);
-      socketRef.current.emit("call:start", { to: targetId, from: myId, fromName: myName, callType: type });
-    } catch (err) {
-      alert("لا يمكن الوصول للميكروفون أو الكاميرا");
-      setCallState("idle");
-    }
+    setRemoteId(targetId); remoteIdRef.current = targetId; setRemoteName(targetName); setCallType(type); setCallState('calling');
+    try { await getMedia(type); socketRef.current.emit('call:start', { to: targetId, from: myId, fromName: myName, callType: type }); }
+    catch { alert('لا يمكن الوصول للميكروفون أو الكاميرا'); setCallState('idle'); }
   }, [myId, myName]);
 
   const acceptCall = useCallback(async () => {
-    try {
-      await getMedia(callType);
-      socketRef.current?.emit("call:accept", { to: remoteId });
-      setCallState("active");
-    } catch {
-      alert("لا يمكن الوصول للميكروفون أو الكاميرا");
-    }
-  }, [callType, remoteId]);
+    try { await getMedia(callType); socketRef.current?.emit('call:accept', { to: remoteIdRef.current }); setCallState('active'); }
+    catch { alert('لا يمكن الوصول للميكروفون أو الكاميرا'); }
+  }, [callType]);
 
-  const rejectCall = useCallback(() => {
-    socketRef.current?.emit("call:reject", { to: remoteId });
-    cleanup();
-    setCallState("idle");
-  }, [remoteId]);
-
-  const endCall = useCallback(() => {
-    socketRef.current?.emit("call:end", { to: remoteId });
-    cleanup();
-    setCallState("ended");
-    setTimeout(() => setCallState("idle"), 2000);
-  }, [remoteId]);
-
-  const toggleMute = useCallback(() => {
-    localStreamRef.current?.getAudioTracks().forEach(t => { t.enabled = !t.enabled; });
-    setIsMuted(p => !p);
-  }, []);
-
-  const toggleCamera = useCallback(() => {
-    localStreamRef.current?.getVideoTracks().forEach(t => { t.enabled = !t.enabled; });
-    setIsCamOff(p => !p);
-  }, []);
+  const rejectCall = useCallback(() => { socketRef.current?.emit('call:reject', { to: remoteIdRef.current }); cleanup(); setCallState('idle'); }, []);
+  const endCall = useCallback(() => { socketRef.current?.emit('call:end', { to: remoteIdRef.current }); cleanup(); setCallState('ended'); setTimeout(() => setCallState('idle'), 2000); }, []);
 
   const cleanup = () => {
     localStreamRef.current?.getTracks().forEach(t => t.stop());
-    localStreamRef.current = null;
-    pcRef.current?.close();
-    pcRef.current = null;
+    localStreamRef.current = null; pcRef.current?.close(); pcRef.current = null;
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
-    setIsMuted(false);
-    setIsCamOff(false);
+    setIsMuted(false); setIsCamOff(false);
   };
 
-  return {
-    callState, callType, remoteId, remoteName,
-    isMuted, isCamOff,
-    localVideoRef, remoteVideoRef,
-    startCall, acceptCall, rejectCall, endCall,
-    toggleMute, toggleCamera,
-  };
+  return { callState, callType, remoteId, remoteName, isMuted, isCamOff, localVideoRef, remoteVideoRef, startCall, acceptCall, rejectCall, endCall, toggleMute, toggleCamera };
 }
