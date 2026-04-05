@@ -1,58 +1,78 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Navbar } from "@/components/layout/navbar";
-import { Footer } from "@/components/layout/footer";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
-import {
-  MessageSquare, Star, Eye, Image as ImageIcon,
-  Clock, MapPin, Save, BadgeCheck, Trash2, Upload, X, Phone, Mail, Briefcase, Banknote, Send, ArrowRight, Quote, Video, ExternalLink, CheckCheck
-} from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { MOCK_ARTISANS, CATEGORIES } from "@/lib/constants";
+import { Send, Image as ImageIcon, Smile, X, ArrowRight, Phone, Video, Star, Heart, CheckCheck } from "lucide-react";
+import { useRoute, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { useLocation } from "wouter";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LOCATIONS, DAIRAS } from "@/lib/constants";
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import { useCall } from "@/hooks/useCall";
 import { CallUI } from "@/components/CallUI";
 
+const EMOJI_LIST = ["😊","😂","❤️","😍","🥰","👍","🙏","🔥","✨","💯","😎","🤝","👋","🎉","💪","🤔","😭","😤","🥺","💬"];
 const FINISH_SIGNAL = "__CHAT_FINISHED__";
 
-function isImageContent(content: string) {
-  return content?.startsWith("data:image") || content?.startsWith("http");
+function formatTime(date: Date | string) {
+  const d = typeof date === "string" ? new Date(date) : date;
+  return d.toLocaleTimeString("ar-DZ", { hour: "2-digit", minute: "2-digit" });
 }
 
-function formatTime(d: any) {
-  try {
-    return new Date(d).toLocaleTimeString("ar-DZ", { hour: "2-digit", minute: "2-digit" });
-  } catch { return ""; }
+function getConversationId(artisanId: number, customerId: string) {
+  return `conv-${artisanId}-${customerId}`;
 }
 
-export default function ArtisanDashboard() {
-  const { toast } = useToast();
-  const { t, i18n } = useTranslation();
-  const { artisan, isArtisan, isLoggedIn, logout, loginArtisan } = useAuth();
+function isImageUrl(content: string) {
+  return content?.startsWith("data:image") || content?.startsWith("/uploads/") || (content?.startsWith("http") && !content?.includes("__"));
+}
+
+function StarRating({ value, onChange, size = 32 }: { value: number; onChange?: (v: number) => void; size?: number }) {
+  const [hovered, setHovered] = useState(0);
+  return (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map(star => (
+        <button key={star} type="button"
+          onMouseEnter={() => onChange && setHovered(star)}
+          onMouseLeave={() => onChange && setHovered(0)}
+          onClick={() => onChange && onChange(star)}
+          style={{ cursor: onChange ? "pointer" : "default" }}
+          className="transition-transform hover:scale-110"
+        >
+          <Star style={{ width: size, height: size }}
+            className={`transition-colors ${(hovered || value) >= star ? 'text-amber-400 fill-amber-400' : 'text-zinc-600'}`}
+          />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export default function Chat() {
+  const [matchRoute, params] = useRoute("/chat/:id");
+  const activeArtisanId = params ? parseInt(params.id) : null;
   const [, setLocation] = useLocation();
+  const { artisan: authArtisan, customer, isArtisan, isLoggedIn } = useAuth();
   const queryClient = useQueryClient();
-  const isRtl = i18n.language === 'ar';
+  const { toast } = useToast();
 
-  const [activeTab, setActiveTab] = useState<"overview" | "portfolio" | "settings">("overview");
-  const [wilaya, setWilaya] = useState(artisan?.wilaya || "الجزائر");
-  const [daira, setDaira] = useState(artisan?.daira || "");
-  const [portfolioImages, setPortfolioImages] = useState<string[]>([]);
-  const [selectedConv, setSelectedConv] = useState<any>(null);
-  const [replyText, setReplyText] = useState("");
-  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const [inputText, setInputText] = useState("");
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [likedMsgs, setLikedMsgs] = useState<Set<number>>(new Set());
+  const [showRating, setShowRating] = useState(false);
+  const [ratingValue, setRatingValue] = useState(0);
+  const [ratingComment, setRatingComment] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const myId = String(artisan?.id || "");
-  const myName = artisan?.name || "حرفي";
+  const myId = isArtisan ? String(authArtisan?.id) : (customer?.id || "guest");
+  const myName = isArtisan ? (authArtisan?.name || "حرفي") : (customer?.name || "زبون");
+  const myType: "artisan" | "customer" = isArtisan ? "artisan" : "customer";
 
-  // ── WebRTC Calls ─────────────────────────────────────────────────────────
+  // ── WebRTC Call ────────────────────────────────────────────────────────
   const {
     callState, callType, remoteName,
     isMuted, isCamOff,
@@ -61,591 +81,525 @@ export default function ArtisanDashboard() {
     toggleMute, toggleCamera,
   } = useCall({ myId, myName });
 
-  const { data: serverArtisan, refetch } = useQuery<any>({
-    queryKey: ["/api/artisans", artisan?.id],
-    queryFn: async () => {
-      const data = await fetch(`/api/artisans/${artisan?.id}`).then(r => r.json());
-      if (data?.portfolioImages) setPortfolioImages(data.portfolioImages || []);
-      return data;
-    },
-    enabled: !!artisan?.id,
+  // Target ID for call (artisan's ID as string, or customer ID)
+  const callTargetId = isArtisan 
+    ? (messages.find((m: any) => m.senderType === "customer")?.senderId || "customer-chat")
+    : String(activeArtisanId);
+
+  // Fetch artisan info
+  const { data: apiArtisan } = useQuery<any>({
+    queryKey: ["/api/artisans", activeArtisanId],
+    queryFn: () => activeArtisanId ? fetch(`/api/artisans/${activeArtisanId}`).then(r => r.ok ? r.json() : null).catch(() => null) : null,
+    enabled: !!activeArtisanId,
   });
 
-  const realArtisan = serverArtisan || artisan;
+  const mockArtisan = activeArtisanId ? MOCK_ARTISANS.find(a => a.id === activeArtisanId) : null;
+  const activeArtisan = activeArtisanId ? {
+    id: activeArtisanId,
+    name: apiArtisan?.name || mockArtisan?.name || "حرفي",
+    image: apiArtisan?.imageUrl || mockArtisan?.image || "",
+    category: apiArtisan?.category || mockArtisan?.category || "",
+  } : null;
 
-  const { data: reviews = [] } = useQuery<any[]>({
-    queryKey: ["/api/artisans", artisan?.id, "reviews"],
-    queryFn: () => fetch(`/api/artisans/${artisan?.id}/reviews`).then(r => r.json()),
-    enabled: !!artisan?.id,
-    refetchInterval: 30000,
+  const convId = activeArtisanId
+    ? getConversationId(activeArtisanId, isArtisan ? "customer-chat" : myId)
+    : null;
+
+  // ── Fetch real conversations for sidebar ─────────────────────────────────
+  const { data: myConversations = [] } = useQuery<any[]>({
+    queryKey: ["/api/conversations", myId, myType],
+    queryFn: () => fetch(`/api/conversations/${myId}?role=${myType}`).then(r => r.ok ? r.json() : []).catch(() => []),
+    enabled: !!myId,
+    refetchInterval: 3000,
   });
 
-  const { data: conversations = [] } = useQuery<any[]>({
-    queryKey: ["/api/conversations", String(artisan?.id)],
-    queryFn: () => fetch(`/api/conversations/${artisan?.id}?role=artisan`).then(r => r.json()),
-    enabled: !!artisan?.id,
-    refetchInterval: 5000,
+  // Fetch all artisans to map IDs to names in sidebar
+  const { data: allArtisans = [] } = useQuery<any[]>({
+    queryKey: ["/api/artisans"],
+    queryFn: () => fetch("/api/artisans").then(r => r.json()),
   });
 
-  const { data: convMessages = [] } = useQuery<any[]>({
-    queryKey: ["/api/conversations", selectedConv?.id, "messages"],
-    queryFn: () => fetch(`/api/conversations/${selectedConv?.id}/messages`).then(r => r.json()),
-    enabled: !!selectedConv?.id,
+  // Create conversation
+  const createConvMutation = useMutation({
+    mutationFn: () => fetch("/api/conversations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: convId,
+        artisanId: activeArtisanId,
+        customerId: isArtisan ? "customer-chat" : myId,
+        customerName: isArtisan ? "زبون" : myName,
+      }),
+    }).then(r => r.json()),
+  });
+
+  useEffect(() => {
+    if (convId && activeArtisanId) createConvMutation.mutate();
+  }, [convId]);
+
+  // Fetch messages
+  const { data: messages = [] } = useQuery<any[]>({
+    queryKey: ["/api/conversations", convId, "messages"],
+    queryFn: () => convId ? fetch(`/api/conversations/${convId}/messages`).then(r => r.json()) : Promise.resolve([]),
+    enabled: !!convId,
     refetchInterval: 2000,
   });
 
-  // Check if selected conv is finished
-  const chatFinished = convMessages.some((m: any) => m.content === FINISH_SIGNAL && m.senderType === "artisan");
+  // ── Check if artisan finished the chat ──────────────────────────────────
+  const chatFinished = messages.some((m: any) => m.content === FINISH_SIGNAL && m.senderType === "artisan");
 
-  useEffect(() => {
-    if (chatScrollRef.current) {
-      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
-    }
-  }, [convMessages]);
-
-  const updateMutation = useMutation({
-    mutationFn: (updates: any) => fetch(`/api/artisans/${artisan?.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updates),
-    }).then(r => r.json()),
-    onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/artisans"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/artisans", artisan?.id] });
-      if (artisan) loginArtisan({ ...artisan, ...data });
-      toast({ title: isRtl ? "تم الحفظ ✓" : "Saved ✓" });
-      refetch();
+  // Check if already reviewed
+  const { data: hasReviewed } = useQuery<boolean>({
+    queryKey: ["/api/reviews/check", activeArtisanId, myId],
+    queryFn: async () => {
+      if (!activeArtisanId || isArtisan) return false;
+      const reviews = await fetch(`/api/artisans/${activeArtisanId}/reviews`).then(r => r.json());
+      return reviews.some((r: any) => r.customerId === myId);
     },
-    onError: () => toast({ title: isRtl ? "فشل الحفظ" : "Save failed", variant: "destructive" }),
+    enabled: !!activeArtisanId && !isArtisan,
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: () => fetch(`/api/artisans/${artisan?.id}`, { method: "DELETE" }).then(r => r.json()),
-    onSuccess: () => {
-      logout();
-      queryClient.invalidateQueries({ queryKey: ["/api/artisans"] });
-      toast({ title: isRtl ? "تم حذف الحساب" : "Account Deleted" });
-      setLocation("/");
+  const uploadMutation = useMutation({
+    mutationFn: async (base64: string) => {
+      const r = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: base64 }),
+      });
+      return r.json();
     },
   });
 
-  const sendReplyMutation = useMutation({
+  const sendMutation = useMutation({
     mutationFn: (content: string) => fetch("/api/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        conversationId: selectedConv?.id,
-        senderId: String(artisan?.id),
-        receiverId: selectedConv?.customerId,
-        senderType: "artisan",
+        conversationId: convId,
+        senderId: myId,
+        receiverId: isArtisan ? "customer-chat" : String(activeArtisanId),
+        senderType: myType,
         content,
       }),
     }).then(r => r.json()),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/conversations", selectedConv?.id, "messages"] });
-      setReplyText("");
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", convId, "messages"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", myId, myType] });
     },
   });
 
-  // ── Finish chat mutation ──────────────────────────────────────────────────
+  // ── Artisan: finish chat ─────────────────────────────────────────────────
   const finishChatMutation = useMutation({
     mutationFn: () => fetch("/api/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        conversationId: selectedConv?.id,
-        senderId: String(artisan?.id),
-        receiverId: selectedConv?.customerId,
+        conversationId: convId,
+        senderId: myId,
+        receiverId: "customer-chat",
         senderType: "artisan",
         content: FINISH_SIGNAL,
       }),
     }).then(r => r.json()),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/conversations", selectedConv?.id, "messages"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", convId, "messages"] });
       toast({ title: "✅ تم إنهاء المحادثة", description: "يمكن للزبون الآن تقييمك" });
     },
   });
 
-  const handleSendReply = () => {
-    if (!replyText.trim() || chatFinished) return;
-    sendReplyMutation.mutate(replyText);
-  };
-
-  const uploadImage = async (base64: string): Promise<string> => {
-    const r = await fetch("/api/upload", {
+  const reviewMutation = useMutation({
+    mutationFn: () => fetch("/api/reviews", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: base64 }),
-    });
-    const data = await r.json();
-    return data.url || base64;
+      body: JSON.stringify({
+        artisanId: activeArtisanId,
+        customerId: myId,
+        customerName: myName,
+        rating: ratingValue,
+        comment: ratingComment || null,
+      }),
+    }).then(r => r.json()),
+    onSuccess: (data: any) => {
+      if (data.message) {
+        toast({ title: data.message, variant: "destructive" });
+      } else {
+        toast({ title: "✓ تم إرسال تقييمك!", description: `قيّمت ${activeArtisan?.name} بـ ${ratingValue} نجوم` });
+        queryClient.invalidateQueries({ queryKey: ["/api/reviews/check"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/artisans", activeArtisanId] });
+      }
+      setShowRating(false);
+      setRatingValue(0);
+      setRatingComment("");
+    },
+  });
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [messages]);
+
+  const handleSend = async () => {
+    if (!inputText.trim() && !selectedImage) return;
+    if (selectedImage) {
+      try {
+        const result = await uploadMutation.mutateAsync(selectedImage);
+        if (result.url) sendMutation.mutate(result.url);
+        else sendMutation.mutate(selectedImage);
+      } catch {
+        sendMutation.mutate(selectedImage);
+      }
+      if (inputText.trim()) setTimeout(() => sendMutation.mutate(inputText), 200);
+    } else {
+      sendMutation.mutate(inputText);
+    }
+    setInputText("");
+    setSelectedImage(null);
+    setShowEmoji(false);
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64 = reader.result as string;
-      const imageUrl = await uploadImage(base64);
-      const currentPortfolio = serverArtisan?.portfolioImages || portfolioImages;
-      const newPortfolio = [imageUrl, ...currentPortfolio.filter((x: string) => x !== imageUrl).slice(0, 4)];
-      updateMutation.mutate({ imageUrl, portfolioImages: newPortfolio });
-      setPortfolioImages(newPortfolio);
-    };
+    reader.onloadend = () => setSelectedImage(reader.result as string);
     reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
-  const handleAddPortfolioPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64 = reader.result as string;
-      const imageUrl = await uploadImage(base64);
-      const currentPortfolio = serverArtisan?.portfolioImages || portfolioImages;
-      const newPortfolio = [...currentPortfolio, imageUrl];
-      updateMutation.mutate({ portfolioImages: newPortfolio });
-      setPortfolioImages(newPortfolio);
+  const toggleLike = (id: number) => {
+    setLikedMsgs(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  };
+
+  // Get artisan info for a conversation (for sidebar)
+  const getArtisanForConv = (conv: any) => {
+    const found = allArtisans.find((a: any) => a.id === conv.artisanId);
+    if (found) return {
+      id: found.id,
+      name: found.name,
+      image: found.imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(found.name)}&background=2DD4BF&color=fff`,
+      category: CATEGORIES.find(c => c.id === found.category)?.label || found.category,
     };
-    reader.readAsDataURL(file);
+    const mock = MOCK_ARTISANS.find(a => a.id === conv.artisanId);
+    if (mock) return { id: mock.id, name: mock.name, image: mock.image, category: mock.category };
+    return { id: conv.artisanId, name: `حرفي #${conv.artisanId}`, image: "", category: "" };
   };
-
-  const handleRemovePortfolioPhoto = (index: number) => {
-    const currentPortfolio = serverArtisan?.portfolioImages || portfolioImages;
-    const newPortfolio = currentPortfolio.filter((_: any, i: number) => i !== index);
-    updateMutation.mutate({ portfolioImages: newPortfolio });
-    setPortfolioImages(newPortfolio);
-  };
-
-  if (!isLoggedIn || !isArtisan) {
-    return (
-      <div className="min-h-screen flex flex-col bg-[#050505] text-white">
-        <Navbar />
-        <main className="flex-1 flex items-center justify-center">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-6">
-            <h2 className="text-3xl font-heading font-bold">{isRtl ? "يجب تسجيل الدخول أولاً" : "Please login first"}</h2>
-            <Button onClick={() => setLocation("/subscription")} className="bg-primary">
-              {isRtl ? "انضم كحرفي" : "Join as Artisan"}
-            </Button>
-          </motion.div>
-        </main>
-      </div>
-    );
-  }
-
-  const displayPortfolio: string[] = serverArtisan?.portfolioImages?.length > 0
-    ? serverArtisan.portfolioImages
-    : portfolioImages;
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#050505] text-white font-sans">
+    <div className="h-screen flex flex-col bg-background overflow-hidden" dir="rtl">
       <Navbar />
 
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[120px] animate-pulse delay-700" />
-      </div>
-
-      <main className="flex-1 container max-w-7xl mx-auto px-4 md:px-6 py-10 relative z-10" dir="rtl">
-        {/* Header */}
-        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-5 justify-between">
-            <div className="flex items-center gap-4">
-              <div className="relative group">
-                <img
-                  src={realArtisan?.imageUrl || `https://ui-avatars.com/api/?name=${artisan?.name}&background=2DD4BF&color=fff&size=200`}
-                  alt={artisan?.name}
-                  className="w-20 h-20 rounded-2xl object-cover border-2 border-primary/30"
-                />
-                <label className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl cursor-pointer">
-                  <Upload className="h-5 w-5 text-white" />
-                  <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
-                </label>
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-2xl md:text-3xl font-heading font-black">{realArtisan?.name || artisan?.name}</h1>
-                  <BadgeCheck className="h-5 w-5 text-primary" />
-                </div>
-                <p className="text-zinc-400 text-sm">{realArtisan?.category || artisan?.category} • {realArtisan?.daira || artisan?.daira}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">نشط</Badge>
-                  <Badge variant="outline" className="border-primary/30 text-primary text-xs">مجاني للأبد ∞</Badge>
-                </div>
-              </div>
-            </div>
+      <div className="flex-1 flex overflow-hidden">
+        {/* ── Sidebar ─────────────────────────────────────────────────────── */}
+        <div className="w-[300px] border-l bg-card hidden md:flex flex-col shrink-0">
+          <div className="p-4 border-b">
+            <h2 className="font-heading font-bold text-lg mb-3">الرسائل</h2>
+            <input className="w-full h-9 rounded-full bg-muted/50 border-none px-4 text-sm focus:outline-none" placeholder="بحث..." />
           </div>
-        </motion.div>
+          <div className="flex-1 overflow-y-auto">
+            {myConversations.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground text-sm px-4">
+                <Send className="h-8 w-8 mx-auto mb-3 opacity-20" />
+                لا توجد محادثات بعد
+              </div>
+            ) : (
+              myConversations.map((conv: any) => {
+                const artisan = isArtisan ? null : getArtisanForConv(conv);
+                const displayName = isArtisan ? (conv.customerName || "زبون") : artisan?.name;
+                const displayImage = isArtisan ? "" : artisan?.image;
+                const displaySub = isArtisan ? conv.customerId?.slice(0, 12) : artisan?.category;
+                const convArtisanId = conv.artisanId;
+                const isActive = activeArtisanId === convArtisanId;
 
-        {/* Tabs */}
-        <div className="flex gap-3 mb-6">
-          {[
-            { key: "overview", label: isRtl ? "نظرة عامة" : "Overview" },
-            { key: "portfolio", label: isRtl ? "معرض الأعمال" : "Portfolio" },
-            { key: "settings", label: isRtl ? "الإعدادات" : "Settings" },
-          ].map(tab => (
-            <Button
-              key={tab.key}
-              variant={activeTab === tab.key ? "default" : "outline"}
-              className="rounded-2xl font-black border-white/10"
-              onClick={() => setActiveTab(tab.key as any)}
-            >
-              {tab.label}
-            </Button>
-          ))}
+                return (
+                  <button
+                    key={conv.id}
+                    onClick={() => setLocation(`/chat/${convArtisanId}`)}
+                    className={`w-full p-3 flex items-center gap-3 hover:bg-muted/40 transition-colors text-right ${isActive ? 'bg-primary/5 border-r-2 border-primary' : ''}`}
+                  >
+                    <div className="relative shrink-0">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={displayImage} />
+                        <AvatarFallback className="bg-primary/20 text-primary font-bold text-lg">
+                          {displayName?.[0] || "؟"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="absolute bottom-0 left-0 w-3 h-3 bg-green-500 border-2 border-card rounded-full" />
+                    </div>
+                    <div className="flex-1 min-w-0 text-right">
+                      <p className="font-bold text-sm truncate">{displayName}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {conv.lastMessage === FINISH_SIGNAL ? "✅ تم إنهاء المحادثة" : (conv.lastMessage || displaySub)}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
         </div>
 
-        {/* Overview Tab */}
-        {activeTab === "overview" && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-            {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <StatCard icon={<Eye />} label={isRtl ? "مشاهدات" : "Views"} value="–" color="blue" />
-              <StatCard icon={<MessageSquare />} label={isRtl ? "محادثات" : "Chats"} value={String(conversations.length)} color="purple" />
-              <StatCard icon={<Star />} label={isRtl ? "التقييم" : "Rating"} value={String(realArtisan?.rating || "0")} color="amber" />
-              <StatCard icon={<Clock />} label={isRtl ? "الاشتراك" : "Plan"} value="∞" color="green" />
-            </div>
+        {/* ── Main Chat ───────────────────────────────────────────────────── */}
+        {activeArtisan ? (
+          <div className="flex-1 flex flex-col bg-background overflow-hidden">
+            {/* Header */}
+            <div className="h-16 border-b flex items-center justify-between px-4 bg-card/80 backdrop-blur-sm shrink-0">
+              <div className="flex items-center gap-3">
+                <button onClick={() => setLocation("/chat")} className="md:hidden p-1">
+                  <ArrowRight className="h-5 w-5" />
+                </button>
+                <div className="relative">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={activeArtisan.image} />
+                    <AvatarFallback className="bg-primary/20 text-primary font-bold">{activeArtisan.name[0]}</AvatarFallback>
+                  </Avatar>
+                  <span className="absolute bottom-0 left-0 w-2.5 h-2.5 bg-green-500 border-2 border-card rounded-full" />
+                </div>
+                <div>
+                  <p className="font-bold text-sm">{activeArtisan.name}</p>
+                  <p className="text-xs text-green-500 font-medium">
+                    {chatFinished ? "✅ تم إنهاء المحادثة" : "متصل الآن"}
+                  </p>
+                </div>
+              </div>
 
-            {/* Info */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <InfoItem icon={<Mail />} label={isRtl ? "البريد الإلكتروني" : "Email"} value={realArtisan?.email || artisan?.email || "–"} />
-              <InfoItem icon={<Phone />} label={isRtl ? "الهاتف" : "Phone"} value={realArtisan?.phone || artisan?.phone || "–"} />
-              <InfoItem icon={<Banknote />} label={isRtl ? "السعر الأدنى" : "Min Price"} value={`${realArtisan?.priceStart || "–"} دج`} />
-              <InfoItem icon={<Briefcase />} label={isRtl ? "سنوات الخبرة" : "Experience"} value={`${realArtisan?.yearsOfExperience || "–"} ${isRtl ? "سنوات" : "years"}`} />
-              <InfoItem icon={<MapPin />} label={isRtl ? "الموقع" : "Location"} value={`${realArtisan?.wilaya || ""} - ${realArtisan?.daira || artisan?.daira || "–"}`} />
-              <InfoItem icon={<BadgeCheck />} label={isRtl ? "المهنة" : "Category"} value={realArtisan?.category || artisan?.category || "–"} />
-            </div>
+              <div className="flex items-center gap-2">
+                <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground ml-2 border-l pl-3">
+                  <span>أنت:</span>
+                  <span className="font-bold text-foreground">{myName}</span>
+                </div>
 
-            {/* Conversations */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <Card className="bg-white/[0.03] border-white/10 rounded-3xl overflow-hidden">
-                <CardHeader className="p-5 border-b border-white/10">
-                  <CardTitle className="flex items-center gap-3 text-lg font-heading font-black">
-                    <MessageSquare className="h-5 w-5 text-primary" />
-                    {isRtl ? "المحادثات" : "Conversations"}
-                    {conversations.length > 0 && (
-                      <Badge className="bg-primary text-white text-xs">{conversations.length}</Badge>
-                    )}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  {conversations.length === 0 ? (
-                    <div className="p-8 text-center text-zinc-500">
-                      <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                      <p>{isRtl ? "لا توجد محادثات بعد" : "No conversations yet"}</p>
-                    </div>
-                  ) : (
-                    conversations.map((conv: any) => (
-                      <button
-                        key={conv.id}
-                        onClick={() => setSelectedConv(selectedConv?.id === conv.id ? null : conv)}
-                        className={`w-full p-4 flex items-center gap-4 border-b border-white/5 transition-all text-right ${selectedConv?.id === conv.id ? 'bg-primary/10 border-primary/20' : 'hover:bg-white/5'}`}
-                      >
-                        <Avatar className="h-11 w-11 shrink-0">
-                          <AvatarFallback className="bg-primary/20 text-primary font-black text-lg">
-                            {conv.customerId?.replace("customer-", "").slice(0, 1).toUpperCase() || "؟"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-bold text-sm">
-                            {conv.customerName || `زبون #${conv.customerId?.slice(-6)}`}
-                          </p>
-                          {conv.lastMessage && (
-                            <p className="text-xs truncate mt-0.5 text-zinc-400">
-                              {conv.lastMessage === FINISH_SIGNAL ? "✅ تم إنهاء المحادثة" : isImageContent(conv.lastMessage) ? "📷 صورة" : conv.lastMessage}
-                            </p>
-                          )}
-                        </div>
-                        <ArrowRight className={`h-4 w-4 text-zinc-500 shrink-0 transition-transform ${selectedConv?.id === conv.id ? 'rotate-90' : ''}`} />
-                      </button>
-                    ))
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Inline Chat Panel */}
-              <AnimatePresence>
-                {selectedConv && (
-                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
-                    <Card className="bg-white/[0.03] border-white/10 rounded-3xl overflow-hidden flex flex-col h-[480px]">
-                      <CardHeader className="p-4 border-b border-white/10 flex-row items-center justify-between space-y-0">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9">
-                            <AvatarFallback className="bg-primary/20 text-primary font-black text-sm">
-                              {selectedConv.customerId?.slice(-1).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-bold text-sm">
-                              {selectedConv.customerName || `زبون #${selectedConv.customerId?.slice(-6)}`}
-                            </p>
-                            <p className="text-xs text-green-400">
-                              {chatFinished ? "✅ تم إنهاء المحادثة" : "متصل"}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Action buttons */}
-                        <div className="flex items-center gap-1.5">
-                          {/* Audio call */}
-                          <button
-                            onClick={() => startCall(selectedConv.customerId, selectedConv.customerName || "زبون", "audio")}
-                            className="p-1.5 rounded-full bg-white/5 hover:bg-primary/20 text-zinc-400 hover:text-primary transition-colors"
-                            title="مكالمة صوتية"
-                          >
-                            <Phone className="h-4 w-4" />
-                          </button>
-                          {/* Video call */}
-                          <button
-                            onClick={() => startCall(selectedConv.customerId, selectedConv.customerName || "زبون", "video")}
-                            className="p-1.5 rounded-full bg-white/5 hover:bg-primary/20 text-zinc-400 hover:text-primary transition-colors"
-                            title="مكالمة بالكاميرا"
-                          >
-                            <Video className="h-4 w-4" />
-                          </button>
-                          {/* Open in full chat page */}
-                          <button
-                            onClick={() => setLocation(`/chat/${selectedConv.artisanId}`)}
-                            className="p-1.5 rounded-full bg-white/5 hover:bg-blue-500/20 text-zinc-400 hover:text-blue-400 transition-colors"
-                            title="فتح في صفحة كاملة"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </button>
-                          {/* Finish chat */}
-                          {!chatFinished && convMessages.length > 0 && (
-                            <button
-                              onClick={() => { if (confirm("هل تريد إنهاء هذه المحادثة؟ سيتمكن الزبون بعدها من تقييمك.")) finishChatMutation.mutate(); }}
-                              disabled={finishChatMutation.isPending}
-                              className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors text-xs font-bold border border-green-500/20"
-                              title="إنهاء المحادثة"
-                            >
-                              <CheckCheck className="h-3.5 w-3.5" />
-                              إنهاء
-                            </button>
-                          )}
-                          {chatFinished && (
-                            <span className="text-xs text-green-500/60 flex items-center gap-1">
-                              <CheckCheck className="h-3 w-3" /> منتهية
-                            </span>
-                          )}
-                          <Button size="icon" variant="ghost" className="rounded-full h-8 w-8 text-zinc-400" onClick={() => setSelectedConv(null)}>
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardHeader>
-
-                      {/* Messages */}
-                      <div className="flex-1 overflow-y-auto p-4 space-y-2" ref={chatScrollRef}>
-                        {convMessages.length === 0 ? (
-                          <div className="h-full flex items-center justify-center text-zinc-500 text-sm">لا توجد رسائل</div>
-                        ) : (
-                          convMessages.map((msg: any) => {
-                            if (msg.content === FINISH_SIGNAL) {
-                              return (
-                                <div key={msg.id} className="flex items-center gap-2 my-2">
-                                  <div className="flex-1 h-px bg-green-500/20" />
-                                  <span className="text-xs text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20 flex items-center gap-1">
-                                    <CheckCheck className="h-3 w-3" /> أنهيت المحادثة
-                                  </span>
-                                  <div className="flex-1 h-px bg-green-500/20" />
-                                </div>
-                              );
-                            }
-                            const isMe = msg.senderType === "artisan";
-                            return (
-                              <div key={msg.id} className={`flex ${isMe ? 'justify-start' : 'justify-end'}`}>
-                                <div className={`max-w-[75%] px-3 py-2 rounded-2xl text-sm ${
-                                  isMe
-                                    ? 'bg-gradient-to-br from-primary to-primary/80 text-white rounded-br-sm'
-                                    : 'bg-white/10 text-white rounded-bl-sm'
-                                }`}>
-                                  {isImageContent(msg.content) ? (
-                                    <img src={msg.content} alt="" className="max-w-full rounded-xl max-h-40 object-cover" />
-                                  ) : <p>{msg.content}</p>}
-                                  <span className="text-[10px] opacity-60 mt-0.5 block">{formatTime(msg.createdAt)}</span>
-                                </div>
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-
-                      {/* Reply Input */}
-                      <div className="p-3 border-t border-white/10">
-                        {chatFinished ? (
-                          <p className="text-center text-xs text-zinc-500 py-1">تم إنهاء المحادثة</p>
-                        ) : (
-                          <div className="flex items-center gap-2 bg-white/5 rounded-2xl px-3 py-2 border border-white/10">
-                            <input
-                              type="text"
-                              className="flex-1 bg-transparent border-none focus:outline-none text-sm text-white placeholder:text-zinc-500"
-                              placeholder={isRtl ? "اكتب ردك..." : "Type your reply..."}
-                              value={replyText}
-                              onChange={e => setReplyText(e.target.value)}
-                              onKeyDown={e => e.key === "Enter" && handleSendReply()}
-                            />
-                            <button
-                              onClick={handleSendReply}
-                              disabled={!replyText.trim() || sendReplyMutation.isPending}
-                              className="p-1.5 bg-primary rounded-full text-white disabled:opacity-40 transition-all hover:bg-primary/80 active:scale-95"
-                            >
-                              <Send className="h-4 w-4" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </Card>
-                  </motion.div>
+                {/* Artisan: finish chat button */}
+                {isArtisan && !chatFinished && messages.length > 0 && (
+                  <button
+                    onClick={() => {
+                      if (confirm("هل تريد إنهاء هذه المحادثة؟ سيتمكن الزبون بعدها من تقييمك.")) {
+                        finishChatMutation.mutate();
+                      }
+                    }}
+                    disabled={finishChatMutation.isPending}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-500/10 text-green-600 hover:bg-green-500/20 transition-colors text-xs font-bold border border-green-500/20"
+                  >
+                    <CheckCheck className="h-3.5 w-3.5" />
+                    إنهاء المحادثة
+                  </button>
                 )}
+
+                {isArtisan && chatFinished && (
+                  <span className="flex items-center gap-1 text-xs text-green-600/70 px-3">
+                    <CheckCheck className="h-3.5 w-3.5" /> تم الإنهاء
+                  </span>
+                )}
+
+                {/* Customer: rate button - only after artisan finishes */}
+                {!isArtisan && chatFinished && !hasReviewed && (
+                  <button
+                    onClick={() => setShowRating(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors text-xs font-bold border border-amber-500/20"
+                  >
+                    <Star className="h-3.5 w-3.5 fill-amber-400" />
+                    قيّم الحرفي
+                  </button>
+                )}
+
+                {!isArtisan && !chatFinished && messages.length > 0 && !hasReviewed && (
+                  <span className="text-xs text-muted-foreground px-2">
+                    انتظر إنهاء الحرفي للمحادثة
+                  </span>
+                )}
+
+                {!isArtisan && hasReviewed && (
+                  <span className="flex items-center gap-1 text-xs text-amber-500/70 px-3">
+                    <Star className="h-3 w-3 fill-amber-400" /> تم التقييم
+                  </span>
+                )}
+
+                <button className="p-2 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-primary"
+                  onClick={() => startCall(callTargetId, activeArtisan.name, "audio")}>
+                  <Phone className="h-5 w-5" />
+                </button>
+                <button className="p-2 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-primary"
+                  onClick={() => startCall(callTargetId, activeArtisan.name, "video")}>
+                  <Video className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-1" ref={scrollRef}>
+              <div className="flex items-center gap-3 my-4">
+                <div className="flex-1 h-px bg-border/50" />
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">اليوم</span>
+                <div className="flex-1 h-px bg-border/50" />
+              </div>
+
+              {messages.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-16 space-y-4">
+                  <Avatar className="h-20 w-20">
+                    <AvatarImage src={activeArtisan.image} />
+                    <AvatarFallback className="bg-primary/20 text-primary text-2xl font-bold">{activeArtisan.name[0]}</AvatarFallback>
+                  </Avatar>
+                  <div className="text-center">
+                    <p className="font-bold text-lg">{activeArtisan.name}</p>
+                    <p className="text-muted-foreground text-sm">{activeArtisan.category}</p>
+                  </div>
+                  <p className="text-muted-foreground text-sm">ابدأ المحادثة مع {activeArtisan.name} 👋</p>
+                </div>
+              )}
+
+              <AnimatePresence initial={false}>
+                {messages.map((msg: any, i: number) => {
+                  // Hide the finish signal message — show a banner instead
+                  if (msg.content === FINISH_SIGNAL) {
+                    return (
+                      <motion.div key={msg.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                        className="flex items-center gap-3 my-4">
+                        <div className="flex-1 h-px bg-green-500/20" />
+                        <span className="text-xs font-bold text-green-600 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20 flex items-center gap-1">
+                          <CheckCheck className="h-3 w-3" /> أنهى الحرفي المحادثة
+                        </span>
+                        <div className="flex-1 h-px bg-green-500/20" />
+                      </motion.div>
+                    );
+                  }
+
+                  const isMe = msg.senderId === myId || msg.senderType === myType;
+                  const showAvatar = !isMe && (i === 0 || messages[i-1]?.senderId !== msg.senderId);
+                  const senderName = isMe ? myName : (msg.senderType === "artisan" ? activeArtisan.name : "زبون");
+                  const showName = i === 0 || messages[i-1]?.senderType !== msg.senderType;
+
+                  return (
+                    <motion.div key={msg.id}
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ duration: 0.2 }}
+                      className={`flex items-end gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'} group`}
+                    >
+                      {!isMe && (
+                        <div className="w-8 h-8 shrink-0">
+                          {showAvatar && (
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={activeArtisan.image} />
+                              <AvatarFallback className="bg-primary/20 text-primary text-xs font-bold">{activeArtisan.name[0]}</AvatarFallback>
+                            </Avatar>
+                          )}
+                        </div>
+                      )}
+                      <div className="max-w-[70%] relative">
+                        {showName && (
+                          <p className={`text-[10px] text-muted-foreground font-bold mb-0.5 ${isMe ? 'text-right' : 'text-left'}`}>
+                            {senderName}
+                          </p>
+                        )}
+                        <div onDoubleClick={() => toggleLike(msg.id)}
+                          className={`rounded-2xl text-sm leading-relaxed cursor-default select-text transition-all overflow-hidden ${
+                            isMe
+                              ? 'bg-gradient-to-br from-primary to-primary/80 text-white rounded-br-md'
+                              : 'bg-muted text-foreground rounded-bl-md'
+                          } ${isImageUrl(msg.content) ? 'p-1' : 'px-4 py-2.5'}`}
+                        >
+                          {isImageUrl(msg.content) ? (
+                            <img src={msg.content} alt="صورة"
+                              className="max-w-[240px] max-h-[300px] rounded-xl object-cover block"
+                              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                            />
+                          ) : msg.content}
+                        </div>
+                        {likedMsgs.has(msg.id) && (
+                          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
+                            className={`absolute -bottom-2 ${isMe ? 'left-2' : 'right-2'} text-sm`}>❤️</motion.div>
+                        )}
+                        <span className={`text-[10px] text-muted-foreground mt-1 block ${isMe ? 'text-right' : 'text-left'} opacity-0 group-hover:opacity-100 transition-opacity`}>
+                          {formatTime(msg.createdAt || new Date())}
+                        </span>
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </AnimatePresence>
             </div>
 
-            {/* Reviews */}
-            {reviews.length > 0 && (
-              <Card className="bg-white/[0.03] border-white/10 rounded-3xl overflow-hidden">
-                <CardHeader className="p-5 border-b border-white/10">
-                  <CardTitle className="flex items-center gap-3 text-lg font-heading font-black">
-                    <Star className="h-5 w-5 text-amber-400 fill-amber-400" />
-                    {isRtl ? "تقييمات الزبائن" : "Customer Reviews"}
-                    <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-sm">
-                      {(reviews.reduce((s: number, r: any) => s + r.rating, 0) / reviews.length).toFixed(1)} ★ ({reviews.length})
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  {reviews.slice(0, 5).map((review: any) => (
-                    <div key={review.id} className="p-4 border-b border-white/5 last:border-0">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-black text-sm">
-                            {review.customerName?.[0] || "؟"}
-                          </div>
-                          <span className="font-bold text-sm">{review.customerName}</span>
-                        </div>
-                        <div className="flex gap-0.5">
-                          {[1,2,3,4,5].map(s => (
-                            <Star key={s} className={`h-3.5 w-3.5 ${s <= review.rating ? 'text-amber-400 fill-amber-400' : 'text-zinc-600'}`} />
-                          ))}
-                        </div>
-                      </div>
-                      {review.comment && (
-                        <p className="text-zinc-400 text-xs leading-relaxed flex gap-1.5">
-                          <Quote className="h-3 w-3 shrink-0 mt-0.5 text-zinc-600" />
-                          {review.comment}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-          </motion.div>
-        )}
-
-        {/* Portfolio Tab */}
-        {activeTab === "portfolio" && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-heading font-black">{isRtl ? "معرض أعمالك" : "Your Portfolio"}</h2>
-                <p className="text-zinc-400 text-sm mt-1">{displayPortfolio.length} {isRtl ? "صورة" : "photos"}</p>
-              </div>
-              <label className="cursor-pointer">
-                <Button className="gap-2 rounded-2xl font-black">
-                  <Upload className="h-4 w-4" />
-                  {isRtl ? "إضافة صورة" : "Add Photo"}
-                </Button>
-                <input type="file" accept="image/*" className="hidden" onChange={handleAddPortfolioPhoto} />
-              </label>
-            </div>
-
-            {displayPortfolio.length === 0 ? (
-              <label className="flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-3xl py-20 text-zinc-500 cursor-pointer hover:border-primary/30 hover:text-zinc-300 transition-all">
-                <ImageIcon className="h-14 w-14 mb-4 opacity-20" />
-                <p className="font-bold text-lg">{isRtl ? "أضف أول صورة لأعمالك" : "Add your first work photo"}</p>
-                <input type="file" accept="image/*" className="hidden" onChange={handleAddPortfolioPhoto} />
-              </label>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {displayPortfolio.map((img: string, i: number) => (
-                  <motion.div key={i} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.05 }}
-                    className="aspect-square rounded-2xl overflow-hidden relative group border border-white/10 cursor-pointer">
-                    <img src={img} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                      {i === 0 && <span className="text-xs font-bold text-white bg-primary/80 px-2 py-1 rounded-full">{isRtl ? "الصورة الرئيسية" : "Main Photo"}</span>}
-                      <button className="h-9 w-9 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-colors" onClick={() => handleRemovePortfolioPhoto(i)}>
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
+            {/* Input */}
+            <div className="px-4 pb-4 pt-2 bg-card/80 backdrop-blur-sm border-t shrink-0">
+              <AnimatePresence>
+                {selectedImage && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+                    className="mb-3 relative inline-block">
+                    <img src={selectedImage} className="h-20 w-20 object-cover rounded-2xl border-2 border-primary" alt="preview" />
+                    <button onClick={() => setSelectedImage(null)}
+                      className="absolute -top-2 -right-2 h-5 w-5 bg-destructive text-white rounded-full flex items-center justify-center">
+                      <X className="h-3 w-3" />
+                    </button>
                   </motion.div>
-                ))}
-                <label className="aspect-square rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-primary/30 transition-colors text-zinc-500 hover:text-zinc-300">
-                  <Upload className="h-6 w-6 mb-2" />
-                  <span className="text-xs font-bold">{isRtl ? "إضافة" : "Add"}</span>
-                  <input type="file" accept="image/*" className="hidden" onChange={handleAddPortfolioPhoto} />
-                </label>
-              </div>
-            )}
-          </motion.div>
-        )}
+                )}
+              </AnimatePresence>
 
-        {/* Settings Tab */}
-        {activeTab === "settings" && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-2xl">
-            <h2 className="text-2xl font-heading font-black">{isRtl ? "تعديل الموقع" : "Edit Location"}</h2>
-            <Card className="bg-white/[0.03] border-white/10 rounded-3xl">
-              <CardContent className="p-6 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-black uppercase tracking-widest text-zinc-400">{isRtl ? "الولاية" : "Wilaya"}</Label>
-                    <Select value={wilaya} onValueChange={v => { setWilaya(v); setDaira((LOCATIONS as any)[v]?.[0] || ""); }} dir={isRtl ? "rtl" : "ltr"}>
-                      <SelectTrigger className="bg-white/5 border-white/10 h-12 rounded-xl text-white">
-                        <SelectValue placeholder={isRtl ? "اختر ولاية" : "Select wilaya"} />
-                      </SelectTrigger>
-                      <SelectContent dir="rtl" className="bg-zinc-900 border-white/10 text-white">
-                        {DAIRAS.map(w => <SelectItem key={w} value={w}>{w}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-black uppercase tracking-widest text-zinc-400">{isRtl ? "الدائرة" : "Daira"}</Label>
-                    <Select value={daira} onValueChange={setDaira} disabled={!wilaya} dir={isRtl ? "rtl" : "ltr"}>
-                      <SelectTrigger className="bg-white/5 border-white/10 h-12 rounded-xl text-white">
-                        <SelectValue placeholder={isRtl ? "اختر دائرة" : "Select daira"} />
-                      </SelectTrigger>
-                      <SelectContent dir="rtl" className="bg-zinc-900 border-white/10 text-white">
-                        {wilaya && (LOCATIONS as any)[wilaya]?.map((d: string) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
+              <AnimatePresence>
+                {showEmoji && (
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+                    className="mb-3 p-3 bg-muted/50 rounded-2xl border border-border/50 flex flex-wrap gap-2">
+                    {EMOJI_LIST.map(e => (
+                      <button key={e} onClick={() => setInputText(p => p + e)} className="text-xl hover:scale-125 transition-transform">{e}</button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="flex items-center gap-2">
+                <button onClick={() => setShowEmoji(p => !p)}
+                  className={`p-2.5 rounded-full transition-colors shrink-0 ${showEmoji ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-primary hover:bg-muted/50'}`}>
+                  <Star className="h-5 w-5" />
+                </button>
+                <button onClick={() => fileInputRef.current?.click()}
+                  className="p-2.5 rounded-full text-muted-foreground hover:text-primary hover:bg-muted/50 transition-colors shrink-0">
+                  <ImageIcon className="h-5 w-5" />
+                </button>
+                <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleFile} />
+
+                <div className="flex-1 flex items-center gap-2 bg-muted/50 rounded-full px-4 py-2 border border-border/50 focus-within:ring-1 focus-within:ring-primary/30">
+                  <input type="text"
+                    className="flex-1 bg-transparent border-none focus:outline-none text-sm"
+                    placeholder={chatFinished ? "تم إنهاء المحادثة" : `رسالة لـ ${activeArtisan.name}...`}
+                    value={inputText}
+                    disabled={chatFinished}
+                    onChange={e => setInputText(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSend())}
+                  />
                 </div>
-                <Button onClick={() => updateMutation.mutate({ wilaya, daira })} className="gap-2 rounded-xl font-black" disabled={updateMutation.isPending}>
-                  <Save className="h-4 w-4" />
-                  {updateMutation.isPending ? (isRtl ? "جاري الحفظ..." : "Saving...") : (isRtl ? "حفظ الموقع" : "Save Location")}
-                </Button>
-              </CardContent>
-            </Card>
 
-            <div className="pt-4 border-t border-white/10">
-              <h3 className="text-lg font-black text-red-400 mb-4">{isRtl ? "منطقة الخطر" : "Danger Zone"}</h3>
-              <Button variant="destructive" className="gap-2 rounded-xl"
-                onClick={() => { if (confirm(isRtl ? "هل أنت متأكد من حذف حسابك نهائياً؟" : "Delete your account permanently?")) deleteMutation.mutate(); }}
-                disabled={deleteMutation.isPending}>
-                <Trash2 className="h-4 w-4" />
-                {isRtl ? "حذف حسابي نهائياً" : "Delete My Account"}
-              </Button>
+                {(inputText.trim() || selectedImage) ? (
+                  <button onClick={handleSend}
+                    disabled={sendMutation.isPending || uploadMutation.isPending || chatFinished}
+                    className="p-2.5 bg-primary text-white rounded-full shrink-0 hover:bg-primary/90 transition-all active:scale-95 shadow-md shadow-primary/30 disabled:opacity-60">
+                    <Send className="h-5 w-5" />
+                  </button>
+                ) : (
+                  <button onClick={() => !chatFinished && sendMutation.mutate("❤️")}
+                    disabled={chatFinished}
+                    className="p-2.5 text-primary shrink-0 hover:scale-110 transition-transform disabled:opacity-40">
+                    <Heart className="h-5 w-5 fill-primary" />
+                  </button>
+                )}
+              </div>
             </div>
-          </motion.div>
+          </div>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-8 gap-6">
+            <div className="h-24 w-24 rounded-full bg-muted/50 border-2 border-dashed border-primary/30 flex items-center justify-center">
+              <Send className="h-10 w-10 text-primary/40" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-heading font-bold mb-2">رسائلك</h2>
+              <p className="text-muted-foreground text-sm">اختر محادثة أو ابدأ واحدة جديدة من صفحة الحرفيين</p>
+            </div>
+          </div>
         )}
-      </main>
-      <Footer />
+      </div>
 
-      {/* ── Call UI ────────────────────────────────────────────────────────── */}
+      {/* ── Call UI ─────────────────────────────────────────────────────── */}
       <CallUI
         callState={callState}
         callType={callType}
-        remoteName={remoteName}
+        remoteName={remoteName || activeArtisan?.name || ""}
+        remoteImage={activeArtisan?.image}
         isMuted={isMuted}
         isCamOff={isCamOff}
         localVideoRef={localVideoRef}
@@ -656,38 +610,52 @@ export default function ArtisanDashboard() {
         onToggleMute={toggleMute}
         onToggleCamera={toggleCamera}
       />
-    </div>
-  );
-}
 
-function StatCard({ icon, label, value, color }: any) {
-  const colorMap: any = {
-    blue: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-    purple: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-    amber: "bg-amber-500/20 text-amber-400 border-amber-500/30",
-    green: "bg-green-500/20 text-green-400 border-green-500/30",
-  };
-  return (
-    <motion.div whileHover={{ y: -4 }}>
-      <Card className="bg-white/[0.03] border-white/10 rounded-2xl">
-        <CardContent className="p-5">
-          <div className={`w-9 h-9 rounded-xl flex items-center justify-center border mb-3 ${colorMap[color]}`}>{icon}</div>
-          <div className="text-3xl font-black font-heading">{value}</div>
-          <div className="text-xs font-black text-zinc-500 uppercase tracking-widest mt-1">{label}</div>
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
-}
+      {/* Rating Dialog */}
+      <Dialog open={showRating} onOpenChange={setShowRating}>
+        <DialogContent className="max-w-sm" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-center text-xl font-heading font-black">
+              قيّم {activeArtisan?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-6 py-4">
+            <div className="flex flex-col items-center gap-3">
+              <Avatar className="h-16 w-16">
+                <AvatarImage src={activeArtisan?.image} />
+                <AvatarFallback className="bg-primary/20 text-primary text-xl font-bold">{activeArtisan?.name?.[0]}</AvatarFallback>
+              </Avatar>
+              <p className="text-muted-foreground text-sm text-center">كيف كانت تجربتك مع {activeArtisan?.name}؟</p>
+            </div>
 
-function InfoItem({ icon, label, value }: any) {
-  return (
-    <div className="flex items-center gap-3 p-4 bg-white/[0.03] border border-white/10 rounded-2xl">
-      <div className="text-primary shrink-0">{icon}</div>
-      <div className="min-w-0">
-        <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{label}</p>
-        <p className="font-bold text-white truncate text-sm">{value}</p>
-      </div>
+            <StarRating value={ratingValue} onChange={setRatingValue} size={40} />
+
+            {ratingValue > 0 && (
+              <p className="text-sm font-bold text-amber-500">
+                {["", "ضعيف 😞", "مقبول 🙂", "جيد 👍", "جيد جداً 😊", "ممتاز 🌟"][ratingValue]}
+              </p>
+            )}
+
+            <textarea
+              className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-muted/30 focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none"
+              placeholder="تعليق اختياري..."
+              rows={3}
+              value={ratingComment}
+              onChange={e => setRatingComment(e.target.value)}
+            />
+
+            <div className="flex gap-3 w-full">
+              <Button variant="outline" className="flex-1" onClick={() => setShowRating(false)}>إلغاء</Button>
+              <Button className="flex-1 gap-2"
+                disabled={ratingValue === 0 || reviewMutation.isPending}
+                onClick={() => reviewMutation.mutate()}>
+                <Star className="h-4 w-4 fill-white" />
+                {reviewMutation.isPending ? "جاري الإرسال..." : "إرسال التقييم"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
