@@ -5,6 +5,7 @@ import { insertArtisanSchema, insertMessageSchema, insertConversationSchema, ins
 import { z } from "zod";
 import fs from "fs";
 import path from "path";
+import { sendVerificationEmail, sendPasswordResetEmail, generateOTP } from "server/Email.ts";
 
 const ADMIN_PASSWORD = "AlaaGH_Mil";
 const adminSessions = new Set<string>();
@@ -54,7 +55,71 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (password.length < 6) return res.status(400).json({ message: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" });
       const user = await storage.registerUser(name, email, password, phone);
       if (!user) return res.status(409).json({ message: "البريد الإلكتروني مستخدم بالفعل" });
-      res.status(201).json({ user: safeUser(user) });
+
+      // Generate & send OTP
+      const otp = generateOTP();
+      await storage.setUserOTP(email, otp);
+      const sent = await sendVerificationEmail(email, name, otp);
+
+      res.status(201).json({
+        user: safeUser(user),
+        emailSent: sent,
+        message: sent ? "تم إرسال رمز التحقق لبريدك الإلكتروني" : "تم إنشاء الحساب لكن فشل إرسال البريد",
+      });
+    } catch {
+      res.status(500).json({ message: "خطأ في الخادم" });
+    }
+  });
+
+  app.post("/api/auth/verify-email", async (req: Request, res: Response) => {
+    try {
+      const { email, otp } = req.body;
+      if (!email || !otp) return res.status(400).json({ message: "البريد والرمز مطلوبان" });
+      const verified = await storage.verifyUserEmail(email, otp);
+      if (!verified) return res.status(400).json({ message: "رمز التحقق غير صحيح أو انتهت صلاحيته" });
+      res.json({ success: true, message: "تم تأكيد بريدك الإلكتروني بنجاح ✅" });
+    } catch {
+      res.status(500).json({ message: "خطأ في الخادم" });
+    }
+  });
+
+  app.post("/api/auth/resend-otp", async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+      const user = await storage.getUserByEmail(email);
+      if (!user) return res.status(404).json({ message: "البريد غير موجود" });
+      if (user.isVerified) return res.status(400).json({ message: "الحساب مؤكد بالفعل" });
+      const otp = generateOTP();
+      await storage.setUserOTP(email, otp);
+      const sent = await sendVerificationEmail(email, user.name, otp);
+      res.json({ success: sent, message: sent ? "تم إرسال رمز جديد" : "فشل الإرسال" });
+    } catch {
+      res.status(500).json({ message: "خطأ في الخادم" });
+    }
+  });
+
+  app.post("/api/auth/forgot-password", async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+      const user = await storage.getUserByEmail(email);
+      if (!user) return res.status(404).json({ message: "البريد غير موجود" });
+      const otp = generateOTP();
+      await storage.setUserOTP(email, otp);
+      const sent = await sendPasswordResetEmail(email, user.name, otp);
+      res.json({ success: sent, message: sent ? "تم إرسال رمز إعادة التعيين" : "فشل الإرسال" });
+    } catch {
+      res.status(500).json({ message: "خطأ في الخادم" });
+    }
+  });
+
+  app.post("/api/auth/reset-password", async (req: Request, res: Response) => {
+    try {
+      const { email, otp, newPassword } = req.body;
+      if (!email || !otp || !newPassword) return res.status(400).json({ message: "جميع الحقول مطلوبة" });
+      if (newPassword.length < 6) return res.status(400).json({ message: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" });
+      const success = await storage.resetUserPassword(email, otp, newPassword);
+      if (!success) return res.status(400).json({ message: "رمز التحقق غير صحيح أو انتهت صلاحيته" });
+      res.json({ success: true, message: "تم تغيير كلمة المرور بنجاح" });
     } catch {
       res.status(500).json({ message: "خطأ في الخادم" });
     }
@@ -66,6 +131,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!email || !password) return res.status(400).json({ message: "البريد وكلمة المرور مطلوبان" });
       const user = await storage.loginUser(email, password);
       if (!user) return res.status(401).json({ message: "البريد أو كلمة المرور غير صحيحة" });
+      if (!user.isVerified) return res.status(403).json({ message: "يجب تأكيد بريدك الإلكتروني أولاً", needsVerification: true, email });
 
       // If artisan, return artisan data too
       let artisanData = null;

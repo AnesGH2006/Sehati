@@ -560,7 +560,7 @@ export default function Chat() {
                             {!isImageUrl(msg.content) && (
                               <button
                                 onClick={() => setEditingMsg({ id: msg.id, content: msg.content })}
-                                className="p-1 rounded-full bg-muted hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors text-xs"
+                                className="p-1 rounded-full bg-muted hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors text-right"
                                 title="تعديل"
                               >✏️</button>
                             )}

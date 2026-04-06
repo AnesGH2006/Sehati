@@ -23,6 +23,9 @@ export interface User {
   phone?: string;
   role: "customer" | "artisan";
   artisanId?: number;
+  isVerified: boolean;
+  otp?: string;
+  otpExpiry?: string;
   createdAt: string;
 }
 
@@ -93,7 +96,11 @@ export interface IStorage {
   registerUser(name: string, email: string, password: string, phone?: string): Promise<User | null>;
   loginUser(email: string, password: string): Promise<User | null>;
   getUserById(id: string): Promise<User | null>;
+  getUserByEmail(email: string): Promise<User | null>;
   linkUserToArtisan(userId: string, artisanId: number): Promise<void>;
+  verifyUserEmail(email: string, otp: string): Promise<boolean>;
+  setUserOTP(email: string, otp: string): Promise<void>;
+  resetUserPassword(email: string, otp: string, newPassword: string): Promise<boolean>;
 
   getArtisan(id: number): Promise<Artisan | undefined>;
   getArtisans(filters?: {
@@ -148,6 +155,7 @@ class FileStorage implements IStorage {
       passwordHash: hashPassword(password),
       phone,
       role: "customer",
+      isVerified: false,
       createdAt: new Date().toISOString(),
     };
     this.store.users.push(user);
@@ -164,6 +172,45 @@ class FileStorage implements IStorage {
 
   async getUserById(id: string): Promise<User | null> {
     return this.store.users.find(u => u.id === id) || null;
+  }
+
+  async getUserByEmail(email: string): Promise<User | null> {
+    return this.store.users.find(u => u.email.toLowerCase() === email.toLowerCase()) || null;
+  }
+
+  async setUserOTP(email: string, otp: string): Promise<void> {
+    const idx = this.store.users.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+    if (idx === -1) return;
+    const expiry = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min
+    this.store.users[idx].otp = otp;
+    this.store.users[idx].otpExpiry = expiry;
+    this.save();
+  }
+
+  async verifyUserEmail(email: string, otp: string): Promise<boolean> {
+    const idx = this.store.users.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+    if (idx === -1) return false;
+    const user = this.store.users[idx];
+    if (!user.otp || user.otp !== otp) return false;
+    if (user.otpExpiry && new Date(user.otpExpiry) < new Date()) return false;
+    this.store.users[idx].isVerified = true;
+    this.store.users[idx].otp = undefined;
+    this.store.users[idx].otpExpiry = undefined;
+    this.save();
+    return true;
+  }
+
+  async resetUserPassword(email: string, otp: string, newPassword: string): Promise<boolean> {
+    const idx = this.store.users.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+    if (idx === -1) return false;
+    const user = this.store.users[idx];
+    if (!user.otp || user.otp !== otp) return false;
+    if (user.otpExpiry && new Date(user.otpExpiry) < new Date()) return false;
+    this.store.users[idx].passwordHash = hashPassword(newPassword);
+    this.store.users[idx].otp = undefined;
+    this.store.users[idx].otpExpiry = undefined;
+    this.save();
+    return true;
   }
 
   async linkUserToArtisan(userId: string, artisanId: number): Promise<void> {
