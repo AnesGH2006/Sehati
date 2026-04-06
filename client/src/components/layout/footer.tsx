@@ -56,7 +56,7 @@ export function Footer() {
               <a href="#" className="bg-white p-2 rounded-full shadow-sm hover:text-primary hover:shadow-md transition-all">
                 <Facebook className="h-5 w-5" />
               </a>
-              <a href="Instagram.com/alaagh23alg" className="bg-white p-2 rounded-full shadow-sm hover:text-primary hover:shadow-md transition-all">
+              <a href="https://Instagram.com/alaagh23alg" className="bg-white p-2 rounded-full shadow-sm hover:text-primary hover:shadow-md transition-all">
                 <Instagram className="h-5 w-5" />
               </a>
             </div>
