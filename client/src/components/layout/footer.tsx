@@ -41,11 +41,11 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2 justify-start">
                 <Phone className="h-4 w-4 text-primary" />
-                <span>+213 46 00 00 00</span>
+                <span>+213 0538200828</span>
               </li>
               <li className="flex items-center gap-2 justify-start">
                 <Mail className="h-4 w-4 text-primary" />
-                <span>contact@herfati.dz</span>
+                <span>alaagh23dz@gmail.com</span>
               </li>
             </ul>
           </div>
@@ -56,11 +56,8 @@ export function Footer() {
               <a href="#" className="bg-white p-2 rounded-full shadow-sm hover:text-primary hover:shadow-md transition-all">
                 <Facebook className="h-5 w-5" />
               </a>
-              <a href="#" className="bg-white p-2 rounded-full shadow-sm hover:text-primary hover:shadow-md transition-all">
+              <a href="Instagram.com/alaagh23alg" className="bg-white p-2 rounded-full shadow-sm hover:text-primary hover:shadow-md transition-all">
                 <Instagram className="h-5 w-5" />
-              </a>
-              <a href="#" className="bg-white p-2 rounded-full shadow-sm hover:text-primary hover:shadow-md transition-all">
-                <Twitter className="h-5 w-5" />
               </a>
             </div>
           </div>
