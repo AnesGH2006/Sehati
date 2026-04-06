@@ -592,6 +592,80 @@ export default function ArtisanDashboard() {
         {/* Settings Tab */}
         {activeTab === "settings" && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-2xl">
+
+            {/* Edit Info */}
+            <h2 className="text-2xl font-heading font-black">{isRtl ? "تعديل المعلومات" : "Edit Info"}</h2>
+            <Card className="bg-white/[0.03] border-white/10 rounded-3xl">
+              <CardContent className="p-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-black uppercase tracking-widest text-zinc-400">الاسم</Label>
+                    <input
+                      defaultValue={realArtisan?.name || ""}
+                      id="edit-name"
+                      className="w-full bg-white/5 border border-white/10 h-12 rounded-xl text-white px-4 text-sm focus:outline-none focus:border-primary/50"
+                      placeholder="اسمك"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-black uppercase tracking-widest text-zinc-400">الهاتف</Label>
+                    <input
+                      defaultValue={realArtisan?.phone || ""}
+                      id="edit-phone"
+                      className="w-full bg-white/5 border border-white/10 h-12 rounded-xl text-white px-4 text-sm focus:outline-none focus:border-primary/50"
+                      placeholder="06XXXXXXXX"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-black uppercase tracking-widest text-zinc-400">السعر الأدنى (دج)</Label>
+                    <input
+                      defaultValue={realArtisan?.priceStart || ""}
+                      id="edit-price"
+                      type="number"
+                      className="w-full bg-white/5 border border-white/10 h-12 rounded-xl text-white px-4 text-sm focus:outline-none focus:border-primary/50"
+                      placeholder="1000"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-black uppercase tracking-widest text-zinc-400">سنوات الخبرة</Label>
+                    <input
+                      defaultValue={realArtisan?.yearsOfExperience || ""}
+                      id="edit-exp"
+                      type="number"
+                      className="w-full bg-white/5 border border-white/10 h-12 rounded-xl text-white px-4 text-sm focus:outline-none focus:border-primary/50"
+                      placeholder="5"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase tracking-widest text-zinc-400">نبذة تعريفية</Label>
+                  <textarea
+                    defaultValue={realArtisan?.description || ""}
+                    id="edit-desc"
+                    rows={3}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl text-white px-4 py-3 text-sm focus:outline-none focus:border-primary/50 resize-none"
+                    placeholder="اكتب نبذة عن نفسك وخدماتك..."
+                  />
+                </div>
+                <Button
+                  onClick={() => {
+                    const name = (document.getElementById("edit-name") as HTMLInputElement)?.value;
+                    const phone = (document.getElementById("edit-phone") as HTMLInputElement)?.value;
+                    const priceStart = parseInt((document.getElementById("edit-price") as HTMLInputElement)?.value);
+                    const yearsOfExperience = parseInt((document.getElementById("edit-exp") as HTMLInputElement)?.value);
+                    const description = (document.getElementById("edit-desc") as HTMLTextAreaElement)?.value;
+                    updateMutation.mutate({ name, phone, priceStart, yearsOfExperience, description });
+                  }}
+                  className="gap-2 rounded-xl font-black"
+                  disabled={updateMutation.isPending}
+                >
+                  <Save className="h-4 w-4" />
+                  {updateMutation.isPending ? "جاري الحفظ..." : "حفظ المعلومات"}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Edit Location */}
             <h2 className="text-2xl font-heading font-black">{isRtl ? "تعديل الموقع" : "Edit Location"}</h2>
             <Card className="bg-white/[0.03] border-white/10 rounded-3xl">
               <CardContent className="p-6 space-y-4">

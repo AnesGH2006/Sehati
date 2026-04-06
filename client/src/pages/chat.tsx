@@ -62,6 +62,7 @@ export default function Chat() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showEmoji, setShowEmoji] = useState(false);
   const [likedMsgs, setLikedMsgs] = useState<Set<number>>(new Set());
+  const [editingMsg, setEditingMsg] = useState<{id: number, content: string} | null>(null);
   const [showRating, setShowRating] = useState(false);
   const [ratingValue, setRatingValue] = useState(0);
   const [ratingComment, setRatingComment] = useState("");
@@ -195,6 +196,26 @@ export default function Chat() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", convId, "messages"] });
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", myId, myType] });
+    },
+  });
+
+  // ── Delete message ────────────────────────────────────────────────────────
+  const deleteMsgMutation = useMutation({
+    mutationFn: (id: number) => fetch(`/api/messages/${id}`, { method: "DELETE" }).then(r => r.json()),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/conversations", convId, "messages"] }),
+  });
+
+  // ── Edit message ──────────────────────────────────────────────────────────
+  const editMsgMutation = useMutation({
+    mutationFn: ({ id, content }: { id: number; content: string }) =>
+      fetch(`/api/messages/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      }).then(r => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", convId, "messages"] });
+      setEditingMsg(null);
     },
   });
 
@@ -501,6 +522,23 @@ export default function Chat() {
                             {senderName}
                           </p>
                         )}
+                        {editingMsg?.id === msg.id ? (
+                          <div className="flex gap-2 items-center">
+                            <input
+                              autoFocus
+                              value={editingMsg.content}
+                              onChange={e => setEditingMsg({ ...editingMsg, content: e.target.value })}
+                              onKeyDown={e => {
+                                if (e.key === "Enter") editMsgMutation.mutate({ id: msg.id, content: editingMsg.content });
+                                if (e.key === "Escape") setEditingMsg(null);
+                              }}
+                              className="flex-1 bg-primary/20 text-white rounded-xl px-3 py-2 text-sm border border-primary/40 focus:outline-none"
+                            />
+                            <button onClick={() => editMsgMutation.mutate({ id: msg.id, content: editingMsg.content })}
+                              className="text-xs text-primary font-bold">✓</button>
+                            <button onClick={() => setEditingMsg(null)} className="text-xs text-muted-foreground">✕</button>
+                          </div>
+                        ) : (
                         <div onDoubleClick={() => toggleLike(msg.id)}
                           className={`rounded-2xl text-sm leading-relaxed cursor-default select-text transition-all overflow-hidden ${
                             isMe
@@ -515,6 +553,24 @@ export default function Chat() {
                             />
                           ) : msg.content}
                         </div>
+                        )}
+                        {/* Delete/Edit buttons for own messages */}
+                        {isMe && !editingMsg && (
+                          <div className={`absolute top-0 ${isMe ? 'left-0 -translate-x-full pr-1' : 'right-0 translate-x-full pl-1'} hidden group-hover:flex items-center gap-1`}>
+                            {!isImageUrl(msg.content) && (
+                              <button
+                                onClick={() => setEditingMsg({ id: msg.id, content: msg.content })}
+                                className="p-1 rounded-full bg-muted hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors text-xs"
+                                title="تعديل"
+                              >✏️</button>
+                            )}
+                            <button
+                              onClick={() => { if (confirm("حذف هذه الرسالة؟")) deleteMsgMutation.mutate(msg.id); }}
+                              className="p-1 rounded-full bg-muted hover:bg-red-500/20 text-muted-foreground hover:text-red-500 transition-colors text-xs"
+                              title="حذف"
+                            >🗑️</button>
+                          </div>
+                        )}
                         {likedMsgs.has(msg.id) && (
                           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
                             className={`absolute -bottom-2 ${isMe ? 'left-2' : 'right-2'} text-sm`}>❤️</motion.div>

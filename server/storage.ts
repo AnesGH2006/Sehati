@@ -116,6 +116,8 @@ export interface IStorage {
   getAllMessages(): Promise<Message[]>;
   createMessage(msg: InsertMessage): Promise<Message>;
   markMessagesAsRead(conversationId: string, userId: string): Promise<void>;
+  deleteMessage(id: number): Promise<boolean>;
+  editMessage(id: number, content: string): Promise<Message | null>;
 
   createReview(review: InsertReview): Promise<Review>;
   getReviewsByArtisan(artisanId: number): Promise<Review[]>;
@@ -319,6 +321,21 @@ class FileStorage implements IStorage {
       if (m.conversationId === conversationId && m.receiverId === userId) m.isRead = true;
     });
     this.save();
+  }
+
+  async deleteMessage(id: number): Promise<boolean> {
+    const before = this.store.messages.length;
+    this.store.messages = this.store.messages.filter(m => m.id !== id);
+    this.save();
+    return this.store.messages.length < before;
+  }
+
+  async editMessage(id: number, content: string): Promise<Message | null> {
+    const idx = this.store.messages.findIndex(m => m.id === id);
+    if (idx === -1) return null;
+    this.store.messages[idx] = { ...this.store.messages[idx], content };
+    this.save();
+    return this.store.messages[idx];
   }
 
   async createReview(insertReview: InsertReview): Promise<Review> {

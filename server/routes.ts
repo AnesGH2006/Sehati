@@ -259,5 +259,26 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  app.delete("/api/messages/:id", async (req: Request, res: Response) => {
+    try {
+      const deleted = await storage.deleteMessage(parseInt(req.params.id));
+      if (!deleted) return res.status(404).json({ message: "Message not found" });
+      res.json({ success: true });
+    } catch {
+      res.status(500).json({ message: "Failed to delete message" });
+    }
+  });
+
+  app.patch("/api/messages/:id", async (req: Request, res: Response) => {
+    try {
+      const { content } = req.body;
+      const message = await storage.editMessage(parseInt(req.params.id), content);
+      if (!message) return res.status(404).json({ message: "Message not found" });
+      res.json(message);
+    } catch {
+      res.status(500).json({ message: "Failed to edit message" });
+    }
+  });
+
   return httpServer;
 }
