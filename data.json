@@ -1,32 +1,5 @@
 {
-  "artisans": [
-    {
-      "id": 1,
-      "userId": null,
-      "name": "NHHH",
-      "email": "alaagh23dz@gmail.com",
-      "phone": "0699524576",
-      "category": "mechanic",
-      "wilaya": "وهران",
-      "daira": "أرزيو",
-      "description": "حرفي محترف في منصة حرفتي",
-      "priceStart": 9000,
-      "rating": 5,
-      "reviewCount": 1,
-      "isVerified": false,
-      "yearsOfExperience": 6,
-      "imageUrl": "https://ui-avatars.com/api/?name=NHHH&background=2DD4BF&color=fff&size=400",
-      "portfolioImages": [],
-      "languages": [
-        "العربية"
-      ],
-      "workingHours": null,
-      "subscriptionType": "free",
-      "subscriptionDuration": 1,
-      "subscriptionExpiresAt": null,
-      "createdAt": "2026-03-30T19:56:23.592Z"
-    }
-  ],
+  "artisans": [],
   "artisanIdCounter": 2,
   "conversations": [
     {

@@ -49,15 +49,6 @@ export const MOCK_ARTISANS = [
   {
     id: 1,
     name: "أحمد بن علي",
-    category: "نجارة",
-    daira: "الجزائر",
-    rating: 4.8,
-    reviews: 124,
-    priceStart: 4000,
-    phone: "0550123456",
-    image: "https://images.unsplash.com/photo-1581244277943-fe4a9c777189?w=400&h=400&fit=crop",
-    isVerified: true,
-    description: "Test z"
   },
 ];
 
