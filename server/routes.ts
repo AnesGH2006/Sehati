@@ -5,7 +5,7 @@ import { insertArtisanSchema, insertMessageSchema, insertConversationSchema, ins
 import { z } from "zod";
 import fs from "fs";
 import path from "path";
-import { sendVerificationEmail, sendPasswordResetEmail, generateOTP } from "server/Email.ts";
+import { sendVerificationEmail, sendPasswordResetEmail, generateOTP } from "server/Email";
 
 const ADMIN_PASSWORD = "AlaaGH_Mil";
 const adminSessions = new Set<string>();
@@ -190,6 +190,34 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.get("/api/admin/conversations/:id/messages", async (req: Request, res: Response) => {
     if (!isAdmin(req)) return res.status(403).json({ message: "Forbidden" });
     res.json(await storage.getMessages(req.params.id));
+  });
+
+  // ─── Admin Users ────────────────────────────────────────────────────────────
+  app.get("/api/admin/users", async (req: Request, res: Response) => {
+    if (!isAdmin(req)) return res.status(403).json({ message: "Forbidden" });
+    const users = await storage.getAllUsers();
+    res.json(users);
+  });
+
+  app.delete("/api/admin/users/:id", async (req: Request, res: Response) => {
+    if (!isAdmin(req)) return res.status(403).json({ message: "Forbidden" });
+    try {
+      const deleted = await storage.deleteUser(req.params.id);
+      if (!deleted) return res.status(404).json({ message: "User not found" });
+      res.json({ success: true });
+    } catch {
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  app.post("/api/admin/users/:id/verify", async (req: Request, res: Response) => {
+    if (!isAdmin(req)) return res.status(403).json({ message: "Forbidden" });
+    try {
+      await storage.forceVerifyUser(req.params.id);
+      res.json({ success: true });
+    } catch {
+      res.status(500).json({ message: "Failed to verify user" });
+    }
   });
 
   // ─── Artisans ───────────────────────────────────────────────────────────────

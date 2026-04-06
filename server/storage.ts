@@ -97,6 +97,9 @@ export interface IStorage {
   loginUser(email: string, password: string): Promise<User | null>;
   getUserById(id: string): Promise<User | null>;
   getUserByEmail(email: string): Promise<User | null>;
+  getAllUsers(): Promise<Omit<User, never>[]>;
+  deleteUser(id: string): Promise<boolean>;
+  forceVerifyUser(id: string): Promise<void>;
   linkUserToArtisan(userId: string, artisanId: number): Promise<void>;
   verifyUserEmail(email: string, otp: string): Promise<boolean>;
   setUserOTP(email: string, otp: string): Promise<void>;
@@ -176,6 +179,27 @@ class FileStorage implements IStorage {
 
   async getUserByEmail(email: string): Promise<User | null> {
     return this.store.users.find(u => u.email.toLowerCase() === email.toLowerCase()) || null;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return [...this.store.users].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    const before = this.store.users.length;
+    this.store.users = this.store.users.filter(u => u.id !== id);
+    this.save();
+    return this.store.users.length < before;
+  }
+
+  async forceVerifyUser(id: string): Promise<void> {
+    const idx = this.store.users.findIndex(u => u.id === id);
+    if (idx !== -1) {
+      this.store.users[idx].isVerified = true;
+      this.store.users[idx].otp = undefined;
+      this.store.users[idx].otpExpiry = undefined;
+      this.save();
+    }
   }
 
   async setUserOTP(email: string, otp: string): Promise<void> {
