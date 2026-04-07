@@ -1,4 +1,4 @@
-import { pgTable, text, integer, boolean, timestamp, real, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, boolean, timestamp, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -19,7 +19,7 @@ export const users = pgTable("users", {
 
 // ── Artisans ─────────────────────────────────────────────────────────────────
 export const artisans = pgTable("artisans", {
-  id: serial("id").primaryKey(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
   name: text("name").notNull(),
   email: text("email").notNull(),
@@ -56,7 +56,7 @@ export const conversations = pgTable("conversations", {
 
 // ── Messages ──────────────────────────────────────────────────────────────────
 export const messages = pgTable("messages", {
-  id: serial("id").primaryKey(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   conversationId: text("conversation_id").notNull().references(() => conversations.id, { onDelete: "cascade" }),
   senderId: text("sender_id").notNull(),
   receiverId: text("receiver_id").notNull(),
@@ -68,7 +68,7 @@ export const messages = pgTable("messages", {
 
 // ── Reviews ───────────────────────────────────────────────────────────────────
 export const reviews = pgTable("reviews", {
-  id: serial("id").primaryKey(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   artisanId: integer("artisan_id").notNull().references(() => artisans.id, { onDelete: "cascade" }),
   customerId: text("customer_id").notNull(),
   customerName: text("customer_name").notNull(),
