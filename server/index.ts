@@ -26,11 +26,14 @@ io.on("connection", (socket) => {
   // ── WebRTC Signaling ────────────────────────────────────────────────────
 
   // Caller initiates call
-  socket.on("call:start", ({ to, from, fromName, callType }: {
-    to: string; from: string; fromName: string; callType: "audio" | "video"
-  }) => {
-    io.to(to).emit("call:incoming", { from, fromName, callType });
-  });
+ socket.on("call:start", ({ to, from, fromName, callType }) => {
+  console.log(`📞 call:start from=${from} to=${to}, online users:`, [...onlineUsers.entries()]);
+  io.to(to).emit("call:incoming", { from, fromName, callType });
+});
+
+
+
+
 
   // Callee accepts
   socket.on("call:accept", ({ to }: { to: string }) => {

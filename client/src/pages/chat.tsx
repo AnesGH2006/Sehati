@@ -69,7 +69,7 @@ export default function Chat() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const myId = isArtisan ? String(authArtisan?.id) : (customer?.id || "guest");
+  const myId = isArtisan ? (authArtisan?.userId || String(authArtisan?.id)) : (customer?.id || "guest");
   const myName = isArtisan ? (authArtisan?.name || "حرفي") : (customer?.name || "زبون");
   const myType: "artisan" | "customer" = isArtisan ? "artisan" : "customer";
 
@@ -157,7 +157,10 @@ export default function Chat() {
 
   // ── Real call target ID — resolved from actual messages ─────────────────
   const customerIdFromMessages = messages.find((m: any) => m.senderType === "customer")?.senderId;
-  const callTargetId = isArtisan ? (customerIdFromMessages || "customer-chat") : (activeArtisanId ? String(activeArtisanId) : "");
+  const artisanUserId = apiArtisan?.userId || String(activeArtisanId);
+const callTargetId = isArtisan
+  ? (customerIdFromMessages || "customer-chat")
+  : artisanUserId;
 
   // Check if already reviewed
   const { data: hasReviewed } = useQuery<boolean>({
