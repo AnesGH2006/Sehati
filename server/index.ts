@@ -34,7 +34,7 @@ io.on("connection", (socket) => {
 
   // Callee accepts
   socket.on("call:accept", ({ to }: { to: string }) => {
-    io.to(to).emit("call:accepted");
+    io.to(to).emit("call:accepted", { from: userId });
   });
 
   // Callee rejects
