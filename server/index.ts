@@ -3,9 +3,20 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
+import webpush from "web-push";
 
 const app = express();
 const httpServer = createServer(app);
+
+// ── Web Push Setup ───────────────────────────────────────────────────────────
+webpush.setVapidDetails(
+  "mailto:admin@herfati.com",
+  "BFpzy5LKld1r6PnRWcQpA3fXGBjBelwb9yXVTiUOkIyJeBL_prUlef95PJ8MU9vpCgRFa1HXPoZz4wdzAC5G4mI",
+  "TUqce04i4eAxl6vAaPCQKMXbiz5E470zHQkq0YfDEMc"
+);
+
+// Store push subscriptions: userId -> PushSubscription
+export const pushSubscriptions = new Map<string, any>();
 
 // ── Socket.io for WebRTC signaling ──────────────────────────────────────────
 export const io = new SocketIOServer(httpServer, {
@@ -16,27 +27,66 @@ export const io = new SocketIOServer(httpServer, {
 // Track active users: userId -> socketId
 const onlineUsers = new Map<string, string>();
 
+async function sendPushToUser(userId: string, payload: object) {
+  const sub = pushSubscriptions.get(userId);
+  if (!sub) return;
+  try {
+    await webpush.sendNotification(sub, JSON.stringify(payload));
+    console.log(`🔔 Push sent to user: ${userId}`);
+  } catch (err: any) {
+    console.warn(`⚠️ Push failed for ${userId}:`, err.message);
+    if (err.statusCode === 410) {
+      // Subscription expired
+      pushSubscriptions.delete(userId);
+    }
+  }
+}
+
 io.on("connection", (socket) => {
   const userId = socket.handshake.query.userId as string;
   if (userId) {
     onlineUsers.set(userId, socket.id);
-    socket.join(userId); // join a room with their userId
+    socket.join(userId);
+    console.log(`✅ User connected: ${userId} (socket: ${socket.id})`);
   }
 
   // ── WebRTC Signaling ────────────────────────────────────────────────────
 
   // Caller initiates call
- socket.on("call:start", ({ to, from, fromName, callType }) => {
-  console.log(`📞 call:start from=${from} to=${to}, online users:`, [...onlineUsers.entries()]);
-  io.to(to).emit("call:incoming", { from, fromName, callType });
-});
+  socket.on("call:start", async ({ to, from, fromName, callType }: {
+    to: string; from: string; fromName: string; callType: "audio" | "video"
+  }) => {
+    console.log(`📞 call:start | from=${from} (${fromName}) → to=${to}`);
+    console.log(`👥 Online users:`, [...onlineUsers.entries()]);
 
+    // Send socket event if user is online
+    io.to(to).emit("call:incoming", { from, fromName, callType });
 
+    // Send push notification if user is offline or on another tab
+    const isOnline = onlineUsers.has(to);
+    console.log(`📡 Target ${to} is ${isOnline ? "ONLINE" : "OFFLINE"}`);
 
-
+    await sendPushToUser(to, {
+      title: `📞 مكالمة ${callType === "video" ? "بالكاميرا" : "صوتية"} واردة`,
+      body: `${fromName} يتصل بك الآن`,
+      tag: "incoming-call",
+      requireInteraction: true,
+      actions: [
+        { action: "accept", title: "✅ قبول" },
+        { action: "reject", title: "❌ رفض" },
+      ],
+      data: {
+        from,
+        fromName,
+        callType,
+        artisanId: to,
+      },
+    });
+  });
 
   // Callee accepts
   socket.on("call:accept", ({ to }: { to: string }) => {
+    console.log(`✅ call:accept | to=${to}`);
     io.to(to).emit("call:accepted", { from: userId });
   });
 
@@ -66,7 +116,10 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    if (userId) onlineUsers.delete(userId);
+    if (userId) {
+      onlineUsers.delete(userId);
+      console.log(`❌ User disconnected: ${userId}`);
+    }
   });
 });
 

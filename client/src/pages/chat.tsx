@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useCall } from "@/hooks/useCall";
 import { CallUI } from "@/components/CallUI";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
+
 
 const EMOJI_LIST = ["😊","😂","❤️","😍","🥰","👍","🙏","🔥","✨","💯","😎","🤝","👋","🎉","💪","🤔","😭","😤","🥺","💬"];
 const FINISH_SIGNAL = "__CHAT_FINISHED__";
