@@ -1,5 +1,5 @@
-import { 
-  type Artisan, 
+import {
+  type Artisan,
   type InsertArtisan,
   type Message,
   type InsertMessage,
@@ -7,97 +7,30 @@ import {
   type InsertConversation,
   type Review,
   type InsertReview,
+  type User,
+  users,
+  artisans,
+  conversations,
+  messages,
+  reviews,
 } from "@shared/schema";
-import fs from "fs";
-import path from "path";
+import { db } from "./db";
+import { eq, and, ilike, gte, lte, desc, or } from "drizzle-orm";
 import crypto from "crypto";
 
-const DATA_FILE = path.join(process.cwd(), "data.json");
-
-// ── User types ───────────────────────────────────────────────────────────────
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  passwordHash: string;
-  phone?: string;
-  role: "customer" | "artisan";
-  artisanId?: number;
-  isVerified: boolean;
-  otp?: string;
-  otpExpiry?: string;
-  createdAt: string;
-}
-
-interface DataStore {
-  artisans: Artisan[];
-  artisanIdCounter: number;
-  conversations: Conversation[];
-  messages: Message[];
-  messageIdCounter: number;
-  reviews: Review[];
-  reviewIdCounter: number;
-  users: User[];
-}
-
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function hashPassword(password: string): string {
   return crypto.createHash("sha256").update(password + "herfati_salt").digest("hex");
 }
 
-function loadData(): DataStore {
-  try {
-    if (fs.existsSync(DATA_FILE)) {
-      const raw = fs.readFileSync(DATA_FILE, "utf-8");
-      const data = JSON.parse(raw);
-      return {
-        artisans: data.artisans || [],
-        artisanIdCounter: data.artisanIdCounter || 1,
-        conversations: data.conversations || [],
-        messages: data.messages || [],
-        messageIdCounter: data.messageIdCounter || 1,
-        reviews: data.reviews || [],
-        reviewIdCounter: data.reviewIdCounter || 1,
-        users: data.users || [],
-      };
-    }
-  } catch (e) {
-    console.error("Failed to load data:", e);
-  }
-  return {
-    artisans: [],
-    artisanIdCounter: 1,
-    conversations: [],
-    messages: [],
-    messageIdCounter: 1,
-    reviews: [],
-    reviewIdCounter: 1,
-    users: [],
-  };
-}
-
-function saveData(store: DataStore) {
-  try {
-    const toSave: DataStore = {
-      ...store,
-      artisans: store.artisans.map(a => ({
-        ...a,
-        portfolioImages: (a.portfolioImages || []).filter((img: string) => !img.startsWith("data:")),
-        imageUrl: a.imageUrl?.startsWith("data:") ? null : a.imageUrl,
-      })),
-    };
-    fs.writeFileSync(DATA_FILE, JSON.stringify(toSave, null, 2), "utf-8");
-  } catch (e) {
-    console.error("Failed to save data:", e);
-  }
-}
-
+// ── Interface ─────────────────────────────────────────────────────────────────
 export interface IStorage {
-  // ── Auth ──────────────────────────────────────────────────────────────────
+  // Auth
   registerUser(name: string, email: string, password: string, phone?: string): Promise<User | null>;
   loginUser(email: string, password: string): Promise<User | null>;
   getUserById(id: string): Promise<User | null>;
   getUserByEmail(email: string): Promise<User | null>;
-  getAllUsers(): Promise<Omit<User, never>[]>;
+  getAllUsers(): Promise<User[]>;
   deleteUser(id: string): Promise<boolean>;
   forceVerifyUser(id: string): Promise<void>;
   linkUserToArtisan(userId: string, artisanId: number): Promise<void>;
@@ -105,6 +38,7 @@ export interface IStorage {
   setUserOTP(email: string, otp: string): Promise<void>;
   resetUserPassword(email: string, otp: string, newPassword: string): Promise<boolean>;
 
+  // Artisans
   getArtisan(id: number): Promise<Artisan | undefined>;
   getArtisans(filters?: {
     category?: string;
@@ -117,11 +51,13 @@ export interface IStorage {
   updateArtisan(id: number, updates: Partial<Artisan>): Promise<Artisan | undefined>;
   deleteArtisan(id: number): Promise<boolean>;
 
+  // Conversations
   getConversation(id: string): Promise<Conversation | undefined>;
-  getConversationsByUser(userId: string, role: 'artisan' | 'customer'): Promise<Conversation[]>;
+  getConversationsByUser(userId: string, role: "artisan" | "customer"): Promise<Conversation[]>;
   getAllConversations(): Promise<Conversation[]>;
   createConversation(conv: InsertConversation): Promise<Conversation>;
 
+  // Messages
   getMessages(conversationId: string): Promise<Message[]>;
   getAllMessages(): Promise<Message[]>;
   createMessage(msg: InsertMessage): Promise<Message>;
@@ -129,129 +65,108 @@ export interface IStorage {
   deleteMessage(id: number): Promise<boolean>;
   editMessage(id: number, content: string): Promise<Message | null>;
 
+  // Reviews
   createReview(review: InsertReview): Promise<Review>;
   getReviewsByArtisan(artisanId: number): Promise<Review[]>;
   hasReviewed(artisanId: number, customerId: string): Promise<boolean>;
   deleteReview(id: number): Promise<boolean>;
 }
 
-class FileStorage implements IStorage {
-  private store: DataStore;
+// ── Implementation ─────────────────────────────────────────────────────────────
+class PostgresStorage implements IStorage {
 
-  constructor() {
-    this.store = loadData();
-  }
-
-  private save() {
-    saveData(this.store);
-  }
-
-  // ── Auth ───────────────────────────────────────────────────────────────────
+  // ── Auth ──────────────────────────────────────────────────────────────────
 
   async registerUser(name: string, email: string, password: string, phone?: string): Promise<User | null> {
-    const exists = this.store.users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (exists) return null;
-    const user: User = {
-      id: `user-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    const existing = await db.select().from(users).where(eq(users.email, email.toLowerCase())).limit(1);
+    if (existing.length > 0) return null;
+
+    const id = `user-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const [user] = await db.insert(users).values({
+      id,
       name,
       email: email.toLowerCase(),
       passwordHash: hashPassword(password),
       phone,
       role: "customer",
       isVerified: false,
-      createdAt: new Date().toISOString(),
-    };
-    this.store.users.push(user);
-    this.save();
+    }).returning();
     return user;
   }
 
   async loginUser(email: string, password: string): Promise<User | null> {
-    const user = this.store.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    const [user] = await db.select().from(users).where(eq(users.email, email.toLowerCase())).limit(1);
     if (!user) return null;
     if (user.passwordHash !== hashPassword(password)) return null;
     return user;
   }
 
   async getUserById(id: string): Promise<User | null> {
-    return this.store.users.find(u => u.id === id) || null;
+    const [user] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    return user || null;
   }
 
   async getUserByEmail(email: string): Promise<User | null> {
-    return this.store.users.find(u => u.email.toLowerCase() === email.toLowerCase()) || null;
+    const [user] = await db.select().from(users).where(eq(users.email, email.toLowerCase())).limit(1);
+    return user || null;
   }
 
   async getAllUsers(): Promise<User[]> {
-    return [...this.store.users].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return db.select().from(users).orderBy(desc(users.createdAt));
   }
 
   async deleteUser(id: string): Promise<boolean> {
-    const before = this.store.users.length;
-    this.store.users = this.store.users.filter(u => u.id !== id);
-    this.save();
-    return this.store.users.length < before;
+    const result = await db.delete(users).where(eq(users.id, id)).returning();
+    return result.length > 0;
   }
 
   async forceVerifyUser(id: string): Promise<void> {
-    const idx = this.store.users.findIndex(u => u.id === id);
-    if (idx !== -1) {
-      this.store.users[idx].isVerified = true;
-      this.store.users[idx].otp = undefined;
-      this.store.users[idx].otpExpiry = undefined;
-      this.save();
-    }
+    await db.update(users)
+      .set({ isVerified: true, otp: null, otpExpiry: null })
+      .where(eq(users.id, id));
+  }
+
+  async linkUserToArtisan(userId: string, artisanId: number): Promise<void> {
+    await db.update(users)
+      .set({ role: "artisan", artisanId })
+      .where(eq(users.id, userId));
+    await db.update(artisans)
+      .set({ userId })
+      .where(eq(artisans.id, artisanId));
   }
 
   async setUserOTP(email: string, otp: string): Promise<void> {
-    const idx = this.store.users.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
-    if (idx === -1) return;
-    const expiry = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min
-    this.store.users[idx].otp = otp;
-    this.store.users[idx].otpExpiry = expiry;
-    this.save();
+    const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+    await db.update(users)
+      .set({ otp, otpExpiry: expiry })
+      .where(eq(users.email, email.toLowerCase()));
   }
 
   async verifyUserEmail(email: string, otp: string): Promise<boolean> {
-    const idx = this.store.users.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
-    if (idx === -1) return false;
-    const user = this.store.users[idx];
-    if (!user.otp || user.otp !== otp) return false;
+    const [user] = await db.select().from(users).where(eq(users.email, email.toLowerCase())).limit(1);
+    if (!user || !user.otp || user.otp !== otp) return false;
     if (user.otpExpiry && new Date(user.otpExpiry) < new Date()) return false;
-    this.store.users[idx].isVerified = true;
-    this.store.users[idx].otp = undefined;
-    this.store.users[idx].otpExpiry = undefined;
-    this.save();
+    await db.update(users)
+      .set({ isVerified: true, otp: null, otpExpiry: null })
+      .where(eq(users.id, user.id));
     return true;
   }
 
   async resetUserPassword(email: string, otp: string, newPassword: string): Promise<boolean> {
-    const idx = this.store.users.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
-    if (idx === -1) return false;
-    const user = this.store.users[idx];
-    if (!user.otp || user.otp !== otp) return false;
+    const [user] = await db.select().from(users).where(eq(users.email, email.toLowerCase())).limit(1);
+    if (!user || !user.otp || user.otp !== otp) return false;
     if (user.otpExpiry && new Date(user.otpExpiry) < new Date()) return false;
-    this.store.users[idx].passwordHash = hashPassword(newPassword);
-    this.store.users[idx].otp = undefined;
-    this.store.users[idx].otpExpiry = undefined;
-    this.save();
+    await db.update(users)
+      .set({ passwordHash: hashPassword(newPassword), otp: null, otpExpiry: null })
+      .where(eq(users.id, user.id));
     return true;
   }
 
-  async linkUserToArtisan(userId: string, artisanId: number): Promise<void> {
-    const userIdx = this.store.users.findIndex(u => u.id === userId);
-    if (userIdx !== -1) {
-      this.store.users[userIdx].role = "artisan";
-      this.store.users[userIdx].artisanId = artisanId;
-    }
-    const artisanIdx = this.store.artisans.findIndex(a => a.id === artisanId);
-    if (artisanIdx !== -1) {
-      this.store.artisans[artisanIdx].userId = userId;
-    }
-    this.save();
-  }
+  // ── Artisans ──────────────────────────────────────────────────────────────
 
   async getArtisan(id: number): Promise<Artisan | undefined> {
-    return this.store.artisans.find(a => a.id === id);
+    const [artisan] = await db.select().from(artisans).where(eq(artisans.id, id)).limit(1);
+    return artisan;
   }
 
   async getArtisans(filters?: {
@@ -261,21 +176,24 @@ class FileStorage implements IStorage {
     minPrice?: number;
     maxPrice?: number;
   }): Promise<Artisan[]> {
-    let result = [...this.store.artisans];
-    if (filters?.category) result = result.filter(a => a.category === filters.category);
-    if (filters?.daira) result = result.filter(a => a.daira === filters.daira);
+    let query = db.select().from(artisans).$dynamic();
+
+    const conditions = [];
+    if (filters?.category) conditions.push(eq(artisans.category, filters.category));
+    if (filters?.daira) conditions.push(eq(artisans.daira, filters.daira));
+    if (filters?.minPrice !== undefined) conditions.push(gte(artisans.priceStart, filters.minPrice));
+    if (filters?.maxPrice !== undefined) conditions.push(lte(artisans.priceStart, filters.maxPrice));
     if (filters?.search) {
-      const q = filters.search.toLowerCase();
-      result = result.filter(a => a.name.toLowerCase().includes(q) || a.category.toLowerCase().includes(q));
+      const q = `%${filters.search}%`;
+      conditions.push(or(ilike(artisans.name, q), ilike(artisans.category, q)));
     }
-    if (filters?.minPrice !== undefined) result = result.filter(a => a.priceStart >= filters.minPrice!);
-    if (filters?.maxPrice !== undefined) result = result.filter(a => a.priceStart <= filters.maxPrice!);
-    return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    if (conditions.length > 0) query = query.where(and(...conditions));
+    return query.orderBy(desc(artisans.createdAt));
   }
 
   async createArtisan(insertArtisan: InsertArtisan): Promise<Artisan> {
-    const artisan: Artisan = {
-      id: this.store.artisanIdCounter++,
+    const [artisan] = await db.insert(artisans).values({
       userId: insertArtisan.userId || null,
       name: insertArtisan.name,
       email: insertArtisan.email,
@@ -296,169 +214,176 @@ class FileStorage implements IStorage {
       subscriptionType: insertArtisan.subscriptionType || "free",
       subscriptionDuration: insertArtisan.subscriptionDuration || 1,
       subscriptionExpiresAt: insertArtisan.subscriptionExpiresAt || null,
-      createdAt: new Date(),
-    };
-    this.store.artisans.push(artisan);
-    this.save();
+    }).returning();
     return artisan;
   }
 
   async updateArtisan(id: number, updates: Partial<Artisan>): Promise<Artisan | undefined> {
-    const idx = this.store.artisans.findIndex(a => a.id === id);
-    if (idx === -1) return undefined;
-    this.store.artisans[idx] = { ...this.store.artisans[idx], ...updates };
-    this.save();
-    return this.store.artisans[idx];
+    // Strip base64 images before saving
+    const safeUpdates = { ...updates };
+    if (safeUpdates.imageUrl?.startsWith("data:")) safeUpdates.imageUrl = null;
+    if (safeUpdates.portfolioImages) {
+      safeUpdates.portfolioImages = safeUpdates.portfolioImages.filter((img: string) => !img.startsWith("data:"));
+    }
+    const [updated] = await db.update(artisans).set(safeUpdates).where(eq(artisans.id, id)).returning();
+    return updated;
   }
 
   async deleteArtisan(id: number): Promise<boolean> {
-    const before = this.store.artisans.length;
-    this.store.artisans = this.store.artisans.filter(a => a.id !== id);
-    // Also delete related reviews and conversations
-    this.store.reviews = this.store.reviews.filter(r => r.artisanId !== id);
-    this.store.conversations = this.store.conversations.filter(c => c.artisanId !== id);
-    this.save();
-    return this.store.artisans.length < before;
+    const result = await db.delete(artisans).where(eq(artisans.id, id)).returning();
+    return result.length > 0;
   }
+
+  // ── Conversations ─────────────────────────────────────────────────────────
 
   async getConversation(id: string): Promise<Conversation | undefined> {
-    return this.store.conversations.find(c => c.id === id);
+    const [conv] = await db.select().from(conversations).where(eq(conversations.id, id)).limit(1);
+    return conv;
   }
 
-  async getConversationsByUser(userId: string, role: 'artisan' | 'customer'): Promise<Conversation[]> {
-    return this.store.conversations
-      .filter(c => role === 'customer' ? c.customerId === userId : String(c.artisanId) === userId)
-      .sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
+  async getConversationsByUser(userId: string, role: "artisan" | "customer"): Promise<Conversation[]> {
+    if (role === "customer") {
+      return db.select().from(conversations)
+        .where(eq(conversations.customerId, userId))
+        .orderBy(desc(conversations.lastMessageAt));
+    } else {
+      // artisan: userId here is the artisan's numeric id stored as string
+      const artisanId = parseInt(userId);
+      if (isNaN(artisanId)) return [];
+      return db.select().from(conversations)
+        .where(eq(conversations.artisanId, artisanId))
+        .orderBy(desc(conversations.lastMessageAt));
+    }
   }
 
   async getAllConversations(): Promise<Conversation[]> {
-    return [...this.store.conversations].sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
+    return db.select().from(conversations).orderBy(desc(conversations.lastMessageAt));
   }
 
   async createConversation(insertConversation: InsertConversation): Promise<Conversation> {
-    const existing = this.store.conversations.find(c => c.id === insertConversation.id);
+    // Upsert: if exists return it (update customerName if missing)
+    const [existing] = await db.select().from(conversations)
+      .where(eq(conversations.id, insertConversation.id)).limit(1);
+
     if (existing) {
       if (insertConversation.customerName && !existing.customerName) {
-        existing.customerName = insertConversation.customerName;
-        this.save();
+        const [updated] = await db.update(conversations)
+          .set({ customerName: insertConversation.customerName })
+          .where(eq(conversations.id, insertConversation.id))
+          .returning();
+        return updated;
       }
       return existing;
     }
-    const conversation: Conversation = {
+
+    const [conv] = await db.insert(conversations).values({
       id: insertConversation.id,
       artisanId: insertConversation.artisanId,
       customerId: insertConversation.customerId,
       customerName: insertConversation.customerName || null,
-      lastMessageAt: new Date(),
       lastMessage: insertConversation.lastMessage || null,
-      createdAt: new Date(),
-    };
-    this.store.conversations.push(conversation);
-    this.save();
-    return conversation;
+    }).returning();
+    return conv;
   }
 
+  // ── Messages ──────────────────────────────────────────────────────────────
+
   async getMessages(conversationId: string): Promise<Message[]> {
-    return this.store.messages.filter(m => m.conversationId === conversationId);
+    return db.select().from(messages)
+      .where(eq(messages.conversationId, conversationId))
+      .orderBy(messages.createdAt);
   }
 
   async getAllMessages(): Promise<Message[]> {
-    return [...this.store.messages];
+    return db.select().from(messages).orderBy(desc(messages.createdAt));
   }
 
   async createMessage(insertMessage: InsertMessage): Promise<Message> {
-    const message: Message = {
-      id: this.store.messageIdCounter++,
+    const [message] = await db.insert(messages).values({
       conversationId: insertMessage.conversationId,
       senderId: insertMessage.senderId,
       receiverId: insertMessage.receiverId,
       senderType: insertMessage.senderType,
       content: insertMessage.content,
       isRead: false,
-      createdAt: new Date(),
-    };
-    this.store.messages.push(message);
-    const conv = this.store.conversations.find(c => c.id === insertMessage.conversationId);
-    if (conv) {
-      conv.lastMessageAt = new Date();
-      conv.lastMessage = insertMessage.content.startsWith("data:image") ? "📷 صورة" : insertMessage.content;
-    }
-    this.save();
+    }).returning();
+
+    // Update conversation lastMessage & lastMessageAt
+    const preview = insertMessage.content.startsWith("data:image") ? "📷 صورة" : insertMessage.content;
+    await db.update(conversations)
+      .set({ lastMessageAt: new Date(), lastMessage: preview })
+      .where(eq(conversations.id, insertMessage.conversationId));
+
     return message;
   }
 
   async markMessagesAsRead(conversationId: string, userId: string): Promise<void> {
-    this.store.messages.forEach(m => {
-      if (m.conversationId === conversationId && m.receiverId === userId) m.isRead = true;
-    });
-    this.save();
+    await db.update(messages)
+      .set({ isRead: true })
+      .where(and(
+        eq(messages.conversationId, conversationId),
+        eq(messages.receiverId, userId),
+      ));
   }
 
   async deleteMessage(id: number): Promise<boolean> {
-    const before = this.store.messages.length;
-    this.store.messages = this.store.messages.filter(m => m.id !== id);
-    this.save();
-    return this.store.messages.length < before;
+    const result = await db.delete(messages).where(eq(messages.id, id)).returning();
+    return result.length > 0;
   }
 
   async editMessage(id: number, content: string): Promise<Message | null> {
-    const idx = this.store.messages.findIndex(m => m.id === id);
-    if (idx === -1) return null;
-    this.store.messages[idx] = { ...this.store.messages[idx], content };
-    this.save();
-    return this.store.messages[idx];
+    const [updated] = await db.update(messages)
+      .set({ content })
+      .where(eq(messages.id, id))
+      .returning();
+    return updated || null;
   }
 
+  // ── Reviews ───────────────────────────────────────────────────────────────
+
   async createReview(insertReview: InsertReview): Promise<Review> {
-    const review: Review = {
-      id: this.store.reviewIdCounter++,
+    const [review] = await db.insert(reviews).values({
       artisanId: insertReview.artisanId,
       customerId: insertReview.customerId,
       customerName: insertReview.customerName,
       rating: insertReview.rating,
       comment: insertReview.comment || null,
-      createdAt: new Date(),
-    };
-    this.store.reviews.push(review);
-    this._recalcRating(insertReview.artisanId);
-    this.save();
+    }).returning();
+    await this._recalcRating(insertReview.artisanId);
     return review;
   }
 
   async getReviewsByArtisan(artisanId: number): Promise<Review[]> {
-    return this.store.reviews
-      .filter(r => r.artisanId === artisanId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return db.select().from(reviews)
+      .where(eq(reviews.artisanId, artisanId))
+      .orderBy(desc(reviews.createdAt));
   }
 
   async hasReviewed(artisanId: number, customerId: string): Promise<boolean> {
-    return this.store.reviews.some(r => r.artisanId === artisanId && r.customerId === customerId);
+    const [existing] = await db.select().from(reviews)
+      .where(and(eq(reviews.artisanId, artisanId), eq(reviews.customerId, customerId)))
+      .limit(1);
+    return !!existing;
   }
 
-  // ── NEW: Delete review & recalculate artisan rating ──────────────────────
   async deleteReview(id: number): Promise<boolean> {
-    const review = this.store.reviews.find(r => r.id === id);
-    if (!review) return false;
-    this.store.reviews = this.store.reviews.filter(r => r.id !== id);
-    this._recalcRating(review.artisanId);
-    this.save();
+    const [deleted] = await db.delete(reviews).where(eq(reviews.id, id)).returning();
+    if (!deleted) return false;
+    await this._recalcRating(deleted.artisanId);
     return true;
   }
 
-  // Helper: recalculate rating & reviewCount for an artisan
-  private _recalcRating(artisanId: number) {
-    const artisanReviews = this.store.reviews.filter(r => r.artisanId === artisanId);
-    const artIdx = this.store.artisans.findIndex(a => a.id === artisanId);
-    if (artIdx === -1) return;
+  private async _recalcRating(artisanId: number): Promise<void> {
+    const artisanReviews = await db.select().from(reviews).where(eq(reviews.artisanId, artisanId));
     if (artisanReviews.length === 0) {
-      this.store.artisans[artIdx].rating = 0;
-      this.store.artisans[artIdx].reviewCount = 0;
+      await db.update(artisans).set({ rating: 0, reviewCount: 0 }).where(eq(artisans.id, artisanId));
     } else {
       const avg = artisanReviews.reduce((s, r) => s + r.rating, 0) / artisanReviews.length;
-      this.store.artisans[artIdx].rating = Math.round(avg * 10) / 10;
-      this.store.artisans[artIdx].reviewCount = artisanReviews.length;
+      await db.update(artisans)
+        .set({ rating: Math.round(avg * 10) / 10, reviewCount: artisanReviews.length })
+        .where(eq(artisans.id, artisanId));
     }
   }
 }
 
-export const storage = new FileStorage();
+export const storage = new PostgresStorage();
