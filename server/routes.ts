@@ -6,7 +6,7 @@ import { z } from "zod";
 import fs from "fs";
 import path from "path";
 import { sendVerificationEmail, sendPasswordResetEmail, generateOTP } from "server/Email";
-import { pushSubscriptions } from "./index";
+import { saveSubscription, removeSubscription, sendPushToUser } from "server/Push";
 
 const ADMIN_PASSWORD = "AlaaGH_Mil";
 const adminSessions = new Set<string>();
@@ -33,21 +33,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   const express = (await import("express")).default;
   app.use("/uploads", express.static(UPLOADS_DIR));
 
-  // ─── Push Notifications ─────────────────────────────────────────────────────
-  app.post("/api/push/subscribe", (req: Request, res: Response) => {
-    const { userId, subscription } = req.body;
-    if (!userId || !subscription) return res.status(400).json({ message: "Missing data" });
-    pushSubscriptions.set(userId, subscription);
-    console.log(`🔔 Push subscription saved for: ${userId}`);
-    res.json({ success: true });
-  });
-
-  app.post("/api/push/unsubscribe", (req: Request, res: Response) => {
-    const { userId } = req.body;
-    if (userId) pushSubscriptions.delete(userId);
-    res.json({ success: true });
-  });
-
   // ─── File Upload ───────────────────────────────────────────────────────────
   app.post("/api/upload", (req: Request, res: Response) => {
     try {
@@ -72,6 +57,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const user = await storage.registerUser(name, email, password, phone);
       if (!user) return res.status(409).json({ message: "البريد الإلكتروني مستخدم بالفعل" });
 
+      // Generate & send OTP
       const otp = generateOTP();
       await storage.setUserOTP(email, otp);
       const sent = await sendVerificationEmail(email, name, otp);
@@ -148,6 +134,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!user) return res.status(401).json({ message: "البريد أو كلمة المرور غير صحيحة" });
       if (!user.isVerified) return res.status(403).json({ message: "يجب تأكيد بريدك الإلكتروني أولاً", needsVerification: true, email });
 
+      // If artisan, return artisan data too
       let artisanData = null;
       if (user.role === "artisan" && user.artisanId) {
         artisanData = await storage.getArtisan(user.artisanId);
@@ -206,9 +193,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json(await storage.getMessages(req.params.id));
   });
 
+  // ─── Admin Users ────────────────────────────────────────────────────────────
   app.get("/api/admin/users", async (req: Request, res: Response) => {
     if (!isAdmin(req)) return res.status(403).json({ message: "Forbidden" });
-    res.json(await storage.getAllUsers());
+    const users = await storage.getAllUsers();
+    res.json(users);
   });
 
   app.delete("/api/admin/users/:id", async (req: Request, res: Response) => {
@@ -263,6 +252,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const data = insertArtisanSchema.parse(req.body);
       const artisan = await storage.createArtisan(data);
+      // Link to user if userId provided
       if (req.body.userId) {
         await storage.linkUserToArtisan(req.body.userId, artisan.id);
       }
@@ -354,10 +344,60 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // ─── Push Notifications ────────────────────────────────────────────────────
+  app.post("/api/push/subscribe", (req: Request, res: Response) => {
+    const { userId, subscription } = req.body;
+    if (!userId || !subscription) return res.status(400).json({ message: "Missing data" });
+    saveSubscription(userId, subscription);
+    res.json({ success: true });
+  });
+
+  app.post("/api/push/unsubscribe", (req: Request, res: Response) => {
+    const { userId } = req.body;
+    if (userId) removeSubscription(userId);
+    res.json({ success: true });
+  });
+
+  // ─── Messages ──────────────────────────────────────────────────────────────
   app.post("/api/messages", async (req: Request, res: Response) => {
     try {
       const data = insertMessageSchema.parse(req.body);
-      res.status(201).json(await storage.createMessage(data));
+      const message = await storage.createMessage(data);
+
+      // Send push notification to receiver
+      const receiverId = data.receiverId;
+      const senderName = data.senderType === "artisan" ? "حرفي" : (data.senderType === "customer" ? "زبون" : "شخص");
+
+      // Try to get sender name from artisan or conversation
+      try {
+        if (data.senderType === "artisan") {
+          const artisan = await storage.getArtisan(parseInt(data.senderId));
+          if (artisan) {
+            await sendPushToUser(receiverId, {
+              title: `رسالة جديدة من ${artisan.name} 🔨`,
+              body: data.content.startsWith("data:image") ? "📷 صورة" : data.content.slice(0, 80),
+              url: `/chat/${artisan.id}`,
+              type: "message",
+            });
+          }
+        } else {
+          // Customer message — notify artisan
+          const conv = await storage.getConversation(data.conversationId);
+          if (conv) {
+            await sendPushToUser(String(conv.artisanId), {
+              title: `رسالة جديدة من ${conv.customerName || "زبون"} 👤`,
+              body: data.content.startsWith("data:image") ? "📷 صورة" : data.content.slice(0, 80),
+              url: `/artisan/dashboard`,
+              type: "message",
+            });
+          }
+        }
+      } catch (pushErr) {
+        // Don't fail if push fails
+        console.warn("Push notification failed:", pushErr);
+      }
+
+      res.status(201).json(message);
     } catch (error) {
       if (error instanceof z.ZodError) return res.status(400).json({ message: "Invalid data", errors: error.errors });
       res.status(500).json({ message: "Failed to send message" });
