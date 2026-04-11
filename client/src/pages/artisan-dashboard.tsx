@@ -1161,11 +1161,3 @@ function InfoItem({ icon, label, value }: { icon: React.ReactNode; label: string
     </div>
   );
 }
-useEffect(() => {
-  if (!artisanId) return;
-  fetch(`/api/artisans/${artisanId}/view`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ viewerId: user?.id || null }),
-  }).catch(() => {});
-}, [artisanId]);
