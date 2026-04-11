@@ -72,37 +72,44 @@ self.addEventListener("fetch", (e) => {
 self.addEventListener("message", (e) => {
   if (e.data?.type === "SKIP_WAITING") self.skipWaiting();
 });
-// Service Worker for Herfati Push Notifications
-const CACHE_NAME = 'herfati-v1';
+// public/sw.js
+// ─── Service Worker لحرفتي ────────────────────────────────────
 
-self.addEventListener('install', (event) => {
+// ── تثبيت ──────────────────────────────────────────────────────
+self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
-self.addEventListener('activate', (event) => {
+self.addEventListener("activate", (event) => {
   event.waitUntil(clients.claim());
 });
 
-self.addEventListener('push', (event) => {
+// ── استقبال Push ───────────────────────────────────────────────
+self.addEventListener("push", (event) => {
   if (!event.data) return;
 
-  const data = event.data.json();
-  const { title, body, icon, badge, url, type } = data;
+  let data = {};
+  try {
+    data = event.data.json();
+  } catch {
+    data = { title: "حرفتي", body: event.data.text() };
+  }
 
+  const title   = data.title || "حرفتي";
   const options = {
-    body: body || '',
-    icon: icon || '/logo.png',
-    badge: badge || '/logo.png',
-    dir: 'rtl',
-    lang: 'ar',
+    body:    data.body  || "",
+    icon:    data.icon  || "/icon-192.png",
+    badge:   data.badge || "/icon-192.png",
+    data:    { url: data.url || "/" },
+    dir:     "rtl",
+    lang:    "ar",
     vibrate: [200, 100, 200],
-    data: { url: url || '/', type },
-    actions: type === 'message' ? [
-      { action: 'open', title: 'فتح المحادثة' },
-      { action: 'dismiss', title: 'تجاهل' }
+    tag:     data.type || "general",       // يمنع تكرار نفس نوع الإشعار
+    renotify: true,
+    actions: data.type === "message" ? [
+      { action: "open",    title: "فتح المحادثة" },
+      { action: "dismiss", title: "تجاهل"        },
     ] : [],
-    requireInteraction: type === 'call',
-    tag: type === 'message' ? 'new-message' : 'notification',
   };
 
   event.waitUntil(
@@ -110,23 +117,28 @@ self.addEventListener('push', (event) => {
   );
 });
 
-self.addEventListener('notificationclick', (event) => {
+// ── النقر على الإشعار ──────────────────────────────────────────
+self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
-  if (event.action === 'dismiss') return;
+  if (event.action === "dismiss") return;
 
-  const url = event.notification.data?.url || '/';
+  const url = event.notification.data?.url || "/";
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      // إذا التطبيق مفتوح، انتقل للـ URL فيه
       for (const client of clientList) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
+        if (client.url.includes(self.location.origin) && "focus" in client) {
           client.focus();
           client.navigate(url);
           return;
         }
       }
-      if (clients.openWindow) return clients.openWindow(url);
+      // وإلا افتح نافذة جديدة
+      if (clients.openWindow) {
+        return clients.openWindow(url);
+      }
     })
   );
 });
