@@ -21,6 +21,38 @@ function getClientIp(req: Request): string {
 function isAdmin(req: Request): boolean { return adminSessions.has(getClientIp(req)); }
 function safeUser(user: any) { const { passwordHash, ...safe } = user; return safe; }
 
+// ── مساعد: يجد كل الـ IDs المحتملة لمستخدم ما ───────────────────────────────
+// المشكلة: customerId في المحادثة قد يكون "customer-xyz" أو "user-xyz"
+// الـ subscription مسجلة بـ user.id الحقيقي
+// هذه الدالة تجرب كل الاحتمالات
+async function resolveUserIds(rawId: string): Promise<string[]> {
+  const ids = new Set<string>([rawId]);
+
+  try {
+    // ① rawId نفسه (الأكثر شيوعاً للمحادثات الجديدة)
+    // ② ابحث في users مباشرة بالـ id
+    const userById = await storage.getUserById(rawId);
+    if (userById) {
+      ids.add(userById.id);
+      // إذا كان حرفياً، أضف artisanId أيضاً
+      if (userById.artisanId) ids.add(String(userById.artisanId));
+    }
+
+    // ③ إذا كان الـ rawId رقماً (artisanId)، ابحث عن user صاحب هذا الـ artisanId
+    const numId = parseInt(rawId);
+    if (!isNaN(numId)) {
+      const artisan = await storage.getArtisan(numId);
+      if (artisan?.userId) {
+        ids.add(artisan.userId);
+      }
+    }
+  } catch {
+    // صامت
+  }
+
+  return Array.from(ids);
+}
+
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
   const express = (await import("express")).default;
   app.use("/uploads", express.static(UPLOADS_DIR));
@@ -197,7 +229,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch { res.status(500).json({ message: "Failed to delete artisan" }); }
   });
 
-  // تسجيل مشاهدة
   app.post("/api/artisans/:id/view", async (req: Request, res: Response) => {
     try {
       await storage.trackArtisanView(parseInt(req.params.id), getClientIp(req), req.body?.viewerId);
@@ -205,7 +236,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (err) { console.warn("[view-track]", err); res.json({ success: false }); }
   });
 
-  // Analytics
   app.get("/api/artisans/:id/analytics", async (req: Request, res: Response) => {
     try {
       const artisanId = req.params.id;
@@ -292,28 +322,33 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/push/subscribe", (req: Request, res: Response) => {
     const { userId, subscription } = req.body;
     if (!userId || !subscription) return res.status(400).json({ message: "Missing data" });
-    saveSubscription(userId, subscription); res.json({ success: true });
+    saveSubscription(userId, subscription);
+    res.json({ success: true });
   });
   app.post("/api/push/unsubscribe", (req: Request, res: Response) => {
-    const { userId } = req.body; if (userId) removeSubscription(userId); res.json({ success: true });
+    const { userId } = req.body;
+    if (userId) removeSubscription(userId);
+    res.json({ success: true });
   });
 
+  // ─── Messages ✦ إصلاح Push للمحادثات القديمة ──────────────────────────────
   app.post("/api/messages", async (req: Request, res: Response) => {
     try {
-      const data = insertMessageSchema.parse(req.body);
+      const data    = insertMessageSchema.parse(req.body);
       const message = await storage.createMessage(data);
-      try {
-        if (data.senderType === "artisan") {
-          const artisan = await storage.getArtisan(parseInt(data.senderId));
-          if (artisan) await sendPushToUser(data.receiverId, { title: `رسالة جديدة من ${artisan.name}`, body: data.content.startsWith("data:image") ? "صورة" : data.content.slice(0, 80), url: `/chat/${artisan.id}`, type: "message" });
-        } else {
-          const conv = await storage.getConversation(data.conversationId);
-          if (conv) await sendPushToUser(String(conv.artisanId), { title: `رسالة جديدة من ${conv.customerName || "زبون"}`, body: data.content.startsWith("data:image") ? "صورة" : data.content.slice(0, 80), url: `/artisan/dashboard`, type: "message" });
-        }
-      } catch (pushErr) { console.warn("Push notification failed:", pushErr); }
+
+      // إرسال الإشعار بشكل غير متزامن — لا يوقف الرسالة إذا فشل
+      sendPushNotification(data).catch(err =>
+        console.warn("[Push] Background notification failed:", err)
+      );
+
       res.status(201).json(message);
-    } catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: "Invalid data", errors: error.errors }); res.status(500).json({ message: "Failed to send message" }); }
+    } catch (error) {
+      if (error instanceof z.ZodError) return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      res.status(500).json({ message: "Failed to send message" });
+    }
   });
+
   app.delete("/api/messages/:id", async (req: Request, res: Response) => {
     try { const d = await storage.deleteMessage(parseInt(req.params.id)); if (!d) return res.status(404).json({ message: "Message not found" }); res.json({ success: true }); }
     catch { res.status(500).json({ message: "Failed to delete message" }); }
@@ -324,4 +359,70 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   return httpServer;
+}
+
+// ── إرسال إشعار مع حل مشكلة عدم تطابق الـ IDs ───────────────────────────────
+async function sendPushNotification(data: any): Promise<void> {
+  const body = data.content.startsWith("data:image") ? "📷 صورة" : data.content.slice(0, 80);
+
+  if (data.senderType === "artisan") {
+    // ── الحرفي يكتب للزبون ────────────────────────────────────────────────
+    const artisan = await storage.getArtisan(parseInt(data.senderId));
+    if (!artisan) return;
+
+    const title = `رسالة جديدة من ${artisan.name} 🔨`;
+    const url   = `/chat/${artisan.id}`;
+
+    // جرّب كل الـ IDs المحتملة للزبون
+    const receiverIds = await resolveUserIds(data.receiverId);
+    console.log(`[Push] Trying receiver IDs for customer:`, receiverIds);
+
+    for (const id of receiverIds) {
+      const sent = await sendPushToUser(id, { title, body, url, type: "message" });
+      if (sent) break; // توقف عند أول نجاح
+    }
+
+  } else {
+    // ── الزبون يكتب للحرفي ────────────────────────────────────────────────
+    const conv = await storage.getConversation(data.conversationId);
+    if (!conv) return;
+
+    const title = `رسالة جديدة من ${conv.customerName || "زبون"} 👤`;
+    const url   = `/artisan/dashboard`;
+
+    // الحرفي: جرّب artisanId رقم + userId نص
+    const artisanNumId = String(conv.artisanId);
+    const receiverIds  = await resolveUserIds(artisanNumId);
+    console.log(`[Push] Trying receiver IDs for artisan:`, receiverIds);
+
+    for (const id of receiverIds) {
+      const sent = await sendPushToUser(id, { title, body, url, type: "message" });
+      if (sent) break;
+    }
+  }
+}
+
+// ── resolveUserIds: يجد كل الـ IDs المحتملة لأي مستخدم ──────────────────────
+async function resolveUserIds(rawId: string): Promise<string[]> {
+  const ids = new Set<string>([rawId]);
+
+  try {
+    // ① rawId مباشرة (الأكثر شيوعاً)
+    const userById = await storage.getUserById(rawId);
+    if (userById) {
+      ids.add(userById.id);
+      if (userById.artisanId) ids.add(String(userById.artisanId));
+    }
+
+    // ② إذا كان رقماً → ابحث عن حرفي وأضف userId صاحبه
+    const numId = parseInt(rawId);
+    if (!isNaN(numId)) {
+      const artisan = await storage.getArtisan(numId);
+      if (artisan?.userId) ids.add(artisan.userId);
+    }
+  } catch {
+    // صامت
+  }
+
+  return Array.from(ids);
 }
