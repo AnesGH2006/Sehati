@@ -29,10 +29,10 @@ export default function Subscription() {
 
   const features = [
     isRtl ? "ملف شخصي احترافي مجاني" : "Free professional profile",
-    isRtl ? "معرض أعمال (5 صور)" : "Portfolio (5 photos)",
+    isRtl ? "معرض أعمال (2 صورة)" : "Portfolio (2 photos)",
     isRtl ? "تواصل مباشر مع الزبائن" : "Direct customer contact",
     isRtl ? "الظهور في نتائج البحث" : "Appear in search results",
-    isRtl ? "لوحة تحكم متكاملة" : "Full dashboard",
+    isRtl ? "لوحة تحكم جزئية" : "Part-dashboard",
     isRtl ? "مجاني للأبد" : "Free forever",
   ];
 

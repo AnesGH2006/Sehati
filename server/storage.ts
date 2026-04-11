@@ -13,6 +13,7 @@ import {
   conversations,
   messages,
   reviews,
+  artisanViews,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, ilike, gte, lte, desc, or } from "drizzle-orm";
@@ -51,9 +52,19 @@ export interface IStorage {
   updateArtisan(id: number, updates: Partial<Artisan>): Promise<Artisan | undefined>;
   deleteArtisan(id: number): Promise<boolean>;
 
+  // Views ✦ جديد
+  trackArtisanView(artisanId: number, viewerIp: string, viewerId?: string): Promise<void>;
+  getArtisanViewStats(artisanId: number): Promise<{
+    total: number;
+    thisMonth: number;
+    lastMonth: number;
+    daily: { date: string; count: number }[];
+  }>;
+
   // Conversations
   getConversation(id: string): Promise<Conversation | undefined>;
   getConversationsByUser(userId: string, role: "artisan" | "customer"): Promise<Conversation[]>;
+  getConversationsByArtisan(artisanId: string): Promise<Conversation[]>;
   getAllConversations(): Promise<Conversation[]>;
   createConversation(conv: InsertConversation): Promise<Conversation>;
 
@@ -72,7 +83,7 @@ export interface IStorage {
   deleteReview(id: number): Promise<boolean>;
 }
 
-// ── Implementation ─────────────────────────────────────────────────────────────
+// ── Implementation ────────────────────────────────────────────────────────────
 class PostgresStorage implements IStorage {
 
   // ── Auth ──────────────────────────────────────────────────────────────────
@@ -127,19 +138,13 @@ class PostgresStorage implements IStorage {
   }
 
   async linkUserToArtisan(userId: string, artisanId: number): Promise<void> {
-    await db.update(users)
-      .set({ role: "artisan", artisanId })
-      .where(eq(users.id, userId));
-    await db.update(artisans)
-      .set({ userId })
-      .where(eq(artisans.id, artisanId));
+    await db.update(users).set({ role: "artisan", artisanId }).where(eq(users.id, userId));
+    await db.update(artisans).set({ userId }).where(eq(artisans.id, artisanId));
   }
 
   async setUserOTP(email: string, otp: string): Promise<void> {
-    const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 min
-    await db.update(users)
-      .set({ otp, otpExpiry: expiry })
-      .where(eq(users.email, email.toLowerCase()));
+    const expiry = new Date(Date.now() + 10 * 60 * 1000);
+    await db.update(users).set({ otp, otpExpiry: expiry }).where(eq(users.email, email.toLowerCase()));
   }
 
   async verifyUserEmail(email: string, otp: string): Promise<boolean> {
@@ -177,41 +182,39 @@ class PostgresStorage implements IStorage {
     maxPrice?: number;
   }): Promise<Artisan[]> {
     let query = db.select().from(artisans).$dynamic();
-
     const conditions = [];
-    if (filters?.category) conditions.push(eq(artisans.category, filters.category));
-    if (filters?.daira) conditions.push(eq(artisans.daira, filters.daira));
-    if (filters?.minPrice !== undefined) conditions.push(gte(artisans.priceStart, filters.minPrice));
-    if (filters?.maxPrice !== undefined) conditions.push(lte(artisans.priceStart, filters.maxPrice));
+    if (filters?.category)                   conditions.push(eq(artisans.category, filters.category));
+    if (filters?.daira)                      conditions.push(eq(artisans.daira, filters.daira));
+    if (filters?.minPrice !== undefined)     conditions.push(gte(artisans.priceStart, filters.minPrice));
+    if (filters?.maxPrice !== undefined)     conditions.push(lte(artisans.priceStart, filters.maxPrice));
     if (filters?.search) {
       const q = `%${filters.search}%`;
       conditions.push(or(ilike(artisans.name, q), ilike(artisans.category, q)));
     }
-
     if (conditions.length > 0) query = query.where(and(...conditions));
     return query.orderBy(desc(artisans.createdAt));
   }
 
   async createArtisan(insertArtisan: InsertArtisan): Promise<Artisan> {
     const [artisan] = await db.insert(artisans).values({
-      userId: insertArtisan.userId || null,
-      name: insertArtisan.name,
-      email: insertArtisan.email,
-      phone: insertArtisan.phone,
-      category: insertArtisan.category,
-      wilaya: insertArtisan.wilaya || "الجزائر",
-      daira: insertArtisan.daira,
-      description: insertArtisan.description || null,
-      priceStart: insertArtisan.priceStart || 1000,
-      rating: 0,
-      reviewCount: 0,
-      isVerified: insertArtisan.isVerified || false,
-      yearsOfExperience: insertArtisan.yearsOfExperience || 0,
-      imageUrl: insertArtisan.imageUrl || null,
-      portfolioImages: insertArtisan.portfolioImages || [],
-      languages: insertArtisan.languages || ["العربية"],
-      workingHours: insertArtisan.workingHours || null,
-      subscriptionType: insertArtisan.subscriptionType || "free",
+      userId:               insertArtisan.userId || null,
+      name:                 insertArtisan.name,
+      email:                insertArtisan.email,
+      phone:                insertArtisan.phone,
+      category:             insertArtisan.category,
+      wilaya:               insertArtisan.wilaya || "الجزائر",
+      daira:                insertArtisan.daira,
+      description:          insertArtisan.description || null,
+      priceStart:           insertArtisan.priceStart || 1000,
+      rating:               0,
+      reviewCount:          0,
+      isVerified:           insertArtisan.isVerified || false,
+      yearsOfExperience:    insertArtisan.yearsOfExperience || 0,
+      imageUrl:             insertArtisan.imageUrl || null,
+      portfolioImages:      insertArtisan.portfolioImages || [],
+      languages:            insertArtisan.languages || ["العربية"],
+      workingHours:         insertArtisan.workingHours || null,
+      subscriptionType:     insertArtisan.subscriptionType || "free",
       subscriptionDuration: insertArtisan.subscriptionDuration || 1,
       subscriptionExpiresAt: insertArtisan.subscriptionExpiresAt || null,
     }).returning();
@@ -219,7 +222,6 @@ class PostgresStorage implements IStorage {
   }
 
   async updateArtisan(id: number, updates: Partial<Artisan>): Promise<Artisan | undefined> {
-    // Strip base64 images before saving
     const safeUpdates = { ...updates };
     if (safeUpdates.imageUrl?.startsWith("data:")) safeUpdates.imageUrl = null;
     if (safeUpdates.portfolioImages) {
@@ -234,6 +236,73 @@ class PostgresStorage implements IStorage {
     return result.length > 0;
   }
 
+  // ── Views ✦ جديد ──────────────────────────────────────────────────────────
+
+  async trackArtisanView(artisanId: number, viewerIp: string, viewerId?: string): Promise<void> {
+    const today    = new Date();
+    const dayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    // منع التكرار: نفس الـ IP في نفس اليوم
+    const existing = await db
+      .select()
+      .from(artisanViews)
+      .where(
+        and(
+          eq(artisanViews.artisanId, artisanId),
+          eq(artisanViews.viewerIp,  viewerIp),
+          gte(artisanViews.createdAt, dayStart)
+        )
+      )
+      .limit(1);
+
+    if (existing.length > 0) return;
+
+    await db.insert(artisanViews).values({
+      artisanId,
+      viewerIp,
+      viewerId: viewerId || null,
+    });
+  }
+
+  async getArtisanViewStats(artisanId: number): Promise<{
+    total: number;
+    thisMonth: number;
+    lastMonth: number;
+    daily: { date: string; count: number }[];
+  }> {
+    const now              = new Date();
+    const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+    const allViews = await db
+      .select()
+      .from(artisanViews)
+      .where(eq(artisanViews.artisanId, artisanId));
+
+    const thisMonth = allViews.filter(v => new Date(v.createdAt!) >= startOfThisMonth).length;
+    const lastMonth = allViews.filter(
+      v => new Date(v.createdAt!) >= startOfLastMonth && new Date(v.createdAt!) < startOfThisMonth
+    ).length;
+
+    // آخر 7 أيام
+    const daily: { date: string; count: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d        = new Date();
+      d.setDate(d.getDate() - i);
+      const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      const dayEnd   = new Date(dayStart.getTime() + 86400000);
+      daily.push({
+        date:  d.toLocaleDateString("ar-DZ", { weekday: "short" }),
+        count: allViews.filter(v => {
+          const t = new Date(v.createdAt!);
+          return t >= dayStart && t < dayEnd;
+        }).length,
+      });
+    }
+
+    return { total: allViews.length, thisMonth, lastMonth, daily };
+  }
+
   // ── Conversations ─────────────────────────────────────────────────────────
 
   async getConversation(id: string): Promise<Conversation | undefined> {
@@ -246,14 +315,21 @@ class PostgresStorage implements IStorage {
       return db.select().from(conversations)
         .where(eq(conversations.customerId, userId))
         .orderBy(desc(conversations.lastMessageAt));
-    } else {
-      // artisan: userId here is the artisan's numeric id stored as string
-      const artisanId = parseInt(userId);
-      if (isNaN(artisanId)) return [];
-      return db.select().from(conversations)
-        .where(eq(conversations.artisanId, artisanId))
-        .orderBy(desc(conversations.lastMessageAt));
     }
+    const artisanId = parseInt(userId);
+    if (isNaN(artisanId)) return [];
+    return db.select().from(conversations)
+      .where(eq(conversations.artisanId, artisanId))
+      .orderBy(desc(conversations.lastMessageAt));
+  }
+
+  // دالة مخصصة للـ analytics — تقبل string وتحوّلها داخلياً
+  async getConversationsByArtisan(artisanId: string): Promise<Conversation[]> {
+    const id = parseInt(artisanId);
+    if (isNaN(id)) return [];
+    return db.select().from(conversations)
+      .where(eq(conversations.artisanId, id))
+      .orderBy(desc(conversations.lastMessageAt));
   }
 
   async getAllConversations(): Promise<Conversation[]> {
@@ -261,7 +337,6 @@ class PostgresStorage implements IStorage {
   }
 
   async createConversation(insertConversation: InsertConversation): Promise<Conversation> {
-    // Upsert: if exists return it (update customerName if missing)
     const [existing] = await db.select().from(conversations)
       .where(eq(conversations.id, insertConversation.id)).limit(1);
 
@@ -277,11 +352,11 @@ class PostgresStorage implements IStorage {
     }
 
     const [conv] = await db.insert(conversations).values({
-      id: insertConversation.id,
-      artisanId: insertConversation.artisanId,
-      customerId: insertConversation.customerId,
+      id:           insertConversation.id,
+      artisanId:    insertConversation.artisanId,
+      customerId:   insertConversation.customerId,
       customerName: insertConversation.customerName || null,
-      lastMessage: insertConversation.lastMessage || null,
+      lastMessage:  insertConversation.lastMessage  || null,
     }).returning();
     return conv;
   }
@@ -301,14 +376,13 @@ class PostgresStorage implements IStorage {
   async createMessage(insertMessage: InsertMessage): Promise<Message> {
     const [message] = await db.insert(messages).values({
       conversationId: insertMessage.conversationId,
-      senderId: insertMessage.senderId,
-      receiverId: insertMessage.receiverId,
-      senderType: insertMessage.senderType,
-      content: insertMessage.content,
-      isRead: false,
+      senderId:       insertMessage.senderId,
+      receiverId:     insertMessage.receiverId,
+      senderType:     insertMessage.senderType,
+      content:        insertMessage.content,
+      isRead:         false,
     }).returning();
 
-    // Update conversation lastMessage & lastMessageAt
     const preview = insertMessage.content.startsWith("data:image") ? "📷 صورة" : insertMessage.content;
     await db.update(conversations)
       .set({ lastMessageAt: new Date(), lastMessage: preview })
@@ -332,10 +406,7 @@ class PostgresStorage implements IStorage {
   }
 
   async editMessage(id: number, content: string): Promise<Message | null> {
-    const [updated] = await db.update(messages)
-      .set({ content })
-      .where(eq(messages.id, id))
-      .returning();
+    const [updated] = await db.update(messages).set({ content }).where(eq(messages.id, id)).returning();
     return updated || null;
   }
 
@@ -343,11 +414,11 @@ class PostgresStorage implements IStorage {
 
   async createReview(insertReview: InsertReview): Promise<Review> {
     const [review] = await db.insert(reviews).values({
-      artisanId: insertReview.artisanId,
-      customerId: insertReview.customerId,
+      artisanId:    insertReview.artisanId,
+      customerId:   insertReview.customerId,
       customerName: insertReview.customerName,
-      rating: insertReview.rating,
-      comment: insertReview.comment || null,
+      rating:       insertReview.rating,
+      comment:      insertReview.comment || null,
     }).returning();
     await this._recalcRating(insertReview.artisanId);
     return review;

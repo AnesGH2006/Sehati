@@ -7,11 +7,17 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import {
   MessageSquare, Star, Eye, Image as ImageIcon,
-  Clock, MapPin, Save, BadgeCheck, Trash2, Upload, X, Phone, Mail, Briefcase, Banknote, Send, ArrowRight, Quote, Video, ExternalLink, CheckCheck
+  Clock, MapPin, Save, BadgeCheck, Trash2, Upload, X,
+  Phone, Mail, Briefcase, Banknote, Send, ArrowRight,
+  Quote, Video, ExternalLink, CheckCheck, TrendingUp,
+  BarChart2, ArrowUp, ArrowDown, Minus,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { LOCATIONS, DAIRAS } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
@@ -20,39 +26,137 @@ import { useTranslation } from "react-i18next";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useCall } from "@/hooks/useCall";
 import { CallUI } from "@/components/CallUI";
-
+import {
+  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+} from "recharts";
+// ─── ثوابت ───────────────────────────────────────────────────────────────────
 const FINISH_SIGNAL = "__CHAT_FINISHED__";
 
+// ─── مساعدات ─────────────────────────────────────────────────────────────────
 function isImageContent(content: string) {
   return content?.startsWith("data:image") || content?.startsWith("http");
 }
-
 function formatTime(d: any) {
   try {
-    return new Date(d).toLocaleTimeString("ar-DZ", { hour: "2-digit", minute: "2-digit" });
+    return new Date(d).toLocaleTimeString("ar-DZ", {
+      hour: "2-digit", minute: "2-digit",
+    });
   } catch { return ""; }
 }
 
+// ─── مكوّن شريط التحسن ──────────────────────────────────────────────────────
+function ImprovementBar({
+  label, value, change, color,
+}: { label: string; value: number; change: number; color: string }) {
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const t = setTimeout(() => setWidth(value), 200);
+    return () => clearTimeout(t);
+  }, [value]);
+
+  const isPos = change > 0;
+  const isNeg = change < 0;
+
+  return (
+    <div className="flex items-center gap-3 py-2">
+      <span className="text-xs text-zinc-400 w-32 shrink-0 text-right">{label}</span>
+      <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-1000 ease-out"
+          style={{ width: `${width}%`, backgroundColor: color }}
+        />
+      </div>
+      <span className="text-xs font-black text-white w-8 text-left">{value}%</span>
+      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-0.5 w-16 justify-center ${
+        isPos ? "bg-green-500/10 text-green-400" :
+        isNeg ? "bg-red-500/10 text-red-400" :
+        "bg-white/5 text-zinc-400"
+      }`}>
+        {isPos ? <ArrowUp className="h-2.5 w-2.5" /> : isNeg ? <ArrowDown className="h-2.5 w-2.5" /> : <Minus className="h-2.5 w-2.5" />}
+        {change !== 0 ? `${Math.abs(change)}%` : "–"}
+      </span>
+    </div>
+  );
+}
+
+// ─── مكوّن KPI ───────────────────────────────────────────────────────────────
+function KpiCard({
+  icon, label, value, change, color,
+}: { icon: React.ReactNode; label: string; value: string; change?: number; color: string }) {
+  const colorMap: Record<string, string> = {
+    blue: "bg-blue-500/15 text-blue-400 border-blue-500/20",
+    purple: "bg-purple-500/15 text-purple-400 border-purple-500/20",
+    amber: "bg-amber-500/15 text-amber-400 border-amber-500/20",
+    green: "bg-green-500/15 text-green-400 border-green-500/20",
+    pink: "bg-pink-500/15 text-pink-400 border-pink-500/20",
+  };
+  const isPos = (change ?? 0) > 0;
+  const isNeg = (change ?? 0) < 0;
+
+  return (
+    <motion.div whileHover={{ y: -3, scale: 1.01 }} transition={{ type: "spring", stiffness: 300 }}>
+      <Card className="bg-white/[0.03] border-white/10 rounded-2xl h-full">
+        <CardContent className="p-4">
+          <div className={`w-8 h-8 rounded-xl flex items-center justify-center border mb-3 ${colorMap[color]}`}>
+            {icon}
+          </div>
+          <div className="text-2xl font-black font-heading">{value}</div>
+          <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">{label}</div>
+          {change !== undefined && (
+            <div className={`mt-2 text-[10px] font-bold flex items-center gap-1 ${
+              isPos ? "text-green-400" : isNeg ? "text-red-400" : "text-zinc-500"
+            }`}>
+              {isPos ? <ArrowUp className="h-2.5 w-2.5" /> : isNeg ? <ArrowDown className="h-2.5 w-2.5" /> : <Minus className="h-2.5 w-2.5" />}
+              {change !== 0 ? `${Math.abs(change)}% هذا الشهر` : "لا تغيير"}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
+// ─── Tooltip مخصص للرسوم البيانية ────────────────────────────────────────────
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload?.length) {
+    return (
+      <div className="bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white shadow-xl">
+        <p className="text-zinc-400 mb-1">{label}</p>
+        <p className="font-black">{payload[0].value}</p>
+      </div>
+    );
+  }
+  return null;
+};
+
+// ─── ألوان مخطط التقييمات ────────────────────────────────────────────────────
+const RATING_COLORS = ["#EF4444", "#F97316", "#EAB308", "#22C55E", "#3B82F6"];
+const PIE_COLORS    = ["#3B82F6", "#8B5CF6", "#F59E0B", "#6B7280"];
+
+// ══════════════════════════════════════════════════════════════════════════════
 export default function ArtisanDashboard() {
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
   const { artisan, isArtisan, isLoggedIn, logout, loginArtisan } = useAuth();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
-  const isRtl = i18n.language === 'ar';
+  const isRtl = i18n.language === "ar";
 
-  const [activeTab, setActiveTab] = useState<"overview" | "portfolio" | "settings">("overview");
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "analytics" | "portfolio" | "settings"
+  >("overview");
   const [wilaya, setWilaya] = useState(artisan?.wilaya || "الجزائر");
-  const [daira, setDaira] = useState(artisan?.daira || "");
+  const [daira, setDaira]   = useState(artisan?.daira  || "");
   const [portfolioImages, setPortfolioImages] = useState<string[]>([]);
   const [selectedConv, setSelectedConv] = useState<any>(null);
   const [replyText, setReplyText] = useState("");
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
-  const myId = String(artisan?.id || "");
-  const myName = artisan?.name || "حرفي";
+  const myId   = String(artisan?.id   || "");
+  const myName = artisan?.name         || "حرفي";
 
-  // ── WebRTC Calls ─────────────────────────────────────────────────────────
+  // ── WebRTC ───────────────────────────────────────────────────────────────
   const {
     callState, callType, remoteName,
     isMuted, isCamOff,
@@ -61,6 +165,7 @@ export default function ArtisanDashboard() {
     toggleMute, toggleCamera,
   } = useCall({ myId, myName });
 
+  // ── Queries ───────────────────────────────────────────────────────────────
   const { data: serverArtisan, refetch } = useQuery<any>({
     queryKey: ["/api/artisans", artisan?.id],
     queryFn: async () => {
@@ -82,32 +187,47 @@ export default function ArtisanDashboard() {
 
   const { data: conversations = [] } = useQuery<any[]>({
     queryKey: ["/api/conversations", String(artisan?.id)],
-    queryFn: () => fetch(`/api/conversations/${artisan?.id}?role=artisan`).then(r => r.json()),
+    queryFn: () =>
+      fetch(`/api/conversations/${artisan?.id}?role=artisan`).then(r => r.json()),
     enabled: !!artisan?.id,
     refetchInterval: 5000,
   });
 
   const { data: convMessages = [] } = useQuery<any[]>({
     queryKey: ["/api/conversations", selectedConv?.id, "messages"],
-    queryFn: () => fetch(`/api/conversations/${selectedConv?.id}/messages`).then(r => r.json()),
+    queryFn: () =>
+      fetch(`/api/conversations/${selectedConv?.id}/messages`).then(r => r.json()),
     enabled: !!selectedConv?.id,
     refetchInterval: 2000,
   });
 
-  const chatFinished = (convMessages as any[]).some((m: any) => m.content === FINISH_SIGNAL && m.senderType === "artisan");
+  // ── Analytics query ──────────────────────────────────────────────────────
+  const { data: analytics } = useQuery<any>({
+    queryKey: ["/api/artisans", artisan?.id, "analytics"],
+    queryFn: () =>
+      fetch(`/api/artisans/${artisan?.id}/analytics`).then(r => r.json()),
+    enabled: !!artisan?.id,
+    refetchInterval: 60000,
+    staleTime: 30000,
+  });
+
+  const chatFinished = (convMessages as any[]).some(
+    (m: any) => m.content === FINISH_SIGNAL && m.senderType === "artisan"
+  );
 
   useEffect(() => {
-    if (chatScrollRef.current) {
+    if (chatScrollRef.current)
       chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
-    }
   }, [convMessages]);
 
+  // ── Mutations ────────────────────────────────────────────────────────────
   const updateMutation = useMutation({
-    mutationFn: (updates: any) => fetch(`/api/artisans/${artisan?.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updates),
-    }).then(r => r.json()),
+    mutationFn: (updates: any) =>
+      fetch(`/api/artisans/${artisan?.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      }).then(r => r.json()),
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/artisans"] });
       queryClient.invalidateQueries({ queryKey: ["/api/artisans", artisan?.id] });
@@ -115,11 +235,13 @@ export default function ArtisanDashboard() {
       toast({ title: isRtl ? "تم الحفظ ✓" : "Saved ✓" });
       refetch();
     },
-    onError: () => toast({ title: isRtl ? "فشل الحفظ" : "Save failed", variant: "destructive" }),
+    onError: () =>
+      toast({ title: isRtl ? "فشل الحفظ" : "Save failed", variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => fetch(`/api/artisans/${artisan?.id}`, { method: "DELETE" }).then(r => r.json()),
+    mutationFn: () =>
+      fetch(`/api/artisans/${artisan?.id}`, { method: "DELETE" }).then(r => r.json()),
     onSuccess: () => {
       logout();
       queryClient.invalidateQueries({ queryKey: ["/api/artisans"] });
@@ -129,38 +251,46 @@ export default function ArtisanDashboard() {
   });
 
   const sendReplyMutation = useMutation({
-    mutationFn: (content: string) => fetch("/api/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        conversationId: selectedConv?.id,
-        senderId: String(artisan?.id),
-        receiverId: selectedConv?.customerId,
-        senderType: "artisan",
-        content,
-      }),
-    }).then(r => r.json()),
+    mutationFn: (content: string) =>
+      fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversationId: selectedConv?.id,
+          senderId: String(artisan?.id),
+          receiverId: selectedConv?.customerId,
+          senderType: "artisan",
+          content,
+        }),
+      }).then(r => r.json()),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/conversations", selectedConv?.id, "messages"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/conversations", selectedConv?.id, "messages"],
+      });
       setReplyText("");
     },
   });
 
-  // ── Finish chat mutation ──────────────────────────────────────────────────
   const finishChatMutation = useMutation({
-    mutationFn: () => fetch("/api/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        conversationId: selectedConv?.id,
-        senderId: String(artisan?.id),
-        receiverId: selectedConv?.customerId,
-        senderType: "artisan",
-        content: FINISH_SIGNAL,
-      }),
-    }).then(r => r.json()),
+    mutationFn: () =>
+      fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversationId: selectedConv?.id,
+          senderId: String(artisan?.id),
+          receiverId: selectedConv?.customerId,
+          senderType: "artisan",
+          content: FINISH_SIGNAL,
+        }),
+      }).then(r => r.json()),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/conversations", selectedConv?.id, "messages"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/conversations", selectedConv?.id, "messages"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/artisans", artisan?.id, "analytics"],
+      });
       toast({ title: "✅ تم إنهاء المحادثة", description: "يمكن للزبون الآن تقييمك" });
     },
   });
@@ -187,10 +317,10 @@ export default function ArtisanDashboard() {
     reader.onloadend = async () => {
       const base64 = reader.result as string;
       const imageUrl = await uploadImage(base64);
-      const currentPortfolio = serverArtisan?.portfolioImages || portfolioImages;
-      const newPortfolio = [imageUrl, ...currentPortfolio.filter((x: string) => x !== imageUrl).slice(0, 4)];
-      updateMutation.mutate({ imageUrl, portfolioImages: newPortfolio });
-      setPortfolioImages(newPortfolio);
+      const current = serverArtisan?.portfolioImages || portfolioImages;
+      const next = [imageUrl, ...current.filter((x: string) => x !== imageUrl).slice(0, 4)];
+      updateMutation.mutate({ imageUrl, portfolioImages: next });
+      setPortfolioImages(next);
     };
     reader.readAsDataURL(file);
   };
@@ -202,28 +332,35 @@ export default function ArtisanDashboard() {
     reader.onloadend = async () => {
       const base64 = reader.result as string;
       const imageUrl = await uploadImage(base64);
-      const currentPortfolio = serverArtisan?.portfolioImages || portfolioImages;
-      const newPortfolio = [...currentPortfolio, imageUrl];
-      updateMutation.mutate({ portfolioImages: newPortfolio });
-      setPortfolioImages(newPortfolio);
+      const current = serverArtisan?.portfolioImages || portfolioImages;
+      const next = [...current, imageUrl];
+      updateMutation.mutate({ portfolioImages: next });
+      setPortfolioImages(next);
     };
     reader.readAsDataURL(file);
   };
 
   const handleRemovePortfolioPhoto = (index: number) => {
-    const currentPortfolio = serverArtisan?.portfolioImages || portfolioImages;
-    const newPortfolio = currentPortfolio.filter((_: any, i: number) => i !== index);
-    updateMutation.mutate({ portfolioImages: newPortfolio });
-    setPortfolioImages(newPortfolio);
+    const current = serverArtisan?.portfolioImages || portfolioImages;
+    const next = current.filter((_: any, i: number) => i !== index);
+    updateMutation.mutate({ portfolioImages: next });
+    setPortfolioImages(next);
   };
 
+  // ── Guard ────────────────────────────────────────────────────────────────
   if (!isLoggedIn || !isArtisan) {
     return (
       <div className="min-h-screen flex flex-col bg-[#050505] text-white">
         <Navbar />
         <main className="flex-1 flex items-center justify-center">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-6">
-            <h2 className="text-3xl font-heading font-bold">{isRtl ? "يجب تسجيل الدخول أولاً" : "Please login first"}</h2>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center space-y-6"
+          >
+            <h2 className="text-3xl font-heading font-bold">
+              {isRtl ? "يجب تسجيل الدخول أولاً" : "Please login first"}
+            </h2>
             <Button onClick={() => setLocation("/subscription")} className="bg-primary">
               {isRtl ? "انضم كحرفي" : "Join as Artisan"}
             </Button>
@@ -233,27 +370,50 @@ export default function ArtisanDashboard() {
     );
   }
 
-  const displayPortfolio: string[] = serverArtisan?.portfolioImages?.length > 0
-    ? serverArtisan.portfolioImages
-    : portfolioImages;
+  const displayPortfolio: string[] =
+    serverArtisan?.portfolioImages?.length > 0
+      ? serverArtisan.portfolioImages
+      : portfolioImages;
 
+  // بيانات الرسوم البيانية من analytics أو قيم افتراضية
+  const dailyData  = analytics?.dailyConversations  || [];
+  const monthlyData = analytics?.monthlyConversations || [];
+  const ratingDist  = analytics?.ratingDistribution  || [];
+  const improvements = analytics?.improvements       || [];
+
+  // مصادر الزبائن (ثابتة مبدئياً — يمكن ربطها بجدول لاحقاً)
+  const sourceData = [
+    { name: "بحث مباشر", value: 55 },
+    { name: "توصية", value: 25 },
+    { name: "تواصل اجتماعي", value: 15 },
+    { name: "أخرى", value: 5 },
+  ];
+
+  // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen flex flex-col bg-[#050505] text-white font-sans">
       <Navbar />
 
+      {/* خلفية متحركة */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] animate-pulse" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[120px] animate-pulse delay-700" />
       </div>
 
-      <main className="flex-1 container max-w-7xl mx-auto px-4 md:px-6 py-10 relative z-10" dir="rtl">
-        {/* Header */}
+      <main
+        className="flex-1 container max-w-7xl mx-auto px-4 md:px-6 py-10 relative z-10"
+        dir="rtl"
+      >
+        {/* ── Header ───────────────────────────────────────────────────── */}
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-5 justify-between">
             <div className="flex items-center gap-4">
               <div className="relative group">
                 <img
-                  src={realArtisan?.imageUrl || `https://ui-avatars.com/api/?name=${artisan?.name}&background=2DD4BF&color=fff&size=200`}
+                  src={
+                    realArtisan?.imageUrl ||
+                    `https://ui-avatars.com/api/?name=${artisan?.name}&background=2DD4BF&color=fff&size=200`
+                  }
                   alt={artisan?.name}
                   className="w-20 h-20 rounded-2xl object-cover border-2 border-primary/30"
                 />
@@ -264,65 +424,106 @@ export default function ArtisanDashboard() {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h1 className="text-2xl md:text-3xl font-heading font-black">{realArtisan?.name || artisan?.name}</h1>
+                  <h1 className="text-2xl md:text-3xl font-heading font-black">
+                    {realArtisan?.name || artisan?.name}
+                  </h1>
                   <BadgeCheck className="h-5 w-5 text-primary" />
                 </div>
-                <p className="text-zinc-400 text-sm">{realArtisan?.category || artisan?.category} • {realArtisan?.daira || artisan?.daira}</p>
+                <p className="text-zinc-400 text-sm">
+                  {realArtisan?.category || artisan?.category} • {realArtisan?.daira || artisan?.daira}
+                </p>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">نشط</Badge>
-                  <Badge variant="outline" className="border-primary/30 text-primary text-xs">مجاني للأبد ∞</Badge>
+                  <Badge variant="outline" className="border-primary/30 text-primary text-xs">
+                    مجاني للأبد ∞
+                  </Badge>
+                  {analytics?.avgRating > 0 && (
+                    <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs">
+                      ★ {analytics.avgRating}
+                    </Badge>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         </motion.div>
 
-        {/* Tabs */}
-        <div className="flex gap-3 mb-6">
+        {/* ── Tabs ─────────────────────────────────────────────────────── */}
+        <div className="flex gap-3 mb-6 flex-wrap">
           {[
-            { key: "overview", label: isRtl ? "نظرة عامة" : "Overview" },
-            { key: "portfolio", label: isRtl ? "معرض الأعمال" : "Portfolio" },
-            { key: "settings", label: isRtl ? "الإعدادات" : "Settings" },
+            { key: "overview",   label: "نظرة عامة",    icon: <Eye className="h-4 w-4" /> },
+            { key: "analytics",  label: "التحليلات",     icon: <BarChart2 className="h-4 w-4" /> },
+            { key: "portfolio",  label: "معرض الأعمال",  icon: <ImageIcon className="h-4 w-4" /> },
+            { key: "settings",   label: "الإعدادات",     icon: <Save className="h-4 w-4" /> },
           ].map(tab => (
             <Button
               key={tab.key}
               variant={activeTab === tab.key ? "default" : "outline"}
-              className="rounded-2xl font-black border-white/10"
+              className={`rounded-2xl font-black border-white/10 gap-2 ${
+                activeTab === tab.key ? "" : "text-zinc-400"
+              }`}
               onClick={() => setActiveTab(tab.key as any)}
             >
+              {tab.icon}
               {tab.label}
             </Button>
           ))}
         </div>
 
-        {/* Overview Tab */}
+        {/* ══════════════════════════════════════════════════════════════ */}
+        {/* تبويب نظرة عامة                                               */}
+        {/* ══════════════════════════════════════════════════════════════ */}
         {activeTab === "overview" && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-            {/* Stats */}
+
+            {/* KPIs */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <StatCard icon={<Eye />} label={isRtl ? "مشاهدات" : "Views"} value="–" color="blue" />
-              <StatCard icon={<MessageSquare />} label={isRtl ? "محادثات" : "Chats"} value={String(conversations.length)} color="purple" />
-              <StatCard icon={<Star />} label={isRtl ? "التقييم" : "Rating"} value={String(realArtisan?.rating || "0")} color="amber" />
-              <StatCard icon={<Clock />} label={isRtl ? "الاشتراك" : "Plan"} value="∞" color="green" />
+              <KpiCard
+                icon={<Eye className="h-4 w-4" />}
+                label="المشاهدات"
+                value={String(analytics?.totalViews ?? "–")}
+                change={analytics?.viewsChange}
+                color="blue"
+              />
+              <KpiCard
+                icon={<MessageSquare className="h-4 w-4" />}
+                label="المحادثات"
+                value={String(analytics?.totalConversations ?? conversations.length)}
+                change={analytics?.convsChange}
+                color="purple"
+              />
+              <KpiCard
+                icon={<Star className="h-4 w-4" />}
+                label="التقييم"
+                value={analytics?.avgRating ? `${analytics.avgRating} ★` : (realArtisan?.rating || "0")}
+                change={analytics?.reviewsChange}
+                color="amber"
+              />
+              <KpiCard
+                icon={<TrendingUp className="h-4 w-4" />}
+                label="معدل الرد"
+                value={analytics?.replyRate != null ? `${analytics.replyRate}%` : "–"}
+                color="green"
+              />
             </div>
 
-            {/* Info */}
+            {/* معلومات الحرفي */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <InfoItem icon={<Mail />} label={isRtl ? "البريد الإلكتروني" : "Email"} value={realArtisan?.email || artisan?.email || "–"} />
-              <InfoItem icon={<Phone />} label={isRtl ? "الهاتف" : "Phone"} value={realArtisan?.phone || artisan?.phone || "–"} />
-              <InfoItem icon={<Banknote />} label={isRtl ? "السعر الأدنى" : "Min Price"} value={`${realArtisan?.priceStart || "–"} دج`} />
-              <InfoItem icon={<Briefcase />} label={isRtl ? "سنوات الخبرة" : "Experience"} value={`${realArtisan?.yearsOfExperience || "–"} ${isRtl ? "سنوات" : "years"}`} />
-              <InfoItem icon={<MapPin />} label={isRtl ? "الموقع" : "Location"} value={`${realArtisan?.wilaya || ""} - ${realArtisan?.daira || artisan?.daira || "–"}`} />
-              <InfoItem icon={<BadgeCheck />} label={isRtl ? "المهنة" : "Category"} value={realArtisan?.category || artisan?.category || "–"} />
+              <InfoItem icon={<Mail />}     label="البريد الإلكتروني" value={realArtisan?.email  || artisan?.email  || "–"} />
+              <InfoItem icon={<Phone />}    label="الهاتف"            value={realArtisan?.phone  || artisan?.phone  || "–"} />
+              <InfoItem icon={<Banknote />} label="السعر الأدنى"      value={`${realArtisan?.priceStart || "–"} دج`} />
+              <InfoItem icon={<Briefcase />} label="سنوات الخبرة"     value={`${realArtisan?.yearsOfExperience || "–"} سنوات`} />
+              <InfoItem icon={<MapPin />}   label="الموقع"             value={`${realArtisan?.wilaya || ""} - ${realArtisan?.daira || artisan?.daira || "–"}`} />
+              <InfoItem icon={<BadgeCheck />} label="المهنة"           value={realArtisan?.category || artisan?.category || "–"} />
             </div>
 
-            {/* Conversations */}
+            {/* المحادثات */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Card className="bg-white/[0.03] border-white/10 rounded-3xl overflow-hidden">
                 <CardHeader className="p-5 border-b border-white/10">
                   <CardTitle className="flex items-center gap-3 text-lg font-heading font-black">
                     <MessageSquare className="h-5 w-5 text-primary" />
-                    {isRtl ? "المحادثات" : "Conversations"}
+                    المحادثات
                     {conversations.length > 0 && (
                       <Badge className="bg-primary text-white text-xs">{conversations.length}</Badge>
                     )}
@@ -332,14 +533,18 @@ export default function ArtisanDashboard() {
                   {conversations.length === 0 ? (
                     <div className="p-8 text-center text-zinc-500">
                       <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                      <p>{isRtl ? "لا توجد محادثات بعد" : "No conversations yet"}</p>
+                      <p>لا توجد محادثات بعد</p>
                     </div>
                   ) : (
                     conversations.map((conv: any) => (
                       <button
                         key={conv.id}
                         onClick={() => setSelectedConv(selectedConv?.id === conv.id ? null : conv)}
-                        className={`w-full p-4 flex items-center gap-4 border-b border-white/5 transition-all text-right ${selectedConv?.id === conv.id ? 'bg-primary/10 border-primary/20' : 'hover:bg-white/5'}`}
+                        className={`w-full p-4 flex items-center gap-4 border-b border-white/5 transition-all text-right ${
+                          selectedConv?.id === conv.id
+                            ? "bg-primary/10 border-primary/20"
+                            : "hover:bg-white/5"
+                        }`}
                       >
                         <Avatar className="h-11 w-11 shrink-0">
                           <AvatarFallback className="bg-primary/20 text-primary font-black text-lg">
@@ -352,11 +557,19 @@ export default function ArtisanDashboard() {
                           </p>
                           {conv.lastMessage && (
                             <p className="text-xs truncate mt-0.5 text-zinc-400">
-                              {conv.lastMessage === FINISH_SIGNAL ? "✅ تم إنهاء المحادثة" : isImageContent(conv.lastMessage) ? "📷 صورة" : conv.lastMessage}
+                              {conv.lastMessage === FINISH_SIGNAL
+                                ? "✅ تم إنهاء المحادثة"
+                                : isImageContent(conv.lastMessage)
+                                ? "📷 صورة"
+                                : conv.lastMessage}
                             </p>
                           )}
                         </div>
-                        <ArrowRight className={`h-4 w-4 text-zinc-500 shrink-0 transition-transform ${selectedConv?.id === conv.id ? 'rotate-90' : ''}`} />
+                        <ArrowRight
+                          className={`h-4 w-4 text-zinc-500 shrink-0 transition-transform ${
+                            selectedConv?.id === conv.id ? "rotate-90" : ""
+                          }`}
+                        />
                       </button>
                     ))
                   )}
@@ -366,7 +579,11 @@ export default function ArtisanDashboard() {
               {/* Inline Chat Panel */}
               <AnimatePresence>
                 {selectedConv && (
-                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                  >
                     <Card className="bg-white/[0.03] border-white/10 rounded-3xl overflow-hidden flex flex-col h-[480px]">
                       <CardHeader className="p-4 border-b border-white/10 flex-row items-center justify-between space-y-0">
                         <div className="flex items-center gap-3">
@@ -384,10 +601,7 @@ export default function ArtisanDashboard() {
                             </p>
                           </div>
                         </div>
-
-                        {/* Action buttons */}
                         <div className="flex items-center gap-1.5">
-                          {/* Audio call */}
                           <button
                             onClick={() => startCall(selectedConv.customerId, selectedConv.customerName || "زبون", "audio")}
                             className="p-1.5 rounded-full bg-white/5 hover:bg-primary/20 text-zinc-400 hover:text-primary transition-colors"
@@ -395,7 +609,6 @@ export default function ArtisanDashboard() {
                           >
                             <Phone className="h-4 w-4" />
                           </button>
-                          {/* Video call */}
                           <button
                             onClick={() => startCall(selectedConv.customerId, selectedConv.customerName || "زبون", "video")}
                             className="p-1.5 rounded-full bg-white/5 hover:bg-primary/20 text-zinc-400 hover:text-primary transition-colors"
@@ -403,7 +616,6 @@ export default function ArtisanDashboard() {
                           >
                             <Video className="h-4 w-4" />
                           </button>
-                          {/* Open in full chat page */}
                           <button
                             onClick={() => setLocation(`/chat/${selectedConv.artisanId}`)}
                             className="p-1.5 rounded-full bg-white/5 hover:bg-blue-500/20 text-zinc-400 hover:text-blue-400 transition-colors"
@@ -411,13 +623,14 @@ export default function ArtisanDashboard() {
                           >
                             <ExternalLink className="h-4 w-4" />
                           </button>
-                          {/* Finish chat */}
                           {!chatFinished && convMessages.length > 0 && (
                             <button
-                              onClick={() => { if (confirm("هل تريد إنهاء هذه المحادثة؟ سيتمكن الزبون بعدها من تقييمك.")) finishChatMutation.mutate(); }}
+                              onClick={() => {
+                                if (confirm("هل تريد إنهاء هذه المحادثة؟ سيتمكن الزبون بعدها من تقييمك."))
+                                  finishChatMutation.mutate();
+                              }}
                               disabled={finishChatMutation.isPending}
                               className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors text-xs font-bold border border-green-500/20"
-                              title="إنهاء المحادثة"
                             >
                               <CheckCheck className="h-3.5 w-3.5" />
                               إنهاء
@@ -428,16 +641,22 @@ export default function ArtisanDashboard() {
                               <CheckCheck className="h-3 w-3" /> منتهية
                             </span>
                           )}
-                          <Button size="icon" variant="ghost" className="rounded-full h-8 w-8 text-zinc-400" onClick={() => setSelectedConv(null)}>
+                          <Button
+                            size="icon" variant="ghost"
+                            className="rounded-full h-8 w-8 text-zinc-400"
+                            onClick={() => setSelectedConv(null)}
+                          >
                             <X className="h-4 w-4" />
                           </Button>
                         </div>
                       </CardHeader>
 
-                      {/* Messages */}
+                      {/* الرسائل */}
                       <div className="flex-1 overflow-y-auto p-4 space-y-2" ref={chatScrollRef}>
                         {convMessages.length === 0 ? (
-                          <div className="h-full flex items-center justify-center text-zinc-500 text-sm">لا توجد رسائل</div>
+                          <div className="h-full flex items-center justify-center text-zinc-500 text-sm">
+                            لا توجد رسائل
+                          </div>
                         ) : (
                           convMessages.map((msg: any) => {
                             if (msg.content === FINISH_SIGNAL) {
@@ -453,16 +672,22 @@ export default function ArtisanDashboard() {
                             }
                             const isMe = msg.senderType === "artisan";
                             return (
-                              <div key={msg.id} className={`flex ${isMe ? 'justify-start' : 'justify-end'}`}>
-                                <div className={`max-w-[75%] px-3 py-2 rounded-2xl text-sm ${
-                                  isMe
-                                    ? 'bg-gradient-to-br from-primary to-primary/80 text-white rounded-br-sm'
-                                    : 'bg-white/10 text-white rounded-bl-sm'
-                                }`}>
+                              <div key={msg.id} className={`flex ${isMe ? "justify-start" : "justify-end"}`}>
+                                <div
+                                  className={`max-w-[75%] px-3 py-2 rounded-2xl text-sm ${
+                                    isMe
+                                      ? "bg-gradient-to-br from-primary to-primary/80 text-white rounded-br-sm"
+                                      : "bg-white/10 text-white rounded-bl-sm"
+                                  }`}
+                                >
                                   {isImageContent(msg.content) ? (
                                     <img src={msg.content} alt="" className="max-w-full rounded-xl max-h-40 object-cover" />
-                                  ) : <p>{msg.content}</p>}
-                                  <span className="text-[10px] opacity-60 mt-0.5 block">{formatTime(msg.createdAt)}</span>
+                                  ) : (
+                                    <p>{msg.content}</p>
+                                  )}
+                                  <span className="text-[10px] opacity-60 mt-0.5 block">
+                                    {formatTime(msg.createdAt)}
+                                  </span>
                                 </div>
                               </div>
                             );
@@ -470,7 +695,7 @@ export default function ArtisanDashboard() {
                         )}
                       </div>
 
-                      {/* Reply Input */}
+                      {/* حقل الرد */}
                       <div className="p-3 border-t border-white/10">
                         {chatFinished ? (
                           <p className="text-center text-xs text-zinc-500 py-1">تم إنهاء المحادثة</p>
@@ -479,7 +704,7 @@ export default function ArtisanDashboard() {
                             <input
                               type="text"
                               className="flex-1 bg-transparent border-none focus:outline-none text-sm text-white placeholder:text-zinc-500"
-                              placeholder={isRtl ? "اكتب ردك..." : "Type your reply..."}
+                              placeholder="اكتب ردك..."
                               value={replyText}
                               onChange={e => setReplyText(e.target.value)}
                               onKeyDown={e => e.key === "Enter" && handleSendReply()}
@@ -500,13 +725,13 @@ export default function ArtisanDashboard() {
               </AnimatePresence>
             </div>
 
-            {/* Reviews */}
+            {/* تقييمات */}
             {reviews.length > 0 && (
               <Card className="bg-white/[0.03] border-white/10 rounded-3xl overflow-hidden">
                 <CardHeader className="p-5 border-b border-white/10">
                   <CardTitle className="flex items-center gap-3 text-lg font-heading font-black">
                     <Star className="h-5 w-5 text-amber-400 fill-amber-400" />
-                    {isRtl ? "تقييمات الزبائن" : "Customer Reviews"}
+                    تقييمات الزبائن
                     <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-sm">
                       {(reviews.reduce((s: number, r: any) => s + r.rating, 0) / reviews.length).toFixed(1)} ★ ({reviews.length})
                     </Badge>
@@ -523,8 +748,8 @@ export default function ArtisanDashboard() {
                           <span className="font-bold text-sm">{review.customerName}</span>
                         </div>
                         <div className="flex gap-0.5">
-                          {[1,2,3,4,5].map(s => (
-                            <Star key={s} className={`h-3.5 w-3.5 ${s <= review.rating ? 'text-amber-400 fill-amber-400' : 'text-zinc-600'}`} />
+                          {[1, 2, 3, 4, 5].map(s => (
+                            <Star key={s} className={`h-3.5 w-3.5 ${s <= review.rating ? "text-amber-400 fill-amber-400" : "text-zinc-600"}`} />
                           ))}
                         </div>
                       </div>
@@ -542,18 +767,198 @@ export default function ArtisanDashboard() {
           </motion.div>
         )}
 
-        {/* Portfolio Tab */}
+        {/* ══════════════════════════════════════════════════════════════ */}
+        {/* تبويب التحليلات ✦ جديد                                        */}
+        {/* ══════════════════════════════════════════════════════════════ */}
+        {activeTab === "analytics" && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+
+            {/* KPIs مصغّرة */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              {[
+                { label: "المشاهدات",       value: analytics?.totalViews        ?? "–", change: analytics?.viewsChange        ?? 0, color: "text-blue-400"   },
+                { label: "المحادثات",       value: analytics?.totalConversations ?? "–", change: analytics?.convsChange        ?? 0, color: "text-purple-400" },
+                { label: "التقييمات",       value: analytics?.totalReviews       ?? "–", change: analytics?.reviewsChange      ?? 0, color: "text-amber-400"  },
+                { label: "معدل الرد",       value: analytics?.replyRate != null ? `${analytics.replyRate}%` : "–", change: 0, color: "text-green-400"  },
+                { label: "إنهاء المحادثات", value: analytics?.finishRate != null ? `${analytics.finishRate}%` : "–", change: 0, color: "text-pink-400"   },
+              ].map(item => (
+                <div key={item.label} className="bg-white/[0.03] border border-white/10 rounded-2xl p-4">
+                  <div className={`text-2xl font-black ${item.color}`}>{item.value}</div>
+                  <div className="text-[10px] text-zinc-500 uppercase tracking-widest mt-1">{item.label}</div>
+                  {item.change !== 0 && (
+                    <div className={`text-[10px] mt-1 flex items-center gap-0.5 ${item.change > 0 ? "text-green-400" : "text-red-400"}`}>
+                      {item.change > 0 ? <ArrowUp className="h-2.5 w-2.5" /> : <ArrowDown className="h-2.5 w-2.5" />}
+                      {Math.abs(item.change)}%
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* رسم المحادثات اليومية + الشهرية */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card className="bg-white/[0.03] border-white/10 rounded-3xl p-5">
+                <p className="text-sm font-black mb-4 flex items-center gap-2">
+                  <BarChart2 className="h-4 w-4 text-blue-400" />
+                  المحادثات — آخر 7 أيام
+                </p>
+                {dailyData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={180}>
+                    <LineChart data={dailyData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                      <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#71717a" }} />
+                      <YAxis tick={{ fontSize: 10, fill: "#71717a" }} allowDecimals={false} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Line
+                        type="monotone" dataKey="count"
+                        stroke="#3B82F6" strokeWidth={2}
+                        dot={{ r: 3, fill: "#3B82F6" }}
+                        activeDot={{ r: 5 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[180px] flex items-center justify-center text-zinc-600 text-sm">
+                    لا توجد بيانات كافية بعد
+                  </div>
+                )}
+              </Card>
+
+              <Card className="bg-white/[0.03] border-white/10 rounded-3xl p-5">
+                <p className="text-sm font-black mb-4 flex items-center gap-2">
+                  <BarChart2 className="h-4 w-4 text-purple-400" />
+                  المحادثات — آخر 6 أشهر
+                </p>
+                {monthlyData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={180}>
+                    <BarChart data={monthlyData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                      <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#71717a" }} />
+                      <YAxis tick={{ fontSize: 10, fill: "#71717a" }} allowDecimals={false} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Bar dataKey="count" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[180px] flex items-center justify-center text-zinc-600 text-sm">
+                    لا توجد بيانات كافية بعد
+                  </div>
+                )}
+              </Card>
+            </div>
+
+            {/* توزيع التقييمات + مصادر الزبائن */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card className="bg-white/[0.03] border-white/10 rounded-3xl p-5">
+                <p className="text-sm font-black mb-4 flex items-center gap-2">
+                  <Star className="h-4 w-4 text-amber-400" />
+                  توزيع التقييمات
+                </p>
+                {ratingDist.length > 0 && ratingDist.some((r: any) => r.count > 0) ? (
+                  <ResponsiveContainer width="100%" height={180}>
+                    <BarChart data={ratingDist.map((r: any) => ({ name: `★${r.star}`, count: r.count }))}>
+                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#71717a" }} />
+                      <YAxis tick={{ fontSize: 10, fill: "#71717a" }} allowDecimals={false} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                        {RATING_COLORS.map((color, i) => (
+                          <Cell key={i} fill={color} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[180px] flex items-center justify-center text-zinc-600 text-sm">
+                    لا توجد تقييمات بعد
+                  </div>
+                )}
+              </Card>
+
+              <Card className="bg-white/[0.03] border-white/10 rounded-3xl p-5">
+                <p className="text-sm font-black mb-4 flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-green-400" />
+                  مصادر الزبائن (تقريبي)
+                </p>
+                <ResponsiveContainer width="100%" height={180}>
+                  <PieChart>
+                    <Pie
+                      data={sourceData}
+                      cx="50%" cy="50%"
+                      innerRadius={45} outerRadius={75}
+                      paddingAngle={3}
+                      dataKey="value"
+                    >
+                      {sourceData.map((_, i) => (
+                        <Cell key={i} fill={PIE_COLORS[i]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(v: any) => [`${v}%`, ""]}
+                      contentStyle={{
+                        background: "#18181b",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        borderRadius: 12,
+                        fontSize: 12,
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="flex flex-wrap gap-2 mt-2 justify-center">
+                  {sourceData.map((s, i) => (
+                    <div key={i} className="flex items-center gap-1 text-[10px] text-zinc-400">
+                      <div className="w-2.5 h-2.5 rounded-sm" style={{ background: PIE_COLORS[i] }} />
+                      {s.name} {s.value}%
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </div>
+
+            {/* نسب التحسن */}
+            <Card className="bg-white/[0.03] border-white/10 rounded-3xl p-5">
+              <p className="text-sm font-black mb-2 flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-primary" />
+                نسب التحسن — مقارنة بالشهر الماضي
+              </p>
+              <p className="text-xs text-zinc-500 mb-5">
+                كل شريط يمثل مستوى الأداء الحالي. السهم يبيّن التغيير مقارنة بالشهر الماضي.
+              </p>
+              <div className="divide-y divide-white/5">
+                {improvements.length > 0 ? (
+                  improvements.map((item: any) => (
+                    <ImprovementBar key={item.key} {...item} />
+                  ))
+                ) : (
+                  // قيم افتراضية لحين توفر بيانات كافية
+                  [
+                    { label: "المشاهدات",         value: 65, change: 0,  color: "#3B82F6" },
+                    { label: "المحادثات",         value: 50, change: 0,  color: "#8B5CF6" },
+                    { label: "التقييم",           value: 80, change: 0,  color: "#F59E0B" },
+                    { label: "معدل الرد",         value: 90, change: 0,  color: "#10B981" },
+                    { label: "إنهاء المحادثات",   value: 60, change: 0,  color: "#EC4899" },
+                  ].map(item => (
+                    <ImprovementBar key={item.label} {...item} />
+                  ))
+                )}
+              </div>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════ */}
+        {/* تبويب معرض الأعمال                                            */}
+        {/* ══════════════════════════════════════════════════════════════ */}
         {activeTab === "portfolio" && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-heading font-black">{isRtl ? "معرض أعمالك" : "Your Portfolio"}</h2>
-                <p className="text-zinc-400 text-sm mt-1">{displayPortfolio.length} {isRtl ? "صورة" : "photos"}</p>
+                <h2 className="text-2xl font-heading font-black">معرض أعمالك</h2>
+                <p className="text-zinc-400 text-sm mt-1">{displayPortfolio.length} صورة</p>
               </div>
               <label className="cursor-pointer">
                 <Button className="gap-2 rounded-2xl font-black">
                   <Upload className="h-4 w-4" />
-                  {isRtl ? "إضافة صورة" : "Add Photo"}
+                  إضافة صورة
                 </Button>
                 <input type="file" accept="image/*" className="hidden" onChange={handleAddPortfolioPhoto} />
               </label>
@@ -562,18 +967,30 @@ export default function ArtisanDashboard() {
             {displayPortfolio.length === 0 ? (
               <label className="flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-3xl py-20 text-zinc-500 cursor-pointer hover:border-primary/30 hover:text-zinc-300 transition-all">
                 <ImageIcon className="h-14 w-14 mb-4 opacity-20" />
-                <p className="font-bold text-lg">{isRtl ? "أضف أول صورة لأعمالك" : "Add your first work photo"}</p>
+                <p className="font-bold text-lg">أضف أول صورة لأعمالك</p>
                 <input type="file" accept="image/*" className="hidden" onChange={handleAddPortfolioPhoto} />
               </label>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {displayPortfolio.map((img: string, i: number) => (
-                  <motion.div key={i} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.05 }}
-                    className="aspect-square rounded-2xl overflow-hidden relative group border border-white/10 cursor-pointer">
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="aspect-square rounded-2xl overflow-hidden relative group border border-white/10 cursor-pointer"
+                  >
                     <img src={img} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                      {i === 0 && <span className="text-xs font-bold text-white bg-primary/80 px-2 py-1 rounded-full">{isRtl ? "الصورة الرئيسية" : "Main Photo"}</span>}
-                      <button className="h-9 w-9 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-colors" onClick={() => handleRemovePortfolioPhoto(i)}>
+                      {i === 0 && (
+                        <span className="text-xs font-bold text-white bg-primary/80 px-2 py-1 rounded-full">
+                          الصورة الرئيسية
+                        </span>
+                      )}
+                      <button
+                        className="h-9 w-9 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-colors"
+                        onClick={() => handleRemovePortfolioPhoto(i)}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
@@ -581,7 +998,7 @@ export default function ArtisanDashboard() {
                 ))}
                 <label className="aspect-square rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-primary/30 transition-colors text-zinc-500 hover:text-zinc-300">
                   <Upload className="h-6 w-6 mb-2" />
-                  <span className="text-xs font-bold">{isRtl ? "إضافة" : "Add"}</span>
+                  <span className="text-xs font-bold">إضافة</span>
                   <input type="file" accept="image/*" className="hidden" onChange={handleAddPortfolioPhoto} />
                 </label>
               </div>
@@ -589,12 +1006,12 @@ export default function ArtisanDashboard() {
           </motion.div>
         )}
 
-        {/* Settings Tab */}
+        {/* ══════════════════════════════════════════════════════════════ */}
+        {/* تبويب الإعدادات                                               */}
+        {/* ══════════════════════════════════════════════════════════════ */}
         {activeTab === "settings" && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-2xl">
-
-            {/* Edit Info */}
-            <h2 className="text-2xl font-heading font-black">{isRtl ? "تعديل المعلومات" : "Edit Info"}</h2>
+            <h2 className="text-2xl font-heading font-black">تعديل المعلومات</h2>
             <Card className="bg-white/[0.03] border-white/10 rounded-3xl">
               <CardContent className="p-6 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -620,8 +1037,7 @@ export default function ArtisanDashboard() {
                     <Label className="text-xs font-black uppercase tracking-widest text-zinc-400">السعر الأدنى (دج)</Label>
                     <input
                       defaultValue={realArtisan?.priceStart || ""}
-                      id="edit-price"
-                      type="number"
+                      id="edit-price" type="number"
                       className="w-full bg-white/5 border border-white/10 h-12 rounded-xl text-white px-4 text-sm focus:outline-none focus:border-primary/50"
                       placeholder="1000"
                     />
@@ -630,8 +1046,7 @@ export default function ArtisanDashboard() {
                     <Label className="text-xs font-black uppercase tracking-widest text-zinc-400">سنوات الخبرة</Label>
                     <input
                       defaultValue={realArtisan?.yearsOfExperience || ""}
-                      id="edit-exp"
-                      type="number"
+                      id="edit-exp" type="number"
                       className="w-full bg-white/5 border border-white/10 h-12 rounded-xl text-white px-4 text-sm focus:outline-none focus:border-primary/50"
                       placeholder="5"
                     />
@@ -641,19 +1056,18 @@ export default function ArtisanDashboard() {
                   <Label className="text-xs font-black uppercase tracking-widest text-zinc-400">نبذة تعريفية</Label>
                   <textarea
                     defaultValue={realArtisan?.description || ""}
-                    id="edit-desc"
-                    rows={3}
+                    id="edit-desc" rows={3}
                     className="w-full bg-white/5 border border-white/10 rounded-xl text-white px-4 py-3 text-sm focus:outline-none focus:border-primary/50 resize-none"
                     placeholder="اكتب نبذة عن نفسك وخدماتك..."
                   />
                 </div>
                 <Button
                   onClick={() => {
-                    const name = (document.getElementById("edit-name") as HTMLInputElement)?.value;
-                    const phone = (document.getElementById("edit-phone") as HTMLInputElement)?.value;
-                    const priceStart = parseInt((document.getElementById("edit-price") as HTMLInputElement)?.value);
-                    const yearsOfExperience = parseInt((document.getElementById("edit-exp") as HTMLInputElement)?.value);
-                    const description = (document.getElementById("edit-desc") as HTMLTextAreaElement)?.value;
+                    const name             = (document.getElementById("edit-name")  as HTMLInputElement)?.value;
+                    const phone            = (document.getElementById("edit-phone") as HTMLInputElement)?.value;
+                    const priceStart       = parseInt((document.getElementById("edit-price") as HTMLInputElement)?.value);
+                    const yearsOfExperience = parseInt((document.getElementById("edit-exp")   as HTMLInputElement)?.value);
+                    const description      = (document.getElementById("edit-desc")  as HTMLTextAreaElement)?.value;
                     updateMutation.mutate({ name, phone, priceStart, yearsOfExperience, description });
                   }}
                   className="gap-2 rounded-xl font-black"
@@ -665,16 +1079,15 @@ export default function ArtisanDashboard() {
               </CardContent>
             </Card>
 
-            {/* Edit Location */}
-            <h2 className="text-2xl font-heading font-black">{isRtl ? "تعديل الموقع" : "Edit Location"}</h2>
+            <h2 className="text-2xl font-heading font-black">تعديل الموقع</h2>
             <Card className="bg-white/[0.03] border-white/10 rounded-3xl">
               <CardContent className="p-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-xs font-black uppercase tracking-widest text-zinc-400">{isRtl ? "الولاية" : "Wilaya"}</Label>
-                    <Select value={wilaya} onValueChange={v => { setWilaya(v); setDaira((LOCATIONS as any)[v]?.[0] || ""); }} dir={isRtl ? "rtl" : "ltr"}>
+                    <Label className="text-xs font-black uppercase tracking-widest text-zinc-400">الولاية</Label>
+                    <Select value={wilaya} onValueChange={v => { setWilaya(v); setDaira((LOCATIONS as any)[v]?.[0] || ""); }} dir="rtl">
                       <SelectTrigger className="bg-white/5 border-white/10 h-12 rounded-xl text-white">
-                        <SelectValue placeholder={isRtl ? "اختر ولاية" : "Select wilaya"} />
+                        <SelectValue placeholder="اختر ولاية" />
                       </SelectTrigger>
                       <SelectContent dir="rtl" className="bg-zinc-900 border-white/10 text-white">
                         {DAIRAS.map(w => <SelectItem key={w} value={w}>{w}</SelectItem>)}
@@ -682,78 +1095,62 @@ export default function ArtisanDashboard() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-xs font-black uppercase tracking-widest text-zinc-400">{isRtl ? "الدائرة" : "Daira"}</Label>
-                    <Select value={daira} onValueChange={setDaira} disabled={!wilaya} dir={isRtl ? "rtl" : "ltr"}>
+                    <Label className="text-xs font-black uppercase tracking-widest text-zinc-400">الدائرة</Label>
+                    <Select value={daira} onValueChange={setDaira} disabled={!wilaya} dir="rtl">
                       <SelectTrigger className="bg-white/5 border-white/10 h-12 rounded-xl text-white">
-                        <SelectValue placeholder={isRtl ? "اختر دائرة" : "Select daira"} />
+                        <SelectValue placeholder="اختر دائرة" />
                       </SelectTrigger>
                       <SelectContent dir="rtl" className="bg-zinc-900 border-white/10 text-white">
-                        {wilaya && (LOCATIONS as any)[wilaya]?.map((d: string) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                        {wilaya && (LOCATIONS as any)[wilaya]?.map((d: string) => (
+                          <SelectItem key={d} value={d}>{d}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
-                <Button onClick={() => updateMutation.mutate({ wilaya, daira })} className="gap-2 rounded-xl font-black" disabled={updateMutation.isPending}>
+                <Button
+                  onClick={() => updateMutation.mutate({ wilaya, daira })}
+                  className="gap-2 rounded-xl font-black"
+                  disabled={updateMutation.isPending}
+                >
                   <Save className="h-4 w-4" />
-                  {updateMutation.isPending ? (isRtl ? "جاري الحفظ..." : "Saving...") : (isRtl ? "حفظ الموقع" : "Save Location")}
+                  {updateMutation.isPending ? "جاري الحفظ..." : "حفظ الموقع"}
                 </Button>
               </CardContent>
             </Card>
 
             <div className="pt-4 border-t border-white/10">
-              <h3 className="text-lg font-black text-red-400 mb-4">{isRtl ? "منطقة الخطر" : "Danger Zone"}</h3>
-              <Button variant="destructive" className="gap-2 rounded-xl"
-                onClick={() => { if (confirm(isRtl ? "هل أنت متأكد من حذف حسابك نهائياً؟" : "Delete your account permanently?")) deleteMutation.mutate(); }}
-                disabled={deleteMutation.isPending}>
+              <h3 className="text-lg font-black text-red-400 mb-4">منطقة الخطر</h3>
+              <Button
+                variant="destructive" className="gap-2 rounded-xl"
+                onClick={() => {
+                  if (confirm("هل أنت متأكد من حذف حسابك نهائياً؟")) deleteMutation.mutate();
+                }}
+                disabled={deleteMutation.isPending}
+              >
                 <Trash2 className="h-4 w-4" />
-                {isRtl ? "حذف حسابي نهائياً" : "Delete My Account"}
+                حذف حسابي نهائياً
               </Button>
             </div>
           </motion.div>
         )}
       </main>
+
       <Footer />
 
-      {/* ── Call UI ────────────────────────────────────────────────────────── */}
       <CallUI
-        callState={callState}
-        callType={callType}
-        remoteName={remoteName}
-        isMuted={isMuted}
-        isCamOff={isCamOff}
-        localVideoRef={localVideoRef}
-        remoteVideoRef={remoteVideoRef}
-        onAccept={acceptCall}
-        onReject={rejectCall}
-        onEnd={endCall}
-        onToggleMute={toggleMute}
-        onToggleCamera={toggleCamera}
+        callState={callState} callType={callType} remoteName={remoteName}
+        isMuted={isMuted} isCamOff={isCamOff}
+        localVideoRef={localVideoRef} remoteVideoRef={remoteVideoRef}
+        onAccept={acceptCall} onReject={rejectCall} onEnd={endCall}
+        onToggleMute={toggleMute} onToggleCamera={toggleCamera}
       />
     </div>
   );
 }
 
-function StatCard({ icon, label, value, color }: any) {
-  const colorMap: any = {
-    blue: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-    purple: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-    amber: "bg-amber-500/20 text-amber-400 border-amber-500/30",
-    green: "bg-green-500/20 text-green-400 border-green-500/30",
-  };
-  return (
-    <motion.div whileHover={{ y: -4 }}>
-      <Card className="bg-white/[0.03] border-white/10 rounded-2xl">
-        <CardContent className="p-5">
-          <div className={`w-9 h-9 rounded-xl flex items-center justify-center border mb-3 ${colorMap[color]}`}>{icon}</div>
-          <div className="text-3xl font-black font-heading">{value}</div>
-          <div className="text-xs font-black text-zinc-500 uppercase tracking-widest mt-1">{label}</div>
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
-}
-
-function InfoItem({ icon, label, value }: any) {
+// ─── مكوّنات مساعدة صغيرة ────────────────────────────────────────────────────
+function InfoItem({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="flex items-center gap-3 p-4 bg-white/[0.03] border border-white/10 rounded-2xl">
       <div className="text-primary shrink-0">{icon}</div>
@@ -764,3 +1161,11 @@ function InfoItem({ icon, label, value }: any) {
     </div>
   );
 }
+useEffect(() => {
+  if (!artisanId) return;
+  fetch(`/api/artisans/${artisanId}/view`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ viewerId: user?.id || null }),
+  }).catch(() => {});
+}, [artisanId]);
