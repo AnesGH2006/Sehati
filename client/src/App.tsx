@@ -18,19 +18,33 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { AuthProvider } from "@/lib/auth";
 import SplashScreen from "@/components/splashscreen";
-import { InstallPrompt } from "@/components/install-prompt";  
-import { useEffect } from "react";
+import { InstallPrompt } from "@/components/install-prompt";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useAuth } from "@/lib/auth";
 
+// ── تسجيل الإشعارات بعد تحميل الـ Auth ──────────────────────────────────────
+function PushRegistrar() {
+  const { user, artisan, isArtisan } = useAuth();
+
+  // الحرفي يسجّل بـ id الحرفي (رقم → string)
+  // الزبون يسجّل بـ user.id
+  const pushId = isArtisan && artisan?.id
+    ? String(artisan.id)
+    : user?.id ?? null;
+
+  usePushNotifications(pushId);
+
+  return null; // لا يعرض شيئاً
+}
+
+// ── Page Transition ───────────────────────────────────────────────────────────
 function PageTransition({ children }: { children: React.ReactNode }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -20, scale: 0.98 }}
-      transition={{ 
-        duration: 0.4,
-        ease: [0.22, 1, 0.36, 1] 
-      }}
+      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       className="w-full flex-1 flex flex-col"
     >
       {children}
@@ -38,9 +52,10 @@ function PageTransition({ children }: { children: React.ReactNode }) {
   );
 }
 
+// ── Router ────────────────────────────────────────────────────────────────────
 function Router() {
   const { i18n } = useTranslation();
-  const isAr = i18n.language === 'ar';
+  const isAr = i18n.language === "ar";
 
   return (
     <AnimatePresence mode="wait" initial={false}>
@@ -49,67 +64,42 @@ function Router() {
         initial={{ opacity: 0, x: isAr ? -100 : 100 }}
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: isAr ? 100 : -100 }}
-        transition={{ 
-          type: "spring",
-          stiffness: 300,
-          damping: 30,
-          duration: 0.3 
-        }}
+        transition={{ type: "spring", stiffness: 300, damping: 30, duration: 0.3 }}
         className="min-h-screen flex flex-col overflow-x-hidden"
       >
         <Switch>
           <Route path="/">
-            <PageTransition>
-              <Home />
-            </PageTransition>
+            <PageTransition><Home /></PageTransition>
           </Route>
           <Route path="/artisans">
-            <PageTransition>
-              <Artisans />
-            </PageTransition>
+            <PageTransition><Artisans /></PageTransition>
           </Route>
           <Route path="/profile/:id">
-            <PageTransition>
-              <Profile />
-            </PageTransition>
+            <PageTransition><Profile /></PageTransition>
           </Route>
           <Route path="/chat/:id">
-            <PageTransition>
-              <Chat />
-            </PageTransition>
+            <PageTransition><Chat /></PageTransition>
           </Route>
           <Route path="/chat">
-            <PageTransition>
-              <Chat />
-            </PageTransition>
+            <PageTransition><Chat /></PageTransition>
           </Route>
           <Route path="/subscription">
-            <PageTransition>
-              <Subscription />
-            </PageTransition>
+            <PageTransition><Subscription /></PageTransition>
           </Route>
           <Route path="/auth">
-            <PageTransition>
-              <Auth />
-            </PageTransition>
+            <PageTransition><Auth /></PageTransition>
           </Route>
           <Route path="/artisan/dashboard">
-            <PageTransition>
-              <ArtisanDashboard />
-            </PageTransition>
+            <PageTransition><ArtisanDashboard /></PageTransition>
           </Route>
           <Route path="/about">
-            <PageTransition>
-              <About />
-            </PageTransition>
+            <PageTransition><About /></PageTransition>
           </Route>
           <Route path="/admin">
             <Admin />
           </Route>
           <Route>
-            <PageTransition>
-              <NotFound />
-            </PageTransition>
+            <PageTransition><NotFound /></PageTransition>
           </Route>
         </Switch>
       </motion.div>
@@ -117,14 +107,16 @@ function Router() {
   );
 }
 
+// ── App ───────────────────────────────────────────────────────────────────────
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="dark">
         <AuthProvider>
           <TooltipProvider>
-            <SplashScreen />        {/* ← أضف هنا */}
-            <InstallPrompt />       {/* ← وهنا */}
+            <PushRegistrar />   {/* ← هنا — داخل AuthProvider */}
+            <SplashScreen />
+            <InstallPrompt />
             <Toaster />
             <Router />
           </TooltipProvider>
