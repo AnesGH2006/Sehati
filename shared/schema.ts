@@ -37,12 +37,18 @@ export const artisans = pgTable("artisans", {
   portfolioImages:       text("portfolio_images").array().notNull().default([]),
   languages:             text("languages").array().notNull().default(["العربية"]),
   workingHours:          text("working_hours"),
-  // ✦ إصلاح: إضافة "standard" | "pro" | "gold" للـ enum
   subscriptionType:      text("subscription_type", {
                            enum: ["free", "standard", "pro", "gold"],
                          }).notNull().default("free"),
   subscriptionDuration:  integer("subscription_duration").notNull().default(1),
   subscriptionExpiresAt: timestamp("subscription_expires_at"),
+  // ── حقول الموقع الجغرافي ─────────────────────────────
+  latitude:              real("latitude"),
+  longitude:             real("longitude"),
+  status:                text("status", {
+                           enum: ["available", "busy", "offline"],
+                         }).default("available"),
+  // ─────────────────────────────────────────────────────
   createdAt:             timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -90,12 +96,12 @@ export const artisanViews = pgTable("artisan_views", {
 });
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-export type User            = typeof users.$inferSelect;
-export type Artisan         = typeof artisans.$inferSelect;
-export type Conversation    = typeof conversations.$inferSelect;
-export type Message         = typeof messages.$inferSelect;
-export type Review          = typeof reviews.$inferSelect;
-export type ArtisanView     = typeof artisanViews.$inferSelect;
+export type User              = typeof users.$inferSelect;
+export type Artisan           = typeof artisans.$inferSelect;
+export type Conversation      = typeof conversations.$inferSelect;
+export type Message           = typeof messages.$inferSelect;
+export type Review            = typeof reviews.$inferSelect;
+export type ArtisanView       = typeof artisanViews.$inferSelect;
 export type InsertArtisanView = typeof artisanViews.$inferInsert;
 
 // ── Insert Schemas (Zod) ──────────────────────────────────────────────────────

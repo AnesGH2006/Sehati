@@ -21,7 +21,8 @@ import SplashScreen from "@/components/splashscreen";
 import { InstallPrompt } from "@/components/install-prompt";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useAuth } from "@/lib/auth";
-
+import NearbyPage from "@/pages/Nearby";
+<Route path="/nearby" component={NearbyPage} />
 // ── تسجيل الإشعارات بعد تحميل الـ Auth ──────────────────────────────────────
 function PushRegistrar() {
   const { user, artisan, isArtisan } = useAuth();

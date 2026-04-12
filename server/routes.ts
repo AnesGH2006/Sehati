@@ -7,6 +7,7 @@ import fs from "fs";
 import path from "path";
 import { sendVerificationEmail, sendPasswordResetEmail, generateOTP } from "server/Email";
 import { saveSubscription, removeSubscription, sendPushToUser } from "server/Push";
+import nearbyRouter from "./routes/nearby";
 
 const ADMIN_PASSWORD = "AlaaGH_Mil";
 const adminSessions = new Set<string>();
@@ -56,7 +57,7 @@ async function  resolveUserIds1(rawId: string): Promise<string[]> {
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
   const express = (await import("express")).default;
   app.use("/uploads", express.static(UPLOADS_DIR));
-
+  app.use("/api/artisans", nearbyRouter);
   app.post("/api/upload", (req: Request, res: Response) => {
     try {
       const { data } = req.body as { data: string; filename: string };

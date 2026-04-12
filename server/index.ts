@@ -1,6 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
-import { serveStatic } from "./static";
+import { registerRoutes } from "server/routes";
+import { serveStatic } from "server/static";
 import { createServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import webpush from "web-push";

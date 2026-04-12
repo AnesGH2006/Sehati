@@ -458,3 +458,162 @@ class PostgresStorage implements IStorage {
 }
 
 export const storage = new PostgresStorage();
+// ======================================================
+// server/storage.ts — أضف هذه الدالة داخل PostgresStorage
+// ======================================================
+
+import { db } from "./db";
+import { artisans, users } from "../shared/schema";
+import { sql, and, eq, gte, lte, like, or } from "drizzle-orm";
+
+// ─── نوع نتيجة البحث ─────────────────────────────────
+export interface NearbyArtisan {
+  id: number;
+  userId: number;
+  name: string;
+  craft: string;
+  rating: number;
+  reviewCount: number;
+  status: string;
+  isVerified: boolean;
+  latitude: number;
+  longitude: number;
+  city: string | null;
+  wilaya: string | null;
+  distanceKm: number;   // المسافة المحسوبة بالكيلومتر
+  avatarUrl: string | null;
+}
+
+// ─── خيارات البحث ────────────────────────────────────
+export interface NearbySearchOptions {
+  lat: number;            // موقع الزبون — خط العرض
+  lng: number;            // موقع الزبون — خط الطول
+  radiusKm?: number;      // النطاق بالكيلومتر (افتراضي: 10)
+  craft?: string;         // فلترة بالحرفة
+  status?: string;        // فلترة بالحالة: available | busy
+  query?: string;         // بحث نصي باسم الحرفي أو الحرفة
+  sortBy?: "distance" | "rating" | "name";
+  limit?: number;
+}
+
+// ─── حساب المسافة بـ Haversine (داخل SQL) ────────────
+//
+//  d = 2R × arcsin( √( sin²(Δlat/2) + cos(lat1)·cos(lat2)·sin²(Δlng/2) ) )
+//
+//  نستخدم نصف قطر الأرض = 6371 كم
+//
+const haversineSQL = (userLat: number, userLng: number) => sql<number>`
+  (
+    6371 * 2 * ASIN(
+      SQRT(
+        POWER(SIN((RADIANS(${artisans.latitude}) - RADIANS(${userLat})) / 2), 2)
+        +
+        COS(RADIANS(${userLat}))
+        * COS(RADIANS(${artisans.latitude}))
+        * POWER(SIN((RADIANS(${artisans.longitude}) - RADIANS(${userLng})) / 2), 2)
+      )
+    )
+  )
+`;
+
+// ─── الدالة الرئيسية ──────────────────────────────────
+export async function getNearbyArtisans(
+  opts: NearbySearchOptions
+): Promise<NearbyArtisan[]> {
+  const {
+    lat,
+    lng,
+    radiusKm = 10,
+    craft,
+    status,
+    query,
+    sortBy = "distance",
+    limit = 50,
+  } = opts;
+
+  const distanceExpr = haversineSQL(lat, lng);
+
+  const conditions = [
+    // يجب أن يكون لدى الحرفي إحداثيات
+    sql`${artisans.latitude} IS NOT NULL AND ${artisans.longitude} IS NOT NULL`,
+    // ضمن النطاق المطلوب
+    sql`${distanceExpr} <= ${radiusKm}`,
+  ];
+
+  // فلترة بالحرفة
+  if (craft && craft !== "all") {
+    conditions.push(eq(artisans.craft, craft));
+  }
+
+  // فلترة بالحالة
+  if (status && status !== "all") {
+    conditions.push(eq(artisans.status, status as any));
+  }
+
+  // بحث نصي (اسم الحرفي أو الحرفة)
+  if (query && query.trim()) {
+    const q = `%${query.trim()}%`;
+    conditions.push(
+      or(
+        like(artisans.craft, q),
+        // نبحث في جدول users باستخدام join أدناه
+        sql`u.full_name ILIKE ${q}`
+      )!
+    );
+  }
+
+  const rows = await db
+    .select({
+      id:           artisans.id,
+      userId:       artisans.userId,
+      name:         sql<string>`u.full_name`,
+      craft:        artisans.craft,
+      rating:       artisans.rating,
+      reviewCount:  artisans.reviewCount,
+      status:       artisans.status,
+      isVerified:   artisans.isVerified,
+      latitude:     artisans.latitude,
+      longitude:    artisans.longitude,
+      city:         artisans.city,
+      wilaya:       artisans.wilaya,
+      distanceKm:   distanceExpr,
+      avatarUrl:    sql<string | null>`u.avatar_url`,
+    })
+    .from(artisans)
+    .innerJoin(sql`users u`, sql`u.id = ${artisans.userId}`)
+    .where(and(...conditions))
+    .orderBy(
+      sortBy === "distance" ? distanceExpr :
+      sortBy === "rating"   ? sql`${artisans.rating} DESC` :
+                              sql`u.full_name ASC`
+    )
+    .limit(limit);
+
+  // نقرب المسافة لـ 1 خانة عشرية
+  return rows.map(r => ({
+    ...r,
+    rating:      r.rating ?? 0,
+    reviewCount: r.reviewCount ?? 0,
+    distanceKm:  Math.round((r.distanceKm ?? 0) * 10) / 10,
+  })) as NearbyArtisan[];
+}
+
+// ─── تحديث موقع الحرفي ───────────────────────────────
+export async function updateArtisanLocation(
+  artisanId: number,
+  lat: number,
+  lng: number,
+  city?: string,
+  wilaya?: string
+) {
+  await db
+    .update(artisans)
+    .set({
+      latitude:  lat,
+      longitude: lng,
+      city:      city ?? null,
+      wilaya:    wilaya ?? null,
+      updatedAt: new Date(),
+    })
+    .where(eq(artisans.id, artisanId));
+}

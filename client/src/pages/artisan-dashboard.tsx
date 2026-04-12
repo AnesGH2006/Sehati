@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { useArtisanLocation } from "@/hooks/useArtisanLocation";
 import {
   MessageSquare, Star, Eye, Image as ImageIcon,
   MapPin, Save, BadgeCheck, Trash2, Upload, X,
@@ -175,6 +176,8 @@ export default function ArtisanDashboard() {
   const [selectedConv, setSelectedConv] = useState<any>(null);
   const [replyText, setReplyText] = useState("");
   const chatScrollRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+  const { location } = useArtisanLocation(user?.artisanId ?? null);
 
   const myId   = String(artisan?.id || "");
   const myName = artisan?.name || "حرفي";
