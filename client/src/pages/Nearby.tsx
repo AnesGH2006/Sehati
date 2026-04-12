@@ -7,10 +7,8 @@ import { MapPin, Navigation, Star, Search, SlidersHorizontal, X, Sun, Moon } fro
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "next-themes";
-import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
 
-// ─── Types ────────────────────────────────────────────
 interface NearbyArtisan {
   id: number;
   userId: string;
@@ -30,28 +28,15 @@ interface NearbyArtisan {
 }
 
 const CRAFTS = ["الكل", "نجارة", "سباكة", "كهرباء", "دهانات", "بناء", "ميكانيك", "تلحيم", "خياطة"];
-const { theme, setTheme } = useTheme();
-const tileRef = useRef<L.TileLayer | null>(null);
-// ─── Craft colors matching site palette ───────────────
-const CRAFT_COLOR = "#2DD4BF"; // teal primary
 
 function makePinIcon(selected = false, available = true) {
   const color = selected ? "#2DD4BF" : available ? "#2DD4BF" : "#6B7280";
   const size = selected ? 44 : 36;
   return L.divIcon({
     html: `
-      <div style="
-        width:${size}px;height:${size}px;
-        background:${selected ? color : "hsl(var(--background))"};
-        border:2.5px solid ${color};
-        border-radius:50% 50% 50% 0;
-        transform:rotate(-45deg);
-        display:flex;align-items:center;justify-content:center;
-        box-shadow:0 2px 12px ${color}55;
-      ">
+      <div style="width:${size}px;height:${size}px;background:${selected ? color : "white"};border:2.5px solid ${color};border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 12px ${color}55;">
         <div style="transform:rotate(45deg);width:8px;height:8px;background:${selected ? "white" : color};border-radius:50%"></div>
-      </div>
-    `,
+      </div>`,
     className: "",
     iconSize: [size, size],
     iconAnchor: [size / 2, size],
@@ -60,43 +45,38 @@ function makePinIcon(selected = false, available = true) {
 }
 
 const USER_ICON = L.divIcon({
-  html: `
-    <div style="position:relative">
-      <div style="width:16px;height:16px;background:#2DD4BF;border:3px solid white;border-radius:50%;box-shadow:0 0 0 4px #2DD4BF33"></div>
-    </div>
-  `,
+  html: `<div style="width:16px;height:16px;background:#2DD4BF;border:3px solid white;border-radius:50%;box-shadow:0 0 0 4px #2DD4BF33"></div>`,
   className: "",
   iconSize: [16, 16],
   iconAnchor: [8, 8],
 });
 
-// ─── Main Page ────────────────────────────────────────
 export default function NearbyPage() {
-  const mapRef      = useRef<L.Map | null>(null);
-  const mapDivRef   = useRef<HTMLDivElement>(null);
-  const markersRef  = useRef<Map<number, L.Marker>>(new Map());
-  const userMarker  = useRef<L.Marker | null>(null);
-  const circleRef   = useRef<L.Circle | null>(null);
+  const mapRef     = useRef<L.Map | null>(null);
+  const mapDivRef  = useRef<HTMLDivElement>(null);
+  const markersRef = useRef<Map<number, L.Marker>>(new Map());
+  const userMarker = useRef<L.Marker | null>(null);
+  const circleRef  = useRef<L.Circle | null>(null);
+  const tileRef    = useRef<L.TileLayer | null>(null); // ← مرة واحدة فقط هنا
 
-  const [selectedId, setSelectedId]     = useState<number | null>(null);
-  const [userLat, setUserLat]           = useState(36.7372);
-  const [userLng, setUserLng]           = useState(3.0865);
-  const [radius, setRadius]             = useState(10);
-  const [craft, setCraft]               = useState("الكل");
-  const [status, setStatus]             = useState("all");
-  const [q, setQ]                       = useState("");
-  const [sort, setSort]                 = useState<"distance"|"rating">("distance");
-  const [locating, setLocating]         = useState(false);
-  const [showFilters, setShowFilters]   = useState(false);
+  const { theme, setTheme } = useTheme(); // ← داخل الـ component
 
-  // ─── Fetch ──────────────────────────────────────────
+  const [selectedId, setSelectedId]   = useState<number | null>(null);
+  const [userLat, setUserLat]         = useState(36.7372);
+  const [userLng, setUserLng]         = useState(3.0865);
+  const [radius, setRadius]           = useState(10);
+  const [craft, setCraft]             = useState("الكل");
+  const [status, setStatus]           = useState("all");
+  const [q, setQ]                     = useState("");
+  const [sort, setSort]               = useState<"distance" | "rating">("distance");
+  const [locating, setLocating]       = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // ─── Fetch ────────────────────────────────────────────
   const { data, isLoading, isError, refetch } = useQuery<{ data: NearbyArtisan[] }>({
     queryKey: ["nearby", userLat, userLng, radius, craft, status, q, sort],
     queryFn: async () => {
-      const p = new URLSearchParams({
-        lat: String(userLat), lng: String(userLng),
-        radius: String(radius), sort,
-      });
+      const p = new URLSearchParams({ lat: String(userLat), lng: String(userLng), radius: String(radius), sort });
       if (craft !== "الكل") p.set("craft", craft);
       if (status !== "all") p.set("status", status);
       if (q.trim()) p.set("q", q.trim());
@@ -109,35 +89,42 @@ export default function NearbyPage() {
 
   const artisans = data?.data ?? [];
 
-  // ─── Init Map ────────────────────────────────────────
+  // ─── Init Map (مرة واحدة) ─────────────────────────────
   useEffect(() => {
     if (!mapDivRef.current || mapRef.current) return;
-    const map = L.map(mapDivRef.current, {
-      center: [userLat, userLng], zoom: 13, zoomControl: false,
-    });
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-      attribution: "© OpenStreetMap © CARTO", maxZoom: 19,
-    }).addTo(map);
+    const map = L.map(mapDivRef.current, { center: [userLat, userLng], zoom: 13, zoomControl: false });
     L.control.zoom({ position: "topleft" }).addTo(map);
     mapRef.current = map;
     return () => { map.remove(); mapRef.current = null; };
   }, []);
 
-  // ─── User marker + circle ────────────────────────────
+  // ─── Tile layer يتغير مع الـ theme ───────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (tileRef.current) map.removeLayer(tileRef.current);
+    tileRef.current = L.tileLayer(
+      theme === "dark"
+        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+      { attribution: "© OpenStreetMap © CARTO", maxZoom: 19 }
+    ).addTo(map);
+  }, [theme, mapRef.current]); // يشتغل لما تتهيأ الخريطة أو يتغير الـ theme
+
+  // ─── User marker + circle ─────────────────────────────
   useEffect(() => {
     const map = mapRef.current; if (!map) return;
     if (userMarker.current) userMarker.current.setLatLng([userLat, userLng]);
     else userMarker.current = L.marker([userLat, userLng], { icon: USER_ICON, zIndexOffset: 1000 }).addTo(map);
     if (circleRef.current) { circleRef.current.setLatLng([userLat, userLng]); circleRef.current.setRadius(radius * 1000); }
     else circleRef.current = L.circle([userLat, userLng], {
-      radius: radius * 1000, color: "#2DD4BF", weight: 1,
-      dashArray: "6,5", fillColor: "#2DD4BF", fillOpacity: 0.05,
+      radius: radius * 1000, color: "#2DD4BF", weight: 1, dashArray: "6,5", fillColor: "#2DD4BF", fillOpacity: 0.05,
     }).addTo(map);
     circleRef.current.setLatLng([userLat, userLng]);
     circleRef.current.setRadius(radius * 1000);
   }, [userLat, userLng, radius]);
 
-  // ─── Pins ────────────────────────────────────────────
+  // ─── Pins ─────────────────────────────────────────────
   useEffect(() => {
     const map = mapRef.current; if (!map) return;
     markersRef.current.forEach(m => m.remove());
@@ -147,17 +134,17 @@ export default function NearbyPage() {
       const avail = a.status === "available";
       const marker = L.marker([a.latitude, a.longitude], {
         icon: makePinIcon(sel, avail), zIndexOffset: sel ? 500 : 0,
-      }).addTo(map).bindPopup(`
-        <div style="direction:rtl;font-family:sans-serif;min-width:170px;padding:4px 0">
-          <div style="font-weight:700;font-size:14px;margin-bottom:4px">${a.name}</div>
-          <div style="color:#2DD4BF;font-size:12px;margin-bottom:6px">${a.category}</div>
-          <div style="display:flex;gap:8px;font-size:12px;color:#9CA3AF">
-            <span>⭐ ${a.rating.toFixed(1)}</span>
-            <span>📍 ${a.distanceKm} كم</span>
-            <span style="color:${avail ? "#2DD4BF" : "#F59E0B"}">${avail ? "● متاح" : "● مشغول"}</span>
-          </div>
-        </div>
-      `, { className: "herfati-popup" })
+      }).addTo(map)
+        .bindPopup(`
+          <div style="direction:rtl;font-family:sans-serif;min-width:170px;padding:4px 0">
+            <div style="font-weight:700;font-size:14px;margin-bottom:4px">${a.name}</div>
+            <div style="color:#2DD4BF;font-size:12px;margin-bottom:6px">${a.category}</div>
+            <div style="display:flex;gap:8px;font-size:12px;color:#9CA3AF">
+              <span>⭐ ${a.rating.toFixed(1)}</span>
+              <span>📍 ${a.distanceKm} كم</span>
+              <span style="color:${avail ? "#2DD4BF" : "#F59E0B"}">${avail ? "● متاح" : "● مشغول"}</span>
+            </div>
+          </div>`, { className: "herfati-popup" })
         .on("click", () => { setSelectedId(a.id); scrollToCard(a.id); });
       markersRef.current.set(a.id, marker);
     });
@@ -183,18 +170,9 @@ export default function NearbyPage() {
   const scrollToCard = (id: number) => {
     setTimeout(() => document.getElementById(`card-${id}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 100);
   };
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    if (tileRef.current) map.removeLayer(tileRef.current);
-    tileRef.current = L.tileLayer(
-      theme === "dark"
-        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-      { attribution: "© OpenStreetMap © CARTO", maxZoom: 19 }
-    ).addTo(map);
-  }, [theme]);
-  // ─── UI ──────────────────────────────────────────────
+
+  const isDark = theme === "dark";
+
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] bg-background" dir="rtl">
 
@@ -210,34 +188,24 @@ export default function NearbyPage() {
               </p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={locateUser}
-            disabled={locating}
-            className="gap-1.5 rounded-full border-primary/40 text-primary hover:bg-primary/10 text-xs"
-          >
+
+          {/* زر الموقع */}
+          <Button variant="outline" size="sm" onClick={locateUser} disabled={locating}
+            className="gap-1.5 rounded-full border-primary/40 text-primary hover:bg-primary/10 text-xs">
             <Navigation className={`h-3.5 w-3.5 ${locating ? "animate-spin" : ""}`} />
             {locating ? "جاري..." : "موقعي"}
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="gap-1.5 rounded-full border-primary/40 text-primary hover:bg-primary/10 text-xs"
-          >
-            {theme === "dark" ? (
-              <><Sun className="h-3.5 w-3.5" /> فاتح</>
-            ) : (
-              <><Moon className="h-3.5 w-3.5" /> داكن</>
-            )}
+
+          {/* زر Light/Dark */}
+          <Button variant="outline" size="sm"
+            onClick={() => setTheme(isDark ? "light" : "dark")}
+            className="gap-1.5 rounded-full border-primary/40 text-primary hover:bg-primary/10 text-xs">
+            {isDark ? <><Sun className="h-3.5 w-3.5" /> فاتح</> : <><Moon className="h-3.5 w-3.5" /> داكن</>}
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowFilters(f => !f)}
-            className="gap-1.5 rounded-full text-xs text-muted-foreground"
-          >
+
+          {/* زر الفلترة */}
+          <Button variant="ghost" size="sm" onClick={() => setShowFilters(f => !f)}
+            className="gap-1.5 rounded-full text-xs text-muted-foreground">
             <SlidersHorizontal className="h-3.5 w-3.5" />
             فلترة
           </Button>
@@ -246,12 +214,8 @@ export default function NearbyPage() {
         {/* Search */}
         <div className="relative mb-3">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={q}
-            onChange={e => setQ(e.target.value)}
-            placeholder="ابحث بالاسم أو التخصص..."
-            className="pr-9 rounded-full bg-muted/40 border-border/40 text-sm h-9"
-          />
+          <Input value={q} onChange={e => setQ(e.target.value)} placeholder="ابحث بالاسم أو التخصص..."
+            className="pr-9 rounded-full bg-muted/40 border-border/40 text-sm h-9" />
           {q && <button onClick={() => setQ("")} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>}
         </div>
 
@@ -260,11 +224,8 @@ export default function NearbyPage() {
           {CRAFTS.map(c => (
             <button key={c} onClick={() => setCraft(c)}
               className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-full border transition-all ${
-                craft === c
-                  ? "bg-primary text-primary-foreground border-primary font-medium"
-                  : "border-border/40 text-muted-foreground hover:border-primary/40 hover:text-primary"
-              }`}
-            >{c}</button>
+                craft === c ? "bg-primary text-primary-foreground border-primary font-medium" : "border-border/40 text-muted-foreground hover:border-primary/40 hover:text-primary"
+              }`}>{c}</button>
           ))}
         </div>
 
@@ -275,28 +236,19 @@ export default function NearbyPage() {
               <span className="text-xs text-muted-foreground">الحالة:</span>
               {[["all","الكل"],["available","متاح"],["busy","مشغول"]].map(([v,l]) => (
                 <button key={v} onClick={() => setStatus(v)}
-                  className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
-                    status === v ? "bg-primary/20 text-primary border-primary/40" : "border-border/30 text-muted-foreground"
-                  }`}
-                >{l}</button>
+                  className={`text-xs px-2.5 py-1 rounded-full border transition-all ${status === v ? "bg-primary/20 text-primary border-primary/40" : "border-border/30 text-muted-foreground"}`}>{l}</button>
               ))}
             </div>
             <div className="flex items-center gap-2 mr-auto">
               <span className="text-xs text-muted-foreground">ترتيب:</span>
               {[["distance","الأقرب"],["rating","الأعلى تقييماً"]].map(([v,l]) => (
                 <button key={v} onClick={() => setSort(v as any)}
-                  className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
-                    sort === v ? "bg-primary/20 text-primary border-primary/40" : "border-border/30 text-muted-foreground"
-                  }`}
-                >{l}</button>
+                  className={`text-xs px-2.5 py-1 rounded-full border transition-all ${sort === v ? "bg-primary/20 text-primary border-primary/40" : "border-border/30 text-muted-foreground"}`}>{l}</button>
               ))}
             </div>
             <div className="flex items-center gap-2 w-full">
               <span className="text-xs text-muted-foreground whitespace-nowrap">النطاق:</span>
-              <input type="range" min={1} max={30} value={radius}
-                onChange={e => setRadius(+e.target.value)}
-                className="flex-1 accent-primary"
-              />
+              <input type="range" min={1} max={30} value={radius} onChange={e => setRadius(+e.target.value)} className="flex-1 accent-primary" />
               <span className="text-xs text-primary font-medium w-12 text-center">{radius} كم</span>
             </div>
           </div>
@@ -315,8 +267,8 @@ export default function NearbyPage() {
             </div>
           )}
           {!isLoading && !isError && artisans.length === 0 && (
-            <div className="p-4 text-center text-muted-foreground text-sm">
-              <MapPin className="h-10 w-10 mx-auto mb-3 opacity-20" />
+            <div className="p-8 text-center text-muted-foreground text-sm">
+              <MapPin className="h-10 w-4 mx-auto mb-3 opacity-20" />
               لا يوجد حرفي ضمن هذه المعايير
             </div>
           )}
@@ -341,20 +293,22 @@ export default function NearbyPage() {
         </div>
       </div>
 
-      {/* Leaflet popup dark style */}
+      {/* Popup style — يتكيف مع الـ theme */}
       <style>{`
         .herfati-popup .leaflet-popup-content-wrapper {
-          background: hsl(222 47% 11%);
-          color: #f1f5f9;
-          border: 1px solid #2DD4BF33;
+          background: ${isDark ? "hsl(222 47% 11%)" : "white"};
+          color: ${isDark ? "#f1f5f9" : "#1e293b"};
+          border: 1px solid ${isDark ? "#2DD4BF33" : "#e2e8f0"};
           border-radius: 12px;
-          box-shadow: 0 4px 24px #0008;
+          box-shadow: 0 4px 24px ${isDark ? "#0008" : "#0002"};
         }
-        .herfati-popup .leaflet-popup-tip { background: hsl(222 47% 11%); }
+        .herfati-popup .leaflet-popup-tip {
+          background: ${isDark ? "hsl(222 47% 11%)" : "white"};
+        }
         .leaflet-control-zoom a {
-          background: hsl(222 47% 11%) !important;
-          color: #f1f5f9 !important;
-          border-color: #2DD4BF33 !important;
+          background: ${isDark ? "hsl(222 47% 11%)" : "white"} !important;
+          color: ${isDark ? "#f1f5f9" : "#1e293b"} !important;
+          border-color: ${isDark ? "#2DD4BF33" : "#e2e8f0"} !important;
         }
         .leaflet-control-zoom a:hover { background: #2DD4BF22 !important; }
       `}</style>
@@ -369,13 +323,9 @@ function ArtisanCard({ artisan: a, selected, onClick }: {
   const avail = a.status === "available";
   return (
     <div id={`card-${a.id}`} onClick={onClick}
-      className={`rounded-xl border p-3 cursor-pointer transition-all group ${
-        selected
-          ? "border-primary/60 bg-primary/5"
-          : "border-border/30 hover:border-primary/30 bg-card/50 hover:bg-card"
-      }`}
-    >
-      {/* Top */}
+      className={`rounded-xl border p-3 cursor-pointer transition-all ${
+        selected ? "border-primary/60 bg-primary/5" : "border-border/30 hover:border-primary/30 bg-card/50 hover:bg-card"
+      }`}>
       <div className="flex items-start gap-2.5 mb-2.5">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center text-primary font-bold text-base flex-shrink-0">
           {a.name[0]}
@@ -391,14 +341,10 @@ function ArtisanCard({ artisan: a, selected, onClick }: {
           </div>
           <p className="text-xs text-primary/80">{a.category}</p>
         </div>
-        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${
-          avail ? "bg-primary/15 text-primary" : "bg-amber-500/15 text-amber-400"
-        }`}>
+        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${avail ? "bg-primary/15 text-primary" : "bg-amber-500/15 text-amber-400"}`}>
           {avail ? "متاح" : "مشغول"}
         </span>
       </div>
-
-      {/* Meta */}
       <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2.5">
         <span className="flex items-center gap-1">
           <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
@@ -413,13 +359,9 @@ function ArtisanCard({ artisan: a, selected, onClick }: {
           <span className="mr-auto text-primary/80 font-medium">{a.priceStart.toLocaleString()} د.ج</span>
         )}
       </div>
-
-      {/* Button */}
       <Link href={`/profile/${a.id}`}>
-        <button
-          onClick={e => e.stopPropagation()}
-          className="w-full text-xs py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-medium"
-        >
+        <button onClick={e => e.stopPropagation()}
+          className="w-full text-xs py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-medium">
           عرض الملف الشخصي ←
         </button>
       </Link>
