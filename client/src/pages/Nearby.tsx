@@ -3,9 +3,10 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useQuery } from "@tanstack/react-query";
-import { MapPin, Navigation, Star, Search, SlidersHorizontal, X } from "lucide-react";
+import { MapPin, Navigation, Star, Search, SlidersHorizontal, X, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useTheme } from "next-themes";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
 
@@ -29,7 +30,8 @@ interface NearbyArtisan {
 }
 
 const CRAFTS = ["الكل", "نجارة", "سباكة", "كهرباء", "دهانات", "بناء", "ميكانيك", "تلحيم", "خياطة"];
-
+const { theme, setTheme } = useTheme();
+const tileRef = useRef<L.TileLayer | null>(null);
 // ─── Craft colors matching site palette ───────────────
 const CRAFT_COLOR = "#2DD4BF"; // teal primary
 
@@ -181,7 +183,17 @@ export default function NearbyPage() {
   const scrollToCard = (id: number) => {
     setTimeout(() => document.getElementById(`card-${id}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 100);
   };
-
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (tileRef.current) map.removeLayer(tileRef.current);
+    tileRef.current = L.tileLayer(
+      theme === "dark"
+        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+      { attribution: "© OpenStreetMap © CARTO", maxZoom: 19 }
+    ).addTo(map);
+  }, [theme]);
   // ─── UI ──────────────────────────────────────────────
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] bg-background" dir="rtl">
@@ -207,6 +219,18 @@ export default function NearbyPage() {
           >
             <Navigation className={`h-3.5 w-3.5 ${locating ? "animate-spin" : ""}`} />
             {locating ? "جاري..." : "موقعي"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="gap-1.5 rounded-full border-primary/40 text-primary hover:bg-primary/10 text-xs"
+          >
+            {theme === "dark" ? (
+              <><Sun className="h-3.5 w-3.5" /> فاتح</>
+            ) : (
+              <><Moon className="h-3.5 w-3.5" /> داكن</>
+            )}
           </Button>
           <Button
             variant="ghost"
@@ -291,7 +315,7 @@ export default function NearbyPage() {
             </div>
           )}
           {!isLoading && !isError && artisans.length === 0 && (
-            <div className="p-8 text-center text-muted-foreground text-sm">
+            <div className="p-4 text-center text-muted-foreground text-sm">
               <MapPin className="h-10 w-10 mx-auto mb-3 opacity-20" />
               لا يوجد حرفي ضمن هذه المعايير
             </div>
