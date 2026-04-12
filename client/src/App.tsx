@@ -99,6 +99,9 @@ function Router() {
           <Route path="/admin">
             <Admin />
           </Route>
+          <Route path="/nearby">
+            <PageTransition><NearbyPage /></PageTransition>
+          </Route>
           <Route>
             <PageTransition><NotFound /></PageTransition>
           </Route>

@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Menu, User, Globe, Moon, Sun, Check, LogOut, LayoutDashboard, UserCircle } from "lucide-react";
+import { Menu, User, Globe, Moon, Sun, Check, LogOut, LayoutDashboard, UserCircle, MapPin } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -57,6 +57,7 @@ export function Navbar() {
           </div>
         </Link>
 
+        {/* ── روابط الديسكتوب ── */}
         <div className="hidden md:flex items-center gap-6">
           {navLinks.map((link) => (
             <Link key={link.href} href={link.href}>
@@ -65,8 +66,18 @@ export function Navbar() {
               </span>
             </Link>
           ))}
+          {/* زر حرفي قريب — ديسكتوب — يظهر فقط بعد الدخول */}
+          {isLoggedIn && (
+            <Link href="/nearby">
+              <span className={`text-sm font-medium transition-colors hover:text-primary cursor-pointer flex items-center gap-1 ${location === "/nearby" ? "text-primary font-bold" : "text-muted-foreground"}`}>
+                <MapPin className="h-3.5 w-3.5" />
+                {isRtl ? "حرفي قريب" : "Nearby"}
+              </span>
+            </Link>
+          )}
         </div>
 
+        {/* ── أزرار الديسكتوب ── */}
         <div className="hidden md:flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="rounded-full">
             <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
@@ -112,6 +123,11 @@ export function Navbar() {
                     {isRtl ? "لوحة التحكم" : "Dashboard"}
                   </DropdownMenuItem>
                 )}
+                {/* حرفي قريب في الـ dropdown أيضاً */}
+                <DropdownMenuItem onClick={() => setLocation("/nearby")} className="cursor-pointer gap-2">
+                  <MapPin className="h-4 w-4" />
+                  {isRtl ? "حرفي قريب مني" : "Nearby Artisans"}
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="cursor-pointer gap-2 text-destructive focus:text-destructive">
                   <LogOut className="h-4 w-4" />
@@ -136,6 +152,7 @@ export function Navbar() {
           )}
         </div>
 
+        {/* ── موبايل: Sheet ── */}
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild className="md:hidden">
             <Button variant="ghost" size="icon"><Menu className="h-6 w-6" /></Button>
@@ -150,7 +167,20 @@ export function Navbar() {
                     </span>
                   </Link>
                 ))}
+                {/* زر حرفي قريب في الموبايل — يظهر فقط بعد الدخول */}
+                {isLoggedIn && (
+                  <Link href="/nearby">
+                    <span
+                      className={`text-lg font-medium transition-colors hover:text-primary cursor-pointer flex items-center gap-2 ${location === "/nearby" ? "text-primary font-bold" : "text-muted-foreground"}`}
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <MapPin className="h-4 w-4" />
+                      {isRtl ? "حرفي قريب مني" : "Nearby Artisans"}
+                    </span>
+                  </Link>
+                )}
               </div>
+
               <div className="flex flex-col gap-3 border-t pt-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">{isRtl ? "الوضع الليلي" : "Dark mode"}</span>
@@ -168,6 +198,7 @@ export function Navbar() {
                     ))}
                   </div>
                 </div>
+
                 {isLoggedIn ? (
                   <>
                     <div className="flex items-center gap-3 py-2">
