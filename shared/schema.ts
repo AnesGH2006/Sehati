@@ -19,28 +19,31 @@ export const users = pgTable("users", {
 
 // ── Artisans ──────────────────────────────────────────────────────────────────
 export const artisans = pgTable("artisans", {
-  id:                   integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  userId:               text("user_id").references(() => users.id, { onDelete: "set null" }),
-  name:                 text("name").notNull(),
-  email:                text("email").notNull(),
-  phone:                text("phone").notNull(),
-  category:             text("category").notNull(),
-  wilaya:               text("wilaya").notNull().default("الجزائر"),
-  daira:                text("daira").notNull(),
-  description:          text("description"),
-  priceStart:           integer("price_start").notNull().default(1000),
-  rating:               real("rating").notNull().default(0),
-  reviewCount:          integer("review_count").notNull().default(0),
-  isVerified:           boolean("is_verified").notNull().default(false),
-  yearsOfExperience:    integer("years_of_experience").notNull().default(0),
-  imageUrl:             text("image_url"),
-  portfolioImages:      text("portfolio_images").array().notNull().default([]),
-  languages:            text("languages").array().notNull().default(["العربية"]),
-  workingHours:         text("working_hours"),
-  subscriptionType:     text("subscription_type", { enum: ["free", "premium", "featured"] }).notNull().default("free"),
-  subscriptionDuration: integer("subscription_duration").notNull().default(1),
+  id:                    integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId:                text("user_id").references(() => users.id, { onDelete: "set null" }),
+  name:                  text("name").notNull(),
+  email:                 text("email").notNull(),
+  phone:                 text("phone").notNull(),
+  category:              text("category").notNull(),
+  wilaya:                text("wilaya").notNull().default("الجزائر"),
+  daira:                 text("daira").notNull(),
+  description:           text("description"),
+  priceStart:            integer("price_start").notNull().default(1000),
+  rating:                real("rating").notNull().default(0),
+  reviewCount:           integer("review_count").notNull().default(0),
+  isVerified:            boolean("is_verified").notNull().default(false),
+  yearsOfExperience:     integer("years_of_experience").notNull().default(0),
+  imageUrl:              text("image_url"),
+  portfolioImages:       text("portfolio_images").array().notNull().default([]),
+  languages:             text("languages").array().notNull().default(["العربية"]),
+  workingHours:          text("working_hours"),
+  // ✦ إصلاح: إضافة "standard" | "pro" | "gold" للـ enum
+  subscriptionType:      text("subscription_type", {
+                           enum: ["free", "standard", "pro", "gold"],
+                         }).notNull().default("free"),
+  subscriptionDuration:  integer("subscription_duration").notNull().default(1),
   subscriptionExpiresAt: timestamp("subscription_expires_at"),
-  createdAt:            timestamp("created_at").notNull().defaultNow(),
+  createdAt:             timestamp("created_at").notNull().defaultNow(),
 });
 
 // ── Conversations ─────────────────────────────────────────────────────────────
@@ -77,7 +80,7 @@ export const reviews = pgTable("reviews", {
   createdAt:    timestamp("created_at").notNull().defaultNow(),
 });
 
-// ── Artisan Views ✦ جديد ──────────────────────────────────────────────────────
+// ── Artisan Views ─────────────────────────────────────────────────────────────
 export const artisanViews = pgTable("artisan_views", {
   id:        serial("id").primaryKey(),
   artisanId: integer("artisan_id").notNull().references(() => artisans.id, { onDelete: "cascade" }),

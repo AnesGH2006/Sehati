@@ -25,7 +25,7 @@ function safeUser(user: any) { const { passwordHash, ...safe } = user; return sa
 // المشكلة: customerId في المحادثة قد يكون "customer-xyz" أو "user-xyz"
 // الـ subscription مسجلة بـ user.id الحقيقي
 // هذه الدالة تجرب كل الاحتمالات
-async function resolveUserIds(rawId: string): Promise<string[]> {
+async function  resolveUserIds1(rawId: string): Promise<string[]> {
   const ids = new Set<string>([rawId]);
 
   try {
