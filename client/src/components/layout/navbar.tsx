@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Menu, User, Globe, Moon, Sun, Check, LogOut, LayoutDashboard, UserCircle, MapPin } from "lucide-react";
+import { Menu, User, Globe, Moon, Sun, Check, LogOut, LayoutDashboard, UserCircle, MapPin, AlertTriangle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -97,7 +97,15 @@ export function Navbar() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-
+          <Link href="/emergency">
+            <Button
+              size="sm"
+              className="gap-1.5 rounded-full bg-red-500 hover:bg-red-600 text-white text-xs px-3"
+            >
+              <AlertTriangle className="h-3.5 w-3.5" />
+              طارئ
+            </Button>
+          </Link>
           {isLoggedIn ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -123,6 +131,7 @@ export function Navbar() {
                     {isRtl ? "لوحة التحكم" : "Dashboard"}
                   </DropdownMenuItem>
                 )}
+                
                 {/* حرفي قريب في الـ dropdown أيضاً */}
                 <DropdownMenuItem onClick={() => setLocation("/nearby")} className="cursor-pointer gap-2">
                   <MapPin className="h-4 w-4" />
@@ -167,6 +176,15 @@ export function Navbar() {
                     </span>
                   </Link>
                 ))}
+                <Link href="/emergency">
+                  <span
+                    className="text-lg font-bold text-red-400 flex items-center gap-2 cursor-pointer"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <AlertTriangle className="h-5 w-5" />
+                    طلب طارئ
+                  </span>
+                </Link>
                 {/* زر حرفي قريب في الموبايل — يظهر فقط بعد الدخول */}
                 {isLoggedIn && (
                   <Link href="/nearby">

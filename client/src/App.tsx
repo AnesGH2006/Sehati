@@ -23,6 +23,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useAuth } from "@/lib/auth";
 import NearbyPage from "@/pages/Nearby";
 <Route path="/Nearby" component={NearbyPage} />
+import EmergencyPage from "@/pages/emergency";
 // ── تسجيل الإشعارات بعد تحميل الـ Auth ──────────────────────────────────────
 function PushRegistrar() {
   const { user, artisan, isArtisan } = useAuth();
@@ -101,6 +102,9 @@ function Router() {
           </Route>
           <Route path="/nearby">
             <PageTransition><NearbyPage /></PageTransition>
+          </Route>
+          <Route path="/emergency">
+            <PageTransition><EmergencyPage /></PageTransition>
           </Route>
           <Route>
             <PageTransition><NotFound /></PageTransition>
