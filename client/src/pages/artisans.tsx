@@ -297,7 +297,7 @@ function Filters({ selectedCategories, toggleCategory, selectedWilaya, setSelect
                   <SelectTrigger className="h-9">
                     <SelectValue placeholder="اختر ولاية" />
                   </SelectTrigger>
-                  <SelectContent dir={isRtl ? "rtl" : "ltr"}>
+                  <SelectContent dir={isRtl ? "rtl" : "ltr"} className="max-h-60 overflow-y-auto">
                     {DAIRAS.map(wilaya => <SelectItem key={wilaya} value={wilaya}>{wilaya}</SelectItem>)}
                   </SelectContent>
                 </Select>

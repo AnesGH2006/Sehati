@@ -465,7 +465,7 @@ function RegisterDialog({ plan, registerMutation, isRtl }: any) {
           <FLabel label="المهنة">
             <Select value={form.category} onValueChange={v => set("category", v)} dir="rtl">
               <SelectTrigger className={selectTriggerStyle}><SelectValue placeholder="اختر مهنتك" /></SelectTrigger>
-              <SelectContent className="bg-zinc-900 border-white/10 text-white">
+              <SelectContent className="bg-zinc-900 border-white/10 text-white max-h-60 overflow-y-auto">
                 {CATEGORIES.map(c => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -475,7 +475,7 @@ function RegisterDialog({ plan, registerMutation, isRtl }: any) {
             <FLabel label="الولاية">
               <Select value={wilaya || ""} onValueChange={v => { setWilaya(v); set("daira", (LOCATIONS as any)[v]?.[0] || ""); }} dir="rtl">
                 <SelectTrigger className={selectTriggerStyle}><SelectValue placeholder="الولاية" /></SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-white/10 text-white">
+                <SelectContent className="bg-zinc-900 border-white/10 text-white max-h-60 overflow-y-auto">
                   {DAIRAS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -483,7 +483,7 @@ function RegisterDialog({ plan, registerMutation, isRtl }: any) {
             <FLabel label="الدائرة">
               <Select value={form.daira} onValueChange={v => set("daira", v)} disabled={!wilaya} dir="rtl">
                 <SelectTrigger className={selectTriggerStyle}><SelectValue placeholder="الدائرة" /></SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-white/10 text-white">
+                <SelectContent className="bg-zinc-900 border-white/10 text-white max-h-60 overflow-y-auto">
                   {wilaya && (LOCATIONS as any)[wilaya]?.map((d: string) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
                 </SelectContent>
               </Select>
