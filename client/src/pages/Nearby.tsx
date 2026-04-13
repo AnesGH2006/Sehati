@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useQuery } from "@tanstack/react-query";
-import { MapPin, Navigation, Star, Search, SlidersHorizontal, X, Sun, Moon } from "lucide-react";
+import { MapPin, Navigation, Star, Search, SlidersHorizontal, X, Sun, Moon, ChevronUp, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "next-themes";
@@ -33,10 +33,7 @@ function makePinIcon(selected = false, available = true) {
   const color = selected ? "#2DD4BF" : available ? "#2DD4BF" : "#6B7280";
   const size = selected ? 44 : 36;
   return L.divIcon({
-    html: `
-      <div style="width:${size}px;height:${size}px;background:${selected ? color : "white"};border:2.5px solid ${color};border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 12px ${color}55;">
-        <div style="transform:rotate(45deg);width:8px;height:8px;background:${selected ? "white" : color};border-radius:50%"></div>
-      </div>`,
+    html: `<div style="width:${size}px;height:${size}px;background:${selected ? color : "white"};border:2.5px solid ${color};border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 12px ${color}55;"><div style="transform:rotate(45deg);width:8px;height:8px;background:${selected ? "white" : color};border-radius:50%"></div></div>`,
     className: "",
     iconSize: [size, size],
     iconAnchor: [size / 2, size],
@@ -57,22 +54,22 @@ export default function NearbyPage() {
   const markersRef = useRef<Map<number, L.Marker>>(new Map());
   const userMarker = useRef<L.Marker | null>(null);
   const circleRef  = useRef<L.Circle | null>(null);
-  const tileRef    = useRef<L.TileLayer | null>(null); // ← مرة واحدة فقط هنا
+  const tileRef    = useRef<L.TileLayer | null>(null);
 
-  const { theme, setTheme } = useTheme(); // ← داخل الـ component
+  const { theme, setTheme } = useTheme();
 
-  const [selectedId, setSelectedId]   = useState<number | null>(null);
-  const [userLat, setUserLat]         = useState(36.7372);
-  const [userLng, setUserLng]         = useState(3.0865);
-  const [radius, setRadius]           = useState(10);
-  const [craft, setCraft]             = useState("الكل");
-  const [status, setStatus]           = useState("all");
-  const [q, setQ]                     = useState("");
-  const [sort, setSort]               = useState<"distance" | "rating">("distance");
-  const [locating, setLocating]       = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [selectedId, setSelectedId]     = useState<number | null>(null);
+  const [userLat, setUserLat]           = useState(36.7372);
+  const [userLng, setUserLng]           = useState(3.0865);
+  const [radius, setRadius]             = useState(10);
+  const [craft, setCraft]               = useState("الكل");
+  const [status, setStatus]             = useState("all");
+  const [q, setQ]                       = useState("");
+  const [sort, setSort]                 = useState<"distance" | "rating">("distance");
+  const [locating, setLocating]         = useState(false);
+  const [showFilters, setShowFilters]   = useState(false);
+  const [listExpanded, setListExpanded] = useState(false); // موبايل — القائمة مفتوحة أو لا
 
-  // ─── Fetch ────────────────────────────────────────────
   const { data, isLoading, isError, refetch } = useQuery<{ data: NearbyArtisan[] }>({
     queryKey: ["nearby", userLat, userLng, radius, craft, status, q, sort],
     queryFn: async () => {
@@ -89,7 +86,7 @@ export default function NearbyPage() {
 
   const artisans = data?.data ?? [];
 
-  // ─── Init Map (مرة واحدة) ─────────────────────────────
+  // ─── Init Map ─────────────────────────────────────────
   useEffect(() => {
     if (!mapDivRef.current || mapRef.current) return;
     const map = L.map(mapDivRef.current, { center: [userLat, userLng], zoom: 13, zoomControl: false });
@@ -98,10 +95,9 @@ export default function NearbyPage() {
     return () => { map.remove(); mapRef.current = null; };
   }, []);
 
-  // ─── Tile layer يتغير مع الـ theme ───────────────────
+  // ─── Tile layer ───────────────────────────────────────
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
+    const map = mapRef.current; if (!map) return;
     if (tileRef.current) map.removeLayer(tileRef.current);
     tileRef.current = L.tileLayer(
       theme === "dark"
@@ -109,7 +105,7 @@ export default function NearbyPage() {
         : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
       { attribution: "© OpenStreetMap © CARTO", maxZoom: 19 }
     ).addTo(map);
-  }, [theme, mapRef.current]); // يشتغل لما تتهيأ الخريطة أو يتغير الـ theme
+  }, [theme, mapRef.current]);
 
   // ─── User marker + circle ─────────────────────────────
   useEffect(() => {
@@ -132,11 +128,10 @@ export default function NearbyPage() {
     artisans.forEach(a => {
       const sel = a.id === selectedId;
       const avail = a.status === "available";
-      const marker = L.marker([a.latitude, a.longitude], {
-        icon: makePinIcon(sel, avail), zIndexOffset: sel ? 500 : 0,
-      }).addTo(map)
+      L.marker([a.latitude, a.longitude], { icon: makePinIcon(sel, avail), zIndexOffset: sel ? 500 : 0 })
+        .addTo(map)
         .bindPopup(`
-          <div style="direction:rtl;font-family:sans-serif;min-width:170px;padding:4px 0">
+          <div style="direction:rtl;font-family:sans-serif;min-width:160px;padding:4px 0">
             <div style="font-weight:700;font-size:14px;margin-bottom:4px">${a.name}</div>
             <div style="color:#2DD4BF;font-size:12px;margin-bottom:6px">${a.category}</div>
             <div style="display:flex;gap:8px;font-size:12px;color:#9CA3AF">
@@ -145,10 +140,15 @@ export default function NearbyPage() {
               <span style="color:${avail ? "#2DD4BF" : "#F59E0B"}">${avail ? "● متاح" : "● مشغول"}</span>
             </div>
           </div>`, { className: "herfati-popup" })
-        .on("click", () => { setSelectedId(a.id); scrollToCard(a.id); });
-      markersRef.current.set(a.id, marker);
+        .on("click", () => { setSelectedId(a.id); setListExpanded(true); scrollToCard(a.id); });
+      markersRef.current.set(a.id, L.marker([a.latitude, a.longitude]));
     });
   }, [artisans, selectedId]);
+
+  // invalidate map size when list panel toggles on mobile
+  useEffect(() => {
+    setTimeout(() => mapRef.current?.invalidateSize(), 320);
+  }, [listExpanded]);
 
   const locateUser = useCallback(() => {
     if (!navigator.geolocation) return;
@@ -168,132 +168,155 @@ export default function NearbyPage() {
   };
 
   const scrollToCard = (id: number) => {
-    setTimeout(() => document.getElementById(`card-${id}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 100);
+    setTimeout(() => document.getElementById(`card-${id}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 150);
   };
 
   const isDark = theme === "dark";
 
+  // ─── Shared: filters panel ────────────────────────────
+  const FiltersPanel = () => (
+    <div className="mt-3 pt-3 border-t border-border/30 flex flex-wrap gap-3 items-center">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs text-muted-foreground">الحالة:</span>
+        {[["all","الكل"],["available","متاح"],["busy","مشغول"]].map(([v,l]) => (
+          <button key={v} onClick={() => setStatus(v)}
+            className={`text-xs px-2.5 py-1 rounded-full border transition-all ${status === v ? "bg-primary/20 text-primary border-primary/40" : "border-border/30 text-muted-foreground"}`}>{l}</button>
+        ))}
+        <span className="text-xs text-muted-foreground mr-2">ترتيب:</span>
+        {[["distance","الأقرب"],["rating","الأعلى تقييماً"]].map(([v,l]) => (
+          <button key={v} onClick={() => setSort(v as any)}
+            className={`text-xs px-2.5 py-1 rounded-full border transition-all ${sort === v ? "bg-primary/20 text-primary border-primary/40" : "border-border/30 text-muted-foreground"}`}>{l}</button>
+        ))}
+      </div>
+      <div className="flex items-center gap-2 w-full">
+        <span className="text-xs text-muted-foreground whitespace-nowrap">النطاق:</span>
+        <input type="range" min={1} max={30} value={radius} onChange={e => setRadius(+e.target.value)} className="flex-1 accent-primary" />
+        <span className="text-xs text-primary font-medium w-12 text-center">{radius} كم</span>
+      </div>
+    </div>
+  );
+
+  // ─── Shared: cards list ───────────────────────────────
+  const CardsList = () => (
+    <div className="flex flex-col gap-2 p-3">
+      {isError && (
+        <div className="text-center py-4">
+          <p className="text-destructive text-sm mb-2">خطأ في جلب البيانات</p>
+          <Button variant="outline" size="sm" onClick={() => refetch()} className="text-xs">إعادة المحاولة</Button>
+        </div>
+      )}
+      {!isLoading && !isError && artisans.length === 0 && (
+        <div className="py-8 text-center text-muted-foreground text-sm">
+          <MapPin className="h-8 w-8 mx-auto mb-2 opacity-20" />
+          لا يوجد حرفي ضمن هذه المعايير
+        </div>
+      )}
+      {artisans.map(a => (
+        <ArtisanCard key={a.id} artisan={a} selected={a.id === selectedId} onClick={() => flyTo(a)} />
+      ))}
+    </div>
+  );
+
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] bg-background" dir="rtl">
+    <div className="flex flex-col bg-background" style={{ height: "calc(100vh - 64px)" }} dir="rtl">
 
-      {/* ── Top Bar ── */}
-      <div className="border-b border-border/40 bg-background/95 backdrop-blur-sm px-4 md:px-6 py-3">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="flex items-center gap-2 flex-1">
-            <MapPin className="h-5 w-5 text-primary flex-shrink-0" />
-            <div>
-              <h1 className="font-bold text-foreground text-base leading-tight">ابحث عن حرفي قريب</h1>
-              <p className="text-xs text-muted-foreground">
-                {isLoading ? "جاري البحث..." : `${artisans.length} حرفي ضمن ${radius} كم`}
-              </p>
-            </div>
+      {/* ── Top Bar (shared desktop + mobile) ── */}
+      <div className="border-b border-border/40 bg-background/95 backdrop-blur-sm px-3 md:px-6 py-2.5 flex-shrink-0">
+        {/* Row 1 */}
+        <div className="flex items-center gap-2 mb-2">
+          <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <h1 className="font-bold text-foreground text-sm leading-tight">ابحث عن حرفي قريب</h1>
+            <p className="text-[10px] text-muted-foreground">
+              {isLoading ? "جاري البحث..." : `${artisans.length} حرفي ضمن ${radius} كم`}
+            </p>
           </div>
-
-          {/* زر الموقع */}
           <Button variant="outline" size="sm" onClick={locateUser} disabled={locating}
-            className="gap-1.5 rounded-full border-primary/40 text-primary hover:bg-primary/10 text-xs">
-            <Navigation className={`h-3.5 w-3.5 ${locating ? "animate-spin" : ""}`} />
-            {locating ? "جاري..." : "موقعي"}
+            className="gap-1 rounded-full border-primary/40 text-primary hover:bg-primary/10 text-[11px] h-7 px-2.5">
+            <Navigation className={`h-3 w-3 ${locating ? "animate-spin" : ""}`} />
+            <span className="hidden sm:inline">{locating ? "جاري..." : "موقعي"}</span>
           </Button>
-
-          {/* زر Light/Dark */}
-          <Button variant="outline" size="sm"
-            onClick={() => setTheme(isDark ? "light" : "dark")}
-            className="gap-1.5 rounded-full border-primary/40 text-primary hover:bg-primary/10 text-xs">
-            {isDark ? <><Sun className="h-3.5 w-3.5" /> فاتح</> : <><Moon className="h-3.5 w-3.5" /> داكن</>}
+          <Button variant="outline" size="sm" onClick={() => setTheme(isDark ? "light" : "dark")}
+            className="gap-1 rounded-full border-primary/40 text-primary hover:bg-primary/10 text-[11px] h-7 px-2.5">
+            {isDark ? <><Sun className="h-3 w-3" /><span className="hidden sm:inline">فاتح</span></> : <><Moon className="h-3 w-3" /><span className="hidden sm:inline">داكن</span></>}
           </Button>
-
-          {/* زر الفلترة */}
           <Button variant="ghost" size="sm" onClick={() => setShowFilters(f => !f)}
-            className="gap-1.5 rounded-full text-xs text-muted-foreground">
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-            فلترة
+            className="gap-1 rounded-full text-[11px] h-7 px-2.5 text-muted-foreground">
+            <SlidersHorizontal className="h-3 w-3" />
+            <span className="hidden sm:inline">فلترة</span>
           </Button>
         </div>
 
-        {/* Search */}
-        <div className="relative mb-3">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        {/* Row 2: Search */}
+        <div className="relative mb-2">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input value={q} onChange={e => setQ(e.target.value)} placeholder="ابحث بالاسم أو التخصص..."
-            className="pr-9 rounded-full bg-muted/40 border-border/40 text-sm h-9" />
-          {q && <button onClick={() => setQ("")} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>}
+            className="pr-8 rounded-full bg-muted/40 border-border/40 text-xs h-8" />
+          {q && <button onClick={() => setQ("")} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"><X className="h-3 w-3" /></button>}
         </div>
 
-        {/* Craft chips */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        {/* Row 3: Craft chips */}
+        <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide">
           {CRAFTS.map(c => (
             <button key={c} onClick={() => setCraft(c)}
-              className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-full border transition-all ${
+              className={`flex-shrink-0 text-[11px] px-2.5 py-1 rounded-full border transition-all ${
                 craft === c ? "bg-primary text-primary-foreground border-primary font-medium" : "border-border/40 text-muted-foreground hover:border-primary/40 hover:text-primary"
               }`}>{c}</button>
           ))}
         </div>
 
-        {/* Extended filters */}
-        {showFilters && (
-          <div className="mt-3 pt-3 border-t border-border/30 flex flex-wrap gap-3 items-center">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">الحالة:</span>
-              {[["all","الكل"],["available","متاح"],["busy","مشغول"]].map(([v,l]) => (
-                <button key={v} onClick={() => setStatus(v)}
-                  className={`text-xs px-2.5 py-1 rounded-full border transition-all ${status === v ? "bg-primary/20 text-primary border-primary/40" : "border-border/30 text-muted-foreground"}`}>{l}</button>
-              ))}
-            </div>
-            <div className="flex items-center gap-2 mr-auto">
-              <span className="text-xs text-muted-foreground">ترتيب:</span>
-              {[["distance","الأقرب"],["rating","الأعلى تقييماً"]].map(([v,l]) => (
-                <button key={v} onClick={() => setSort(v as any)}
-                  className={`text-xs px-2.5 py-1 rounded-full border transition-all ${sort === v ? "bg-primary/20 text-primary border-primary/40" : "border-border/30 text-muted-foreground"}`}>{l}</button>
-              ))}
-            </div>
-            <div className="flex items-center gap-2 w-full">
-              <span className="text-xs text-muted-foreground whitespace-nowrap">النطاق:</span>
-              <input type="range" min={1} max={30} value={radius} onChange={e => setRadius(+e.target.value)} className="flex-1 accent-primary" />
-              <span className="text-xs text-primary font-medium w-12 text-center">{radius} كم</span>
-            </div>
-          </div>
-        )}
+        {showFilters && <FiltersPanel />}
       </div>
 
-      {/* ── Main: Map + List ── */}
-      <div className="flex flex-1 overflow-hidden">
-
-        {/* List */}
-        <div className="w-72 xl:w-80 flex-shrink-0 overflow-y-auto border-l border-border/30 bg-background/50">
-          {isError && (
-            <div className="p-6 text-center">
-              <p className="text-destructive text-sm mb-2">خطأ في جلب البيانات</p>
-              <Button variant="outline" size="sm" onClick={() => refetch()} className="text-xs">إعادة المحاولة</Button>
-            </div>
-          )}
-          {!isLoading && !isError && artisans.length === 0 && (
-            <div className="p-8 text-center text-muted-foreground text-sm">
-              <MapPin className="h-10 w-4 mx-auto mb-3 opacity-20" />
-              لا يوجد حرفي ضمن هذه المعايير
-            </div>
-          )}
-          <div className="p-3 flex flex-col gap-2">
-            {artisans.map(a => (
-              <ArtisanCard key={a.id} artisan={a} selected={a.id === selectedId} onClick={() => flyTo(a)} />
-            ))}
-          </div>
+      {/* ── Desktop layout: side by side ── */}
+      <div className="hidden md:flex flex-1 overflow-hidden">
+        <div className="w-80 flex-shrink-0 overflow-y-auto border-l border-border/30 bg-background/50">
+          <CardsList />
         </div>
-
-        {/* Map */}
         <div className="flex-1 relative">
           <div ref={mapDivRef} className="w-full h-full" />
-          {isLoading && (
-            <div className="absolute inset-0 bg-background/40 backdrop-blur-sm flex items-center justify-center z-10">
-              <div className="flex items-center gap-2 text-sm text-primary">
-                <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                جاري البحث...
-              </div>
+          {isLoading && <LoadingOverlay />}
+        </div>
+      </div>
+
+      {/* ── Mobile layout: map on top, sliding list from bottom ── */}
+      <div className="flex md:hidden flex-1 flex-col overflow-hidden relative">
+        {/* Map */}
+        <div className="flex-1 relative" style={{ minHeight: listExpanded ? "35%" : "65%" }}>
+          <div ref={mapDivRef} className="w-full h-full" />
+          {isLoading && <LoadingOverlay />}
+        </div>
+
+        {/* Bottom sheet */}
+        <div
+          className="flex-shrink-0 bg-background border-t border-border/40 overflow-hidden transition-all duration-300"
+          style={{ height: listExpanded ? "65%" : "44px" }}
+        >
+          {/* Handle / toggle */}
+          <button
+            onClick={() => setListExpanded(e => !e)}
+            className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-muted/30 transition-colors"
+          >
+            <span className="text-xs font-medium text-foreground flex items-center gap-1.5">
+              <MapPin className="h-3.5 w-3.5 text-primary" />
+              {artisans.length} حرفي قريب
+            </span>
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <span className="text-[10px]">{listExpanded ? "إخفاء" : "عرض الكل"}</span>
+              {listExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
+            </div>
+          </button>
+
+          {/* Cards */}
+          {listExpanded && (
+            <div className="overflow-y-auto h-[calc(100%-44px)]">
+              <CardsList />
             </div>
           )}
         </div>
       </div>
 
-      {/* Popup style — يتكيف مع الـ theme */}
+      {/* Popup styles */}
       <style>{`
         .herfati-popup .leaflet-popup-content-wrapper {
           background: ${isDark ? "hsl(222 47% 11%)" : "white"};
@@ -302,9 +325,7 @@ export default function NearbyPage() {
           border-radius: 12px;
           box-shadow: 0 4px 24px ${isDark ? "#0008" : "#0002"};
         }
-        .herfati-popup .leaflet-popup-tip {
-          background: ${isDark ? "hsl(222 47% 11%)" : "white"};
-        }
+        .herfati-popup .leaflet-popup-tip { background: ${isDark ? "hsl(222 47% 11%)" : "white"}; }
         .leaflet-control-zoom a {
           background: ${isDark ? "hsl(222 47% 11%)" : "white"} !important;
           color: ${isDark ? "#f1f5f9" : "#1e293b"} !important;
@@ -316,7 +337,17 @@ export default function NearbyPage() {
   );
 }
 
-// ─── Artisan Card ─────────────────────────────────────
+function LoadingOverlay() {
+  return (
+    <div className="absolute inset-0 bg-background/40 backdrop-blur-sm flex items-center justify-center z-10">
+      <div className="flex items-center gap-2 text-sm text-primary">
+        <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        جاري البحث...
+      </div>
+    </div>
+  );
+}
+
 function ArtisanCard({ artisan: a, selected, onClick }: {
   artisan: NearbyArtisan; selected: boolean; onClick: () => void;
 }) {
@@ -326,12 +357,12 @@ function ArtisanCard({ artisan: a, selected, onClick }: {
       className={`rounded-xl border p-3 cursor-pointer transition-all ${
         selected ? "border-primary/60 bg-primary/5" : "border-border/30 hover:border-primary/30 bg-card/50 hover:bg-card"
       }`}>
-      <div className="flex items-start gap-2.5 mb-2.5">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center text-primary font-bold text-base flex-shrink-0">
+      <div className="flex items-start gap-2.5 mb-2">
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center text-primary font-bold flex-shrink-0">
           {a.name[0]}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
             <span className="font-semibold text-sm text-foreground truncate">{a.name}</span>
             {a.isVerified && (
               <svg className="w-3.5 h-3.5 text-primary flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -339,17 +370,16 @@ function ArtisanCard({ artisan: a, selected, onClick }: {
               </svg>
             )}
           </div>
-          <p className="text-xs text-primary/80">{a.category}</p>
+          <p className="text-[11px] text-primary/80">{a.category}</p>
         </div>
         <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${avail ? "bg-primary/15 text-primary" : "bg-amber-500/15 text-amber-400"}`}>
           {avail ? "متاح" : "مشغول"}
         </span>
       </div>
-      <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2.5">
+      <div className="flex items-center gap-3 text-[11px] text-muted-foreground mb-2">
         <span className="flex items-center gap-1">
           <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-          {a.rating.toFixed(1)}
-          <span className="text-muted-foreground/60">({a.reviewCount})</span>
+          {a.rating.toFixed(1)} ({a.reviewCount})
         </span>
         <span className="flex items-center gap-1">
           <MapPin className="h-3 w-3 text-primary" />
