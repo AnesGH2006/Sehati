@@ -33,7 +33,7 @@ interface EmergencyResult {
 
 export default function EmergencyPage() {
   const [, setLocation] = useLocation();
-  const { customer, artisan, isLoggedIn } = useAuth();
+  const { customer, artisan, isLoggedIn, isArtisan } = useAuth();
   const { toast } = useToast();
 
   const [category, setCategory]     = useState("");
@@ -121,7 +121,7 @@ export default function EmergencyPage() {
             <div className="flex gap-2">
               <Button
                 className="flex-1 bg-primary hover:bg-primary/90 gap-2 rounded-xl"
-                onClick={() => setLocation(`/chat/${result.artisan.id}`)}
+                onClick={() => isArtisan ? setLocation('/artisan/dashboard') : setLocation(`/chat/${result.artisan.id}`)}
               >
                 <MessageCircle className="h-4 w-4" />
                 فتح المحادثة

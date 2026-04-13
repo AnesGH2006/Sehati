@@ -176,15 +176,6 @@ export function Navbar() {
                     </span>
                   </Link>
                 ))}
-                <Link href="/emergency">
-                  <span
-                    className="text-lg font-bold text-red-400 flex items-center gap-2 cursor-pointer"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    <AlertTriangle className="h-5 w-5" />
-                    طلب طارئ
-                  </span>
-                </Link>
                 {/* زر حرفي قريب في الموبايل — يظهر فقط بعد الدخول */}
                 {isLoggedIn && (
                   <Link href="/nearby">
