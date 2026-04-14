@@ -10,12 +10,12 @@ import { useToast } from "@/hooks/use-toast";
 
 // ─── التخصصات ─────────────────────────────────────────
 const CATEGORIES = [
-  { value: "كهرباء",   label: "كهربائي",   icon: "⚡", desc: "انقطاع كهرباء، ماس كهربائي" },
-  { value: "سباكة",    label: "سباك",      icon: "💧", desc: "تسريب مياه، انسداد" },
-  { value: "غاز",      label: "غاز",       icon: "🔥", desc: "تسريب غاز، مشكلة قنون" },
-  { value: "بناء",     label: "بناء",      icon: "🧱", desc: "تشقق، انهيار جزئي" },
-  { value: "نجارة",    label: "نجار",      icon: "🪚", desc: "باب، نافذة، أثاث" },
-  { value: "ميكانيك",  label: "ميكانيك",   icon: "🔧", desc: "سيارة، محرك" },
+  { value: "electrical",   label: "كهربائي",   icon: "⚡", desc: "انقطاع كهرباء، ماس كهربائي" },
+  { value: "plumbing",    label: "سباك",      icon: "💧", desc: "تسريب مياه، انسداد" },
+  { value: "gas",      label: "غاز",       icon: "🔥", desc: "تسريب غاز، مشكلة قنون" },
+  { value: "masonry",     label: "بناء",      icon: "🧱", desc: "تشقق، انهيار جزئي" },
+  { value: "carpentry",    label: "نجار",      icon: "🪚", desc: "باب، نافذة، أثاث" },
+  { value: "mechanic",  label: "ميكانيك",   icon: "🔧", desc: "سيارة، محرك" },
 ];
 
 interface EmergencyResult {
