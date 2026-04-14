@@ -19,7 +19,7 @@ export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const { t, i18n } = useTranslation();
-  const { artisan, customer, isLoggedIn, isArtisan, isCustomer, logout } = useAuth();
+  const { artisan, customer, isLoggedIn, isArtisan, logout } = useAuth();
   const isRtl = i18n.language === 'ar';
 
   useEffect(() => {
@@ -42,14 +42,12 @@ export function Navbar() {
   const displayName = artisan?.name || customer?.name || "";
   const displayEmail = artisan?.email || "";
 
-  const handleLogout = () => {
-    logout();
-    setLocation("/");
-  };
+  const handleLogout = () => { logout(); setLocation("/"); };
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md" dir={isRtl ? "rtl" : "ltr"}>
       <div className="container flex h-16 items-center justify-between px-4 md:px-8">
+
         <Link href="/">
           <div className="flex items-center gap-2 cursor-pointer">
             <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-white font-bold">ح</div>
@@ -57,7 +55,6 @@ export function Navbar() {
           </div>
         </Link>
 
-        {/* ── روابط الديسكتوب ── */}
         <div className="hidden md:flex items-center gap-6">
           {navLinks.map((link) => (
             <Link key={link.href} href={link.href}>
@@ -66,7 +63,6 @@ export function Navbar() {
               </span>
             </Link>
           ))}
-          {/* زر حرفي قريب — ديسكتوب — يظهر فقط بعد الدخول */}
           {isLoggedIn && (
             <Link href="/nearby">
               <span className={`text-sm font-medium transition-colors hover:text-primary cursor-pointer flex items-center gap-1 ${location === "/nearby" ? "text-primary font-bold" : "text-muted-foreground"}`}>
@@ -77,7 +73,6 @@ export function Navbar() {
           )}
         </div>
 
-        {/* ── أزرار الديسكتوب ── */}
         <div className="hidden md:flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="rounded-full">
             <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
@@ -97,15 +92,18 @@ export function Navbar() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Link href="/emergency">
-            <Button
-              size="sm"
-              className="gap-1.5 rounded-full bg-red-500 hover:bg-red-600 text-white text-xs px-3"
-            >
-              <AlertTriangle className="h-3.5 w-3.5" />
-              طارئ
-            </Button>
-          </Link>
+
+          {/* زر طارئ — للزبون وغير المسجل فقط */}
+          {!isArtisan && isLoggedIn && (
+            <Link href="/emergency">
+              <Button size="sm" className="gap-1.5 rounded-full bg-red-500 hover:bg-red-600 text-white text-xs px-3">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                طارئ
+              </Button>
+            </Link>
+          )}
+          
+
           {isLoggedIn ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -131,8 +129,6 @@ export function Navbar() {
                     {isRtl ? "لوحة التحكم" : "Dashboard"}
                   </DropdownMenuItem>
                 )}
-                
-                {/* حرفي قريب في الـ dropdown أيضاً */}
                 <DropdownMenuItem onClick={() => setLocation("/nearby")} className="cursor-pointer gap-2">
                   <MapPin className="h-4 w-4" />
                   {isRtl ? "حرفي قريب مني" : "Nearby Artisans"}
@@ -161,7 +157,6 @@ export function Navbar() {
           )}
         </div>
 
-        {/* ── موبايل: Sheet ── */}
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild className="md:hidden">
             <Button variant="ghost" size="icon"><Menu className="h-6 w-6" /></Button>
@@ -176,15 +171,20 @@ export function Navbar() {
                     </span>
                   </Link>
                 ))}
-                {/* زر حرفي قريب في الموبايل — يظهر فقط بعد الدخول */}
                 {isLoggedIn && (
                   <Link href="/nearby">
-                    <span
-                      className={`text-lg font-medium transition-colors hover:text-primary cursor-pointer flex items-center gap-2 ${location === "/nearby" ? "text-primary font-bold" : "text-muted-foreground"}`}
-                      onClick={() => setIsOpen(false)}
-                    >
+                    <span className={`text-lg font-medium transition-colors hover:text-primary cursor-pointer flex items-center gap-2 ${location === "/nearby" ? "text-primary font-bold" : "text-muted-foreground"}`} onClick={() => setIsOpen(false)}>
                       <MapPin className="h-4 w-4" />
                       {isRtl ? "حرفي قريب مني" : "Nearby Artisans"}
+                    </span>
+                  </Link>
+                )}
+                {/* زر طارئ موبايل — للزبون فقط */}
+                {!isArtisan && (
+                  <Link href="/emergency">
+                    <span className="text-lg font-bold text-red-400 flex items-center gap-2 cursor-pointer" onClick={() => setIsOpen(false)}>
+                      <AlertTriangle className="h-5 w-5" />
+                      طلب طارئ
                     </span>
                   </Link>
                 )}
@@ -207,7 +207,6 @@ export function Navbar() {
                     ))}
                   </div>
                 </div>
-
                 {isLoggedIn ? (
                   <>
                     <div className="flex items-center gap-3 py-2">
@@ -251,6 +250,7 @@ export function Navbar() {
             </div>
           </SheetContent>
         </Sheet>
+
       </div>
     </nav>
   );
