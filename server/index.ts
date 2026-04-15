@@ -1,13 +1,23 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "server/routes";
+import { registerRoutes } from "./routes";
 import { serveStatic } from "server/static";
 import { createServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import webpush from "web-push";
 import { setupGoogleAuth } from "./google-Auth";
-
+import session from "express-session";
 const app = express();
 const httpServer = createServer(app);
+app.use(session({
+  secret: process.env.SESSION_SECRET || "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",
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: true,
+    httpOnly: true,
+    maxAge: 1000 * 60 * 60 * 24 * 7,
+  },
+}));
 setupGoogleAuth(app);
 // ── Web Push Setup ───────────────────────────────────────────────────────────
 webpush.setVapidDetails(
