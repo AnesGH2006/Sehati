@@ -29,8 +29,8 @@ export function setupGoogleAuth(app: Express) {
 
   passport.use(new GoogleStrategy(
     {
-      clientID:     GOOGLE_CLIENT_ID,
-      clientSecret: GOOGLE_CLIENT_SECRET,
+      clientID:     "180429058585-98arm61fqvb5o505efa1d7m8f6b6uo52.apps.googleusercontent.com",
+      clientSecret: "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"],
       callbackURL:  `https://herfati--alaagh23dz.replit.app/api/auth/google/callback`,
     },
     async (_accessToken, _refreshToken, profile, done) => {
