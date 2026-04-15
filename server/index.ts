@@ -9,7 +9,7 @@ import session from "express-session";
 const app = express();
 const httpServer = createServer(app);
 app.use(session({
-  secret: process.env.SESSION_SECRET || "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",
+  secret: process.env.SESSION_SECRET || "180429058585-98arm61fqvb5o505efa1d7m8f6b6uo52.apps.googleusercontent.com",
   resave: false,
   saveUninitialized: false,
   cookie: {
