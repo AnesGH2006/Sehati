@@ -29,6 +29,9 @@ import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
+import StatusToggle from "@/components/StatusToggle";
+import LocationPicker from "@/components/LocationPicker";
+import ArtisansMap from "@/components/ArtisansMap";
 
 // ══════════════════════════════════════════════════════════════════════════════
 // حدود الخطط
@@ -360,7 +363,7 @@ export default function ArtisanDashboard() {
         {/* ── Header ──────────────────────────────────────────────────── */}
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-5">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-1">
               <div className="relative group">
                 <img
                   src={realArtisan?.imageUrl || `https://ui-avatars.com/api/?name=${artisan?.name}&background=2DD4BF&color=fff&size=200`}
@@ -372,14 +375,20 @@ export default function ArtisanDashboard() {
                   <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
                 </label>
               </div>
-              <div>
-                <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-2xl md:text-3xl font-heading font-black">{realArtisan?.name || artisan?.name}</h1>
                   <BadgeCheck className="h-5 w-5 text-primary" />
                 </div>
                 <p className="text-zinc-400 text-sm">{realArtisan?.category || artisan?.category} • {realArtisan?.daira || artisan?.daira}</p>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">نشط</Badge>
+                  {/* ── StatusToggle هنا ── */}
+                  <StatusToggle
+                    initialStatus={realArtisan?.isOnline ?? false}
+                    onStatusChange={(status) => {
+                      queryClient.invalidateQueries({ queryKey: ["/api/artisans", artisan?.id] });
+                    }}
+                  />
                   {/* شارة الخطة */}
                   <Badge className={`text-xs border flex items-center gap-1 ${planMeta.color}`}>
                     {planMeta.icon}
@@ -444,6 +453,20 @@ export default function ArtisanDashboard() {
               <InfoItem icon={<MapPin />}     label="الموقع"             value={`${realArtisan?.wilaya || ""} - ${realArtisan?.daira || artisan?.daira || "–"}`} />
               <InfoItem icon={<BadgeCheck />} label="المهنة"             value={realArtisan?.category || artisan?.category || "–"} />
             </div>
+
+            {/* ── خريطة الحرفيين المتاحين ── */}
+            <Card className="bg-white/[0.03] border-white/10 rounded-3xl overflow-hidden">
+              <CardHeader className="p-5 border-b border-white/10">
+                <CardTitle className="flex items-center gap-3 text-lg font-heading font-black">
+                  <MapPin className="h-5 w-5 text-red-400" />
+                  خريطة الحرفيين المتاحين
+                  <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-xs">🔴 مباشر</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <ArtisansMap height="380px" onlineOnly={true} />
+              </CardContent>
+            </Card>
 
             {/* المحادثات */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -690,7 +713,7 @@ export default function ArtisanDashboard() {
         )}
 
         {/* ══════════════════════════════════════════════════════════════
-            معرض الأعمال — محدود بعدد الصور
+            معرض الأعمال
         ══════════════════════════════════════════════════════════════ */}
         {activeTab === "portfolio" && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
@@ -699,7 +722,6 @@ export default function ArtisanDashboard() {
                 <h2 className="text-2xl font-heading font-black">معرض أعمالك</h2>
                 <div className="flex items-center gap-2 mt-1">
                   <p className="text-zinc-400 text-sm">{displayPortfolio.length} / {portfolioMax === 99 ? "∞" : portfolioMax} صورة</p>
-                  {/* شريط تقدم الصور */}
                   {portfolioMax < 99 && (
                     <div className="w-24 h-1.5 bg-white/10 rounded-full overflow-hidden">
                       <div
@@ -711,7 +733,6 @@ export default function ArtisanDashboard() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                {/* تحذير إذا اقترب من الحد */}
                 {portfolioMax < 99 && displayPortfolio.length >= portfolioMax && (
                   <button onClick={() => setLocation("/subscription")} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-300 hover:bg-amber-400/20 transition-all">
                     <Crown className="h-3 w-3" /> ترقية للمزيد
@@ -747,7 +768,6 @@ export default function ArtisanDashboard() {
                     </div>
                   </motion.div>
                 ))}
-                {/* خانة الإضافة — فقط إذا لم يبلغ الحد */}
                 {displayPortfolio.length < portfolioMax ? (
                   <label className="aspect-square rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-primary/30 transition-colors text-zinc-500 hover:text-zinc-300">
                     <Upload className="h-6 w-6 mb-2" /><span className="text-xs font-bold">إضافة</span>
@@ -770,6 +790,39 @@ export default function ArtisanDashboard() {
         ══════════════════════════════════════════════════════════════ */}
         {activeTab === "settings" && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-2xl">
+
+            {/* ── حالة التوفر ── */}
+            <h2 className="text-2xl font-heading font-black">حالة التوفر</h2>
+            <Card className="bg-white/[0.03] border-white/10 rounded-3xl">
+              <CardContent className="p-6">
+                <p className="text-sm text-zinc-400 mb-4">تحكم في ظهورك للزبائن. عند تفعيل الحالة ستظهر نقطتك على خريطة الحرفيين.</p>
+                <StatusToggle
+                  initialStatus={realArtisan?.isOnline ?? false}
+                  onStatusChange={(status) => {
+                    queryClient.invalidateQueries({ queryKey: ["/api/artisans", artisan?.id] });
+                    toast({ title: status ? "✅ أنت الآن متاح للزبائن" : "⏸️ تم إخفاؤك عن الخريطة" });
+                  }}
+                />
+              </CardContent>
+            </Card>
+
+            {/* ── موقعي على الخريطة ── */}
+            <h2 className="text-2xl font-heading font-black">موقعي على الخريطة</h2>
+            <Card className="bg-white/[0.03] border-white/10 rounded-3xl">
+              <CardContent className="p-6">
+                <p className="text-sm text-zinc-400 mb-4">حدد موقعك الجغرافي ليظهر كنقطة حمراء على الخريطة للزبائن القريبين منك.</p>
+                <LocationPicker
+                  initialLat={realArtisan?.latitude}
+                  initialLng={realArtisan?.longitude}
+                  initialName={realArtisan?.locationName || realArtisan?.wilaya || ""}
+                  onSaved={(lat, lng, name) => {
+                    queryClient.invalidateQueries({ queryKey: ["/api/artisans", artisan?.id] });
+                    toast({ title: "📍 تم حفظ موقعك على الخريطة" });
+                  }}
+                />
+              </CardContent>
+            </Card>
+
             <h2 className="text-2xl font-heading font-black">تعديل المعلومات</h2>
             <Card className="bg-white/[0.03] border-white/10 rounded-3xl">
               <CardContent className="p-6 space-y-4">
@@ -829,7 +882,7 @@ export default function ArtisanDashboard() {
 
             {/* خطة الاشتراك */}
             <h2 className="text-2xl font-heading font-black">خطة الاشتراك</h2>
-            <Card className={`border rounded-3xl overflow-hidden ${planMeta.color.split(" ").slice(0,1).join(" ")}/10 border-current`} style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+            <Card className={`border rounded-3xl overflow-hidden`} style={{ borderColor: "rgba(255,255,255,0.08)" }}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">

@@ -26,7 +26,6 @@ export default function Home() {
               <h2 className="text-3xl md:text-5xl font-heading font-bold">{t('usage.title')}</h2>
               <p className="text-lg text-muted-foreground">{t('usage.subtitle')}</p>
             </div>
-            
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative max-w-5xl mx-auto">
               <div className="absolute top-1/2 left-0 w-full h-0.5 bg-primary/10 -translate-y-1/2 hidden md:block -z-0" />
               <UsageStep 

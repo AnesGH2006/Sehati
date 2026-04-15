@@ -1,4 +1,4 @@
-import { pgTable, text, integer, boolean, timestamp, real, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, boolean, timestamp, real, serial, doublePrecision } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -42,13 +42,20 @@ export const artisans = pgTable("artisans", {
                          }).notNull().default("free"),
   subscriptionDuration:  integer("subscription_duration").notNull().default(1),
   subscriptionExpiresAt: timestamp("subscription_expires_at"),
-  // ── حقول الموقع الجغرافي ─────────────────────────────
-  latitude:              real("latitude"),
-  longitude:             real("longitude"),
+
+  // ── الحالة (online/offline) ──────────────────────────
+  isOnline:              boolean("is_online").notNull().default(false),
+  lastSeen:              timestamp("last_seen").defaultNow(),
+
+  // ── الموقع الجغرافي على الخريطة ──────────────────────
+  latitude:              doublePrecision("latitude"),
+  longitude:             doublePrecision("longitude"),
+  locationName:          text("location_name"),
+
   status:                text("status", {
                            enum: ["available", "busy", "offline"],
                          }).default("available"),
-  // ─────────────────────────────────────────────────────
+
   createdAt:             timestamp("created_at").notNull().defaultNow(),
 });
 

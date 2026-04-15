@@ -4,10 +4,11 @@ import { serveStatic } from "server/static";
 import { createServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import webpush from "web-push";
+import { setupGoogleAuth } from "./google-Auth";
 
 const app = express();
 const httpServer = createServer(app);
-
+setupGoogleAuth(app);
 // ── Web Push Setup ───────────────────────────────────────────────────────────
 webpush.setVapidDetails(
   "mailto:admin@herfati.com",
