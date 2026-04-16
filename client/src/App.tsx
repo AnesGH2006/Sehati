@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -21,22 +21,55 @@ import SplashScreen from "@/components/splashscreen";
 import { InstallPrompt } from "@/components/install-prompt";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useAuth } from "@/lib/auth";
+import { useEffect } from "react";
 import NearbyPage from "@/pages/Nearby";
-<Route path="/Nearby" component={NearbyPage} />
 import EmergencyPage from "@/pages/emergency";
+
+// ── معالج Google OAuth ────────────────────────────────────────────────────────
+// يقرأ الـ query params بعد redirect من /api/auth/google/callback
+function GoogleAuthHandler() {
+  const { loginCustomer } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("google_auth") !== "1") return;
+
+    const id        = params.get("id")        || "";
+    const name      = params.get("name")      || "";
+    const role      = params.get("role")      || "customer";
+    const artisanId = params.get("artisanId") || "";
+
+    if (!id || !name) return;
+
+    // حفظ المستخدم في الـ auth state
+    loginCustomer({ id, name, phone: "" });
+
+    // تنظيف الـ URL فوراً
+    window.history.replaceState({}, document.title, "/");
+
+    // redirect حسب الدور
+    if (role === "artisan" && artisanId) {
+      setLocation("/artisan/dashboard");
+    } else {
+      setLocation("/");
+    }
+  }, []);
+
+  return null;
+}
+
 // ── تسجيل الإشعارات بعد تحميل الـ Auth ──────────────────────────────────────
 function PushRegistrar() {
   const { user, artisan, isArtisan } = useAuth();
 
-  // الحرفي يسجّل بـ id الحرفي (رقم → string)
-  // الزبون يسجّل بـ user.id
   const pushId = isArtisan && artisan?.id
     ? String(artisan.id)
     : user?.id ?? null;
 
   usePushNotifications(pushId);
 
-  return null; // لا يعرض شيئاً
+  return null;
 }
 
 // ── Page Transition ───────────────────────────────────────────────────────────
@@ -122,7 +155,8 @@ function App() {
       <ThemeProvider attribute="class" defaultTheme="dark">
         <AuthProvider>
           <TooltipProvider>
-            <PushRegistrar />   {/* ← هنا — داخل AuthProvider */}
+            <GoogleAuthHandler />  {/* ← يعالج redirect من Google */}
+            <PushRegistrar />
             <SplashScreen />
             <InstallPrompt />
             <Toaster />
