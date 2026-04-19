@@ -61,11 +61,11 @@ function GoogleAuthHandler() {
 
 // ── تسجيل الإشعارات بعد تحميل الـ Auth ──────────────────────────────────────
 function PushRegistrar() {
-  const { user, artisan, isArtisan } = useAuth();
+  const { customer, artisan, isArtisan } = useAuth();
 
   const pushId = isArtisan && artisan?.id
     ? String(artisan.id)
-    : user?.id ?? null;
+    : customer?.id ?? null;
 
   usePushNotifications(pushId);
 

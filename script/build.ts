@@ -2,8 +2,6 @@ import { build as esbuild } from "esbuild";
 import { build as viteBuild } from "vite";
 import { rm, readFile } from "fs/promises";
 
-// server deps to bundle to reduce openat(2) syscalls
-// which helps cold start times
 const allowlist = [
   "@google/generative-ai",
   "@neondatabase/serverless",
@@ -24,8 +22,10 @@ const allowlist = [
   "openai",
   "passport",
   "passport-local",
+  "socket.io",
   "stripe",
   "uuid",
+  "web-push",
   "ws",
   "xlsx",
   "zod",
@@ -46,6 +46,17 @@ async function buildAll() {
   ];
   const externals = allDeps.filter((dep) => !allowlist.includes(dep));
 
+  // Always external: vite.config and replit plugins (dev-only, ESM-only)
+  const alwaysExternal = [
+    "vite",
+    "vite.config",
+    "./vite",
+    "../vite.config",
+    "@replit/vite-plugin-runtime-error-modal",
+    "@replit/vite-plugin-cartographer",
+    "@replit/vite-plugin-dev-banner",
+  ];
+
   await esbuild({
     entryPoints: ["server/index.ts"],
     platform: "node",
@@ -56,7 +67,7 @@ async function buildAll() {
       "process.env.NODE_ENV": '"production"',
     },
     minify: true,
-    external: externals,
+    external: [...new Set([...externals, ...alwaysExternal])],
     logLevel: "info",
   });
 }
