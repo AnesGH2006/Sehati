@@ -309,7 +309,7 @@ function Filters({ selectedCategories, toggleCategory, selectedWilaya, setSelect
                     <SelectValue placeholder="اختر ولاية" />
                   </SelectTrigger>
                   <SelectContent dir="rtl" className="max-h-60 overflow-y-auto">
-                    <SelectItem value="">كل الولايات</SelectItem>
+                    <SelectItem value="all">كل الولايات</SelectItem>
                     {DAIRAS.map(w => <SelectItem key={w} value={w}>{w}</SelectItem>)}
                   </SelectContent>
                 </Select>

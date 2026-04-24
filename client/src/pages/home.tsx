@@ -16,20 +16,23 @@ export default function Home() {
   const [, setLocation] = useLocation();
 
   const [searchQuery, setSearchQuery]       = useState("");
-  const [searchCategory, setSearchCategory] = useState("");
-  const [searchWilaya, setSearchWilaya]     = useState("");
-  const [searchDaira, setSearchDaira]       = useState("");
+  const [searchCategory, setSearchCategory] = useState("all");
+  const [searchWilaya, setSearchWilaya]     = useState("all");
+  const [searchDaira, setSearchDaira]       = useState("all");
 
   const handleSearch = () => {
     const params = new URLSearchParams();
-    if (searchQuery)    params.set("q",        searchQuery);
-    if (searchCategory) params.set("category", searchCategory);
-    if (searchWilaya)   params.set("wilaya",   searchWilaya);
-    if (searchDaira)    params.set("daira",    searchDaira);
+    if (searchQuery)                                    params.set("q",        searchQuery);
+    if (searchCategory && searchCategory !== "all")     params.set("category", searchCategory);
+    if (searchWilaya   && searchWilaya   !== "all")     params.set("wilaya",   searchWilaya);
+    if (searchDaira    && searchDaira    !== "all")     params.set("daira",    searchDaira);
     setLocation(`/artisans?${params.toString()}`);
   };
 
-  const dairaOptions = searchWilaya ? (LOCATIONS as any)[searchWilaya] ?? [] : [];
+  const dairaOptions =
+    searchWilaya && searchWilaya !== "all"
+      ? (LOCATIONS as any)[searchWilaya] ?? []
+      : [];
 
   return (
     <div className="min-h-screen flex flex-col bg-background font-sans">
@@ -69,7 +72,7 @@ export default function Home() {
                     <SelectValue placeholder="🔧 الحرفة" />
                   </SelectTrigger>
                   <SelectContent dir="rtl" className="max-h-60">
-                    <SelectItem value="">كل الحرف</SelectItem>
+                    <SelectItem value="all">كل الحرف</SelectItem>
                     {CATEGORIES.map(c => (
                       <SelectItem key={c.id} value={c.label}>{c.label}</SelectItem>
                     ))}
@@ -79,14 +82,14 @@ export default function Home() {
                 {/* Wilaya */}
                 <Select
                   value={searchWilaya}
-                  onValueChange={v => { setSearchWilaya(v); setSearchDaira(""); }}
+                  onValueChange={v => { setSearchWilaya(v); setSearchDaira("all"); }}
                   dir="rtl"
                 >
                   <SelectTrigger className="h-11 rounded-xl">
                     <SelectValue placeholder="📍 الولاية" />
                   </SelectTrigger>
                   <SelectContent dir="rtl" className="max-h-60">
-                    <SelectItem value="">كل الولايات</SelectItem>
+                    <SelectItem value="all">كل الولايات</SelectItem>
                     {DAIRAS.map(w => (
                       <SelectItem key={w} value={w}>{w}</SelectItem>
                     ))}
@@ -97,14 +100,14 @@ export default function Home() {
                 <Select
                   value={searchDaira}
                   onValueChange={setSearchDaira}
-                  disabled={!searchWilaya}
+                  disabled={!searchWilaya || searchWilaya === "all"}
                   dir="rtl"
                 >
                   <SelectTrigger className="h-11 rounded-xl">
                     <SelectValue placeholder="🏘️ الدائرة" />
                   </SelectTrigger>
                   <SelectContent dir="rtl" className="max-h-60">
-                    <SelectItem value="">كل الدوائر</SelectItem>
+                    <SelectItem value="all">كل الدوائر</SelectItem>
                     {dairaOptions.map((d: string) => (
                       <SelectItem key={d} value={d}>{d}</SelectItem>
                     ))}
