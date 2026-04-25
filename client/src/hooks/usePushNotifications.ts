@@ -1,4 +1,3 @@
-// client/src/hooks/usePushNotifications.ts
 import { useEffect, useRef } from "react";
 
 const VAPID_PUBLIC_KEY = "BJLmuiQop_NNT8b28tn9M5CmcZyekRNNpdjI4MezLaX7FBAHecOvti-yZ-xLkskmLOuC1gPuL7LopTKOUvSWTr4";
@@ -22,22 +21,17 @@ export function usePushNotifications(userId: string | null | undefined) {
 
     async function register() {
       try {
-        // ① تسجيل Service Worker
         const reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
         await navigator.serviceWorker.ready;
         console.log("[Push] Service Worker registered");
 
-        // ② طلب إذن الإشعارات
         const permission = await Notification.requestPermission();
         if (permission !== "granted") {
           console.warn("[Push] Permission denied");
           return;
         }
 
-        // ③ التحقق إذا في subscription موجودة
         let subscription = await reg.pushManager.getSubscription();
-
-        // ④ إذا ما فيها أو انتهت صلاحيتها، أنشئ جديدة
         if (!subscription) {
           subscription = await reg.pushManager.subscribe({
             userVisibleOnly:      true,
@@ -46,7 +40,6 @@ export function usePushNotifications(userId: string | null | undefined) {
           console.log("[Push] New subscription created");
         }
 
-        // ⑤ أرسل الـ subscription للسيرفر
         const res = await fetch("/api/push/subscribe", {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
@@ -64,7 +57,6 @@ export function usePushNotifications(userId: string | null | undefined) {
 
     register();
 
-    // إلغاء التسجيل عند تسجيل الخروج
     return () => {
       if (registeredRef.current && userId) {
         fetch("/api/push/unsubscribe", {
