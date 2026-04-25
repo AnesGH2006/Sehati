@@ -26,7 +26,6 @@ import NearbyPage from "@/pages/Nearby";
 import EmergencyPage from "@/pages/emergency";
 
 // ── معالج Google OAuth ────────────────────────────────────────────────────────
-// يقرأ الـ query params بعد redirect من /api/auth/google/callback
 function GoogleAuthHandler() {
   const { loginCustomer } = useAuth();
   const [, setLocation] = useLocation();
@@ -35,15 +34,16 @@ function GoogleAuthHandler() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("google_auth") !== "1") return;
 
-    const id        = params.get("id")        || "";
-    const name      = params.get("name")      || "";
-    const role      = params.get("role")      || "customer";
+    const id       = params.get("id")    || "";
+    const name     = params.get("name")  || "";
+    const phone    = params.get("phone") || "";
+    const role     = params.get("role")  || "customer";
     const artisanId = params.get("artisanId") || "";
 
     if (!id || !name) return;
 
-    // حفظ المستخدم في الـ auth state
-    loginCustomer({ id, name, phone: "" });
+    // حفظ المستخدم في الـ auth state (CustomerSession)
+    loginCustomer({ id, name, phone });
 
     // تنظيف الـ URL فوراً
     window.history.replaceState({}, document.title, "/");
@@ -155,7 +155,7 @@ function App() {
       <ThemeProvider attribute="class" defaultTheme="dark">
         <AuthProvider>
           <TooltipProvider>
-            <GoogleAuthHandler />  {/* ← يعالج redirect من Google */}
+            <GoogleAuthHandler />
             <PushRegistrar />
             <SplashScreen />
             <InstallPrompt />
