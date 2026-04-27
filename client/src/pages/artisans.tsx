@@ -20,7 +20,6 @@ import { useQuery } from "@tanstack/react-query";
 export default function Artisans() {
   const { t, i18n } = useTranslation();
 
-  // ── قراءة الـ URL params من صفحة البحث ───────────────────
   const urlParams   = new URLSearchParams(window.location.search);
   const initQuery   = urlParams.get("q")        ?? "";
   const initCat     = urlParams.get("category") ?? "";
@@ -31,9 +30,8 @@ export default function Artisans() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>(initCat ? [initCat] : []);
   const [selectedWilaya,     setSelectedWilaya]     = useState<string | null>(initWilaya || null);
   const [selectedDairas,     setSelectedDairas]     = useState<string[]>(initDaira ? [initDaira] : []);
-  const [priceRange,         setPriceRange]         = useState([10000]);
+  const [priceRange,         setPriceRange]         = useState([50000]);
 
-  // عند تغيير الـ URL (مثلاً من زر الفئات السريعة)
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
     const cat = p.get("category") ?? "";
@@ -83,7 +81,7 @@ export default function Artisans() {
       const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(artisan.category);
       const matchesWilaya   = !selectedWilaya || artisan.wilaya === selectedWilaya;
       const matchesDaira    = selectedDairas.length === 0 || selectedDairas.includes(artisan.daira);
-      const matchesPrice    = artisan.priceStart <= priceRange[0];
+      const matchesPrice    = !artisan.priceStart || artisan.priceStart <= priceRange[0];
       return matchesSearch && matchesCategory && matchesWilaya && matchesDaira && matchesPrice;
     });
   }, [allArtisans, searchQuery, selectedCategories, selectedWilaya, selectedDairas, priceRange]);
@@ -99,8 +97,7 @@ export default function Artisans() {
     setSelectedCategories([]);
     setSelectedWilaya(null);
     setSelectedDairas([]);
-    setPriceRange([10000]);
-    // تنظيف الـ URL
+    setPriceRange([50000]);
     window.history.replaceState({}, "", "/artisans");
   };
 
@@ -339,10 +336,20 @@ function Filters({ selectedCategories, toggleCategory, selectedWilaya, setSelect
           <AccordionTrigger className="font-heading font-bold">{t('artisans.max_price')}</AccordionTrigger>
           <AccordionContent>
             <div className="pt-4 px-2 space-y-4">
-              <div className="text-center font-bold text-primary">{priceRange[0].toLocaleString()} دج</div>
-              <Slider value={priceRange} onValueChange={setPriceRange} max={10000} min={500} step={500} className="w-full" />
+              <div className="text-center font-bold text-primary text-lg">
+                {priceRange[0] === 50000 ? "الكل" : `${priceRange[0].toLocaleString()} دج`}
+              </div>
+              <Slider
+                value={priceRange}
+                onValueChange={setPriceRange}
+                max={50000}
+                min={0}
+                step={1000}
+                className="w-full"
+              />
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>500 دج</span><span>10,000 دج</span>
+                <span>0 دج</span>
+                <span>50,000 دج</span>
               </div>
             </div>
           </AccordionContent>
