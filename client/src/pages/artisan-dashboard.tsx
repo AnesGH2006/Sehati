@@ -12,7 +12,7 @@ import {
   Phone, Mail, Briefcase, Banknote, Send, ArrowRight,
   Quote, Video, ExternalLink, CheckCheck, TrendingUp,
   BarChart2, ArrowUp, ArrowDown, Minus, Lock, Sparkles,
-  Crown, Zap,
+  Crown, Zap, Play,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
@@ -37,10 +37,10 @@ import ArtisansMap from "@/components/ArtisansMap";
 // حدود الخطط
 // ══════════════════════════════════════════════════════════════════════════════
 const PLAN_LIMITS = {
-  free:     { portfolioMax: 2,  analytics: false, label: "مجاني",    color: "bg-zinc-500/20 text-zinc-300 border-zinc-500/30",     icon: <Star className="h-3 w-3" />,    upgradeColor: "from-zinc-600 to-zinc-700" },
-  standard: { portfolioMax: 3,  analytics: false, label: "قياسي",    color: "bg-blue-500/20 text-blue-300 border-blue-500/30",     icon: <Zap className="h-3 w-3" />,     upgradeColor: "from-blue-600 to-blue-700" },
-  pro:      { portfolioMax: 5,  analytics: true,  label: "احترافي",  color: "bg-violet-500/20 text-violet-300 border-violet-500/30", icon: <Crown className="h-3 w-3" />,   upgradeColor: "from-violet-600 to-purple-700" },
-  gold:     { portfolioMax: 99, analytics: true,  label: "ذهبي",     color: "bg-amber-400/20 text-amber-300 border-amber-400/30",  icon: <Sparkles className="h-3 w-3" />, upgradeColor: "from-amber-500 to-yellow-600" },
+  free:     { portfolioMax: 2,  analytics: false, videoPortfolio: false, label: "مجاني",    color: "bg-zinc-500/20 text-zinc-300 border-zinc-500/30",       icon: <Star className="h-3 w-3" />,    upgradeColor: "from-zinc-600 to-zinc-700" },
+  standard: { portfolioMax: 3,  analytics: false, videoPortfolio: false, label: "قياسي",    color: "bg-blue-500/20 text-blue-300 border-blue-500/30",       icon: <Zap className="h-3 w-3" />,     upgradeColor: "from-blue-600 to-blue-700" },
+  pro:      { portfolioMax: 5,  analytics: true,  videoPortfolio: true,  label: "احترافي",  color: "bg-violet-500/20 text-violet-300 border-violet-500/30", icon: <Crown className="h-3 w-3" />,   upgradeColor: "from-violet-600 to-purple-700" },
+  gold:     { portfolioMax: 99, analytics: true,  videoPortfolio: true,  label: "ذهبي",     color: "bg-amber-400/20 text-amber-300 border-amber-400/30",    icon: <Sparkles className="h-3 w-3" />, upgradeColor: "from-amber-500 to-yellow-600" },
 } as const;
 
 type PlanKey = keyof typeof PLAN_LIMITS;
@@ -55,7 +55,6 @@ function getPlan(sub: string | undefined): PlanKey {
 // ══════════════════════════════════════════════════════════════════════════════
 const FINISH_SIGNAL = "__CHAT_FINISHED__";
 const RATING_COLORS = ["#EF4444", "#F97316", "#EAB308", "#22C55E", "#3B82F6"];
-const PIE_COLORS    = ["#3B82F6", "#8B5CF6", "#F59E0B", "#6B7280"];
 
 function isImageContent(c: string) { return c?.startsWith("data:image") || c?.startsWith("http"); }
 function formatTime(d: any) {
@@ -170,7 +169,6 @@ export default function ArtisanDashboard() {
   const { artisan, isArtisan, isLoggedIn, logout, loginArtisan } = useAuth();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
-  const isRtl = i18n.language === "ar";
 
   const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "portfolio" | "settings">("overview");
   const [wilaya, setWilaya] = useState(artisan?.wilaya || "الجزائر");
@@ -202,10 +200,11 @@ export default function ArtisanDashboard() {
   const realArtisan = serverArtisan || artisan;
 
   // ── حدود الخطة الحالية ───────────────────────────────────────────────────
-  const planKey  = getPlan(realArtisan?.subscriptionType);
-  const planMeta = PLAN_LIMITS[planKey];
+  const planKey        = getPlan(realArtisan?.subscriptionType);
+  const planMeta       = PLAN_LIMITS[planKey];
   const portfolioMax   = planMeta.portfolioMax;
   const canAnalytics   = planMeta.analytics;
+  const canVideo       = planMeta.videoPortfolio;
 
   const { data: reviews = [] } = useQuery<any[]>({
     queryKey: ["/api/artisans", artisan?.id, "reviews"],
@@ -328,6 +327,39 @@ export default function ArtisanDashboard() {
     setPortfolioImages(next);
   };
 
+  // ── رفع الفيديو ───────────────────────────────────────────────────────────
+  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 50 * 1024 * 1024) {
+      toast({ title: "الفيديو كبير جداً", description: "الحد الأقصى 50 ميغابايت", variant: "destructive" });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      try {
+        const r = await fetch("/api/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data: reader.result, filename: file.name }),
+        });
+        const { url } = await r.json();
+        if (url) {
+          updateMutation.mutate({ portfolioVideo: url });
+          toast({ title: "✅ تم رفع الفيديو بنجاح" });
+        }
+      } catch {
+        toast({ title: "فشل رفع الفيديو", variant: "destructive" });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveVideo = () => {
+    updateMutation.mutate({ portfolioVideo: null });
+    toast({ title: "تم حذف الفيديو" });
+  };
+
   if (!isLoggedIn || !isArtisan) {
     return (
       <div className="min-h-screen flex flex-col bg-[#050505] text-white">
@@ -343,12 +375,12 @@ export default function ArtisanDashboard() {
   }
 
   const displayPortfolio: string[] = serverArtisan?.portfolioImages?.length > 0 ? serverArtisan.portfolioImages : portfolioImages;
+  const portfolioVideo = realArtisan?.portfolioVideo || null;
   const dailyData    = analytics?.dailyConversations   || [];
   const monthlyData  = analytics?.monthlyConversations  || [];
   const ratingDist   = analytics?.ratingDistribution   || [];
   const improvements = analytics?.improvements         || [];
   const dailyViews   = analytics?.dailyViews           || [];
-  const sourceData   = [{ name: "بحث مباشر", value: 55 }, { name: "توصية", value: 25 }, { name: "تواصل اجتماعي", value: 15 }, { name: "أخرى", value: 5 }];
 
   return (
     <div className="min-h-screen flex flex-col bg-[#050505] text-white font-sans">
@@ -382,27 +414,19 @@ export default function ArtisanDashboard() {
                 </div>
                 <p className="text-zinc-400 text-sm">{realArtisan?.category || artisan?.category} • {realArtisan?.daira || artisan?.daira}</p>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  {/* ── StatusToggle هنا ── */}
                   <StatusToggle
                     initialStatus={realArtisan?.isOnline ?? false}
-                    onStatusChange={(status) => {
-                      queryClient.invalidateQueries({ queryKey: ["/api/artisans", artisan?.id] });
-                    }}
+                    onStatusChange={() => queryClient.invalidateQueries({ queryKey: ["/api/artisans", artisan?.id] })}
                   />
-                  {/* شارة الخطة */}
                   <Badge className={`text-xs border flex items-center gap-1 ${planMeta.color}`}>
-                    {planMeta.icon}
-                    {planMeta.label}
+                    {planMeta.icon}{planMeta.label}
                   </Badge>
                   {analytics?.avgRating > 0 && (
                     <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs">★ {analytics.avgRating}</Badge>
                   )}
-                  {/* زر الترقية إذا ليس ذهبي */}
                   {planKey !== "gold" && (
-                    <button
-                      onClick={() => setLocation("/subscription")}
-                      className="text-[10px] px-2 py-0.5 rounded-full bg-gradient-to-r from-violet-500/20 to-purple-600/20 border border-violet-500/30 text-violet-300 hover:from-violet-500/30 hover:to-purple-600/30 transition-all flex items-center gap-1"
-                    >
+                    <button onClick={() => setLocation("/subscription")}
+                      className="text-[10px] px-2 py-0.5 rounded-full bg-gradient-to-r from-violet-500/20 to-purple-600/20 border border-violet-500/30 text-violet-300 hover:from-violet-500/30 hover:to-purple-600/30 transition-all flex items-center gap-1">
                       <Crown className="h-2.5 w-2.5" /> ترقية الخطة
                     </button>
                   )}
@@ -420,29 +444,23 @@ export default function ArtisanDashboard() {
             { key: "portfolio", label: "معرض الأعمال", icon: <ImageIcon className="h-4 w-4" /> },
             { key: "settings",  label: "الإعدادات",    icon: <Save className="h-4 w-4" /> },
           ].map(tab => (
-            <Button
-              key={tab.key}
-              variant={activeTab === tab.key ? "default" : "outline"}
+            <Button key={tab.key} variant={activeTab === tab.key ? "default" : "outline"}
               className={`rounded-2xl font-black border-white/10 gap-2 ${activeTab === tab.key ? "" : "text-zinc-400"}`}
-              onClick={() => setActiveTab(tab.key as any)}
-            >
-              {tab.icon}
-              {tab.label}
+              onClick={() => setActiveTab(tab.key as any)}>
+              {tab.icon}{tab.label}
               {tab.locked && <Lock className="h-3 w-3 text-zinc-600" />}
             </Button>
           ))}
         </div>
 
-        {/* ══════════════════════════════════════════════════════════════
-            نظرة عامة
-        ══════════════════════════════════════════════════════════════ */}
+        {/* ══ نظرة عامة ══ */}
         {activeTab === "overview" && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <KpiCard icon={<Eye className="h-4 w-4" />}           label="المشاهدات"  value={String(analytics?.totalViews ?? "–")}                                               change={analytics?.viewsChange}   color="blue"   />
-              <KpiCard icon={<MessageSquare className="h-4 w-4" />} label="المحادثات"  value={String(analytics?.totalConversations ?? conversations.length)}                       change={analytics?.convsChange}   color="purple" />
-              <KpiCard icon={<Star className="h-4 w-4" />}          label="التقييم"    value={analytics?.avgRating ? `${analytics.avgRating} ★` : (realArtisan?.rating || "0")}   change={analytics?.reviewsChange} color="amber"  />
-              <KpiCard icon={<TrendingUp className="h-4 w-4" />}    label="معدل الرد"  value={analytics?.replyRate != null ? `${analytics.replyRate}%` : "–"}                      color="green"  />
+              <KpiCard icon={<Eye className="h-4 w-4" />}           label="المشاهدات"  value={String(analytics?.totalViews ?? "–")}                                             change={analytics?.viewsChange}   color="blue"   />
+              <KpiCard icon={<MessageSquare className="h-4 w-4" />} label="المحادثات"  value={String(analytics?.totalConversations ?? conversations.length)}                     change={analytics?.convsChange}   color="purple" />
+              <KpiCard icon={<Star className="h-4 w-4" />}          label="التقييم"    value={analytics?.avgRating ? `${analytics.avgRating} ★` : (realArtisan?.rating || "0")} change={analytics?.reviewsChange} color="amber"  />
+              <KpiCard icon={<TrendingUp className="h-4 w-4" />}    label="معدل الرد"  value={analytics?.replyRate != null ? `${analytics.replyRate}%` : "–"}                    color="green"  />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -450,22 +468,18 @@ export default function ArtisanDashboard() {
               <InfoItem icon={<Phone />}      label="الهاتف"            value={realArtisan?.phone  || artisan?.phone  || "–"} />
               <InfoItem icon={<Banknote />}   label="السعر الأدنى"      value={`${realArtisan?.priceStart || "–"} دج`} />
               <InfoItem icon={<Briefcase />}  label="سنوات الخبرة"      value={`${realArtisan?.yearsOfExperience || "–"} سنوات`} />
-              <InfoItem icon={<MapPin />}     label="الموقع"             value={`${realArtisan?.wilaya || ""} - ${realArtisan?.daira || artisan?.daira || "–"}`} />
-              <InfoItem icon={<BadgeCheck />} label="المهنة"             value={realArtisan?.category || artisan?.category || "–"} />
+              <InfoItem icon={<MapPin />}     label="الموقع"            value={`${realArtisan?.wilaya || ""} - ${realArtisan?.daira || artisan?.daira || "–"}`} />
+              <InfoItem icon={<BadgeCheck />} label="المهنة"            value={realArtisan?.category || artisan?.category || "–"} />
             </div>
 
-            {/* ── خريطة الحرفيين المتاحين ── */}
             <Card className="bg-white/[0.03] border-white/10 rounded-3xl overflow-hidden">
               <CardHeader className="p-5 border-b border-white/10">
                 <CardTitle className="flex items-center gap-3 text-lg font-heading font-black">
-                  <MapPin className="h-5 w-5 text-red-400" />
-                  خريطة الحرفيين المتاحين
+                  <MapPin className="h-5 w-5 text-red-400" />خريطة الحرفيين المتاحين
                   <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-xs">🔴 مباشر</Badge>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-4">
-                <ArtisansMap height="380px" onlineOnly={true} />
-              </CardContent>
+              <CardContent className="p-4"><ArtisansMap height="380px" onlineOnly={true} /></CardContent>
             </Card>
 
             {/* المحادثات */}
@@ -473,23 +487,16 @@ export default function ArtisanDashboard() {
               <Card className="bg-white/[0.03] border-white/10 rounded-3xl overflow-hidden">
                 <CardHeader className="p-5 border-b border-white/10">
                   <CardTitle className="flex items-center gap-3 text-lg font-heading font-black">
-                    <MessageSquare className="h-5 w-5 text-primary" />
-                    المحادثات
+                    <MessageSquare className="h-5 w-5 text-primary" />المحادثات
                     {conversations.length > 0 && <Badge className="bg-primary text-white text-xs">{conversations.length}</Badge>}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                   {conversations.length === 0 ? (
-                    <div className="p-8 text-center text-zinc-500">
-                      <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                      <p>لا توجد محادثات بعد</p>
-                    </div>
+                    <div className="p-8 text-center text-zinc-500"><MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-20" /><p>لا توجد محادثات بعد</p></div>
                   ) : conversations.map((conv: any) => (
-                    <button
-                      key={conv.id}
-                      onClick={() => setSelectedConv(selectedConv?.id === conv.id ? null : conv)}
-                      className={`w-full p-4 flex items-center gap-4 border-b border-white/5 transition-all text-right ${selectedConv?.id === conv.id ? "bg-primary/10 border-primary/20" : "hover:bg-white/5"}`}
-                    >
+                    <button key={conv.id} onClick={() => setSelectedConv(selectedConv?.id === conv.id ? null : conv)}
+                      className={`w-full p-4 flex items-center gap-4 border-b border-white/5 transition-all text-right ${selectedConv?.id === conv.id ? "bg-primary/10 border-primary/20" : "hover:bg-white/5"}`}>
                       <Avatar className="h-11 w-11 shrink-0">
                         <AvatarFallback className="bg-primary/20 text-primary font-black text-lg">
                           {conv.customerId?.replace("customer-", "").slice(0, 1).toUpperCase() || "؟"}
@@ -515,9 +522,7 @@ export default function ArtisanDashboard() {
                     <Card className="bg-white/[0.03] border-white/10 rounded-3xl overflow-hidden flex flex-col h-[480px]">
                       <CardHeader className="p-4 border-b border-white/10 flex-row items-center justify-between space-y-0">
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9">
-                            <AvatarFallback className="bg-primary/20 text-primary font-black text-sm">{selectedConv.customerId?.slice(-1).toUpperCase()}</AvatarFallback>
-                          </Avatar>
+                          <Avatar className="h-9 w-9"><AvatarFallback className="bg-primary/20 text-primary font-black text-sm">{selectedConv.customerId?.slice(-1).toUpperCase()}</AvatarFallback></Avatar>
                           <div>
                             <p className="font-bold text-sm">{selectedConv.customerName || `زبون #${selectedConv.customerId?.slice(-6)}`}</p>
                             <p className="text-xs text-green-400">{chatFinished ? "✅ تم إنهاء المحادثة" : "متصل"}</p>
@@ -604,14 +609,10 @@ export default function ArtisanDashboard() {
           </motion.div>
         )}
 
-        {/* ══════════════════════════════════════════════════════════════
-            التحليلات — محجوب للـ free وstandard
-        ══════════════════════════════════════════════════════════════ */}
+        {/* ══ التحليلات ══ */}
         {activeTab === "analytics" && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            {!canAnalytics ? (
-              <UpgradeGate plan={planKey} feature="صفحة التحليلات" />
-            ) : (
+            {!canAnalytics ? <UpgradeGate plan={planKey} feature="صفحة التحليلات" /> : (
               <div className="space-y-6">
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                   {[
@@ -632,194 +633,183 @@ export default function ArtisanDashboard() {
                     </div>
                   ))}
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Card className="bg-white/[0.03] border-white/10 rounded-3xl p-5">
                     <p className="text-sm font-black mb-4 flex items-center gap-2"><Eye className="h-4 w-4 text-blue-400" />المشاهدات — آخر 7 أيام</p>
                     {dailyViews.length > 0 && dailyViews.some((d: any) => d.count > 0) ? (
                       <ResponsiveContainer width="100%" height={180}>
-                        <BarChart data={dailyViews}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                          <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#71717a" }} />
-                          <YAxis tick={{ fontSize: 10, fill: "#71717a" }} allowDecimals={false} />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Bar dataKey="count" fill="#3B82F6" radius={[4,4,0,0]} />
-                        </BarChart>
+                        <BarChart data={dailyViews}><CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" /><XAxis dataKey="date" tick={{ fontSize: 10, fill: "#71717a" }} /><YAxis tick={{ fontSize: 10, fill: "#71717a" }} allowDecimals={false} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="count" fill="#3B82F6" radius={[4,4,0,0]} /></BarChart>
                       </ResponsiveContainer>
                     ) : <div className="h-[180px] flex items-center justify-center text-zinc-600 text-sm">لا توجد مشاهدات بعد</div>}
                   </Card>
-
                   <Card className="bg-white/[0.03] border-white/10 rounded-3xl p-5">
                     <p className="text-sm font-black mb-4 flex items-center gap-2"><MessageSquare className="h-4 w-4 text-purple-400" />المحادثات — آخر 7 أيام</p>
                     {dailyData.length > 0 ? (
                       <ResponsiveContainer width="100%" height={180}>
-                        <LineChart data={dailyData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                          <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#71717a" }} />
-                          <YAxis tick={{ fontSize: 10, fill: "#71717a" }} allowDecimals={false} />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Line type="monotone" dataKey="count" stroke="#8B5CF6" strokeWidth={2} dot={{ r: 3, fill: "#8B5CF6" }} activeDot={{ r: 5 }} />
-                        </LineChart>
+                        <LineChart data={dailyData}><CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" /><XAxis dataKey="date" tick={{ fontSize: 10, fill: "#71717a" }} /><YAxis tick={{ fontSize: 10, fill: "#71717a" }} allowDecimals={false} /><Tooltip content={<CustomTooltip />} /><Line type="monotone" dataKey="count" stroke="#8B5CF6" strokeWidth={2} dot={{ r: 3, fill: "#8B5CF6" }} activeDot={{ r: 5 }} /></LineChart>
                       </ResponsiveContainer>
                     ) : <div className="h-[180px] flex items-center justify-center text-zinc-600 text-sm">لا توجد بيانات كافية</div>}
                   </Card>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Card className="bg-white/[0.03] border-white/10 rounded-3xl p-5">
-                    <p className="text-sm font-black mb-4 flex items-center gap-2"><BarChart2 className="h-4 w-4 text-purple-400" />المحادثات — آخر 6 أشهر</p>
-                    {monthlyData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={180}>
-                        <BarChart data={monthlyData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                          <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#71717a" }} />
-                          <YAxis tick={{ fontSize: 10, fill: "#71717a" }} allowDecimals={false} />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Bar dataKey="count" fill="#8B5CF6" radius={[4,4,0,0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    ) : <div className="h-[180px] flex items-center justify-center text-zinc-600 text-sm">لا توجد بيانات كافية</div>}
-                  </Card>
-
-                  <Card className="bg-white/[0.03] border-white/10 rounded-3xl p-5">
-                    <p className="text-sm font-black mb-4 flex items-center gap-2"><Star className="h-4 w-4 text-amber-400" />توزيع التقييمات</p>
-                    {ratingDist.length > 0 && ratingDist.some((r: any) => r.count > 0) ? (
-                      <ResponsiveContainer width="100%" height={180}>
-                        <BarChart data={ratingDist.map((r: any) => ({ name: `★${r.star}`, count: r.count }))}>
-                          <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#71717a" }} />
-                          <YAxis tick={{ fontSize: 10, fill: "#71717a" }} allowDecimals={false} />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Bar dataKey="count" radius={[4,4,0,0]}>{RATING_COLORS.map((color, i) => <Cell key={i} fill={color} />)}</Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    ) : <div className="h-[180px] flex items-center justify-center text-zinc-600 text-sm">لا توجد تقييمات بعد</div>}
-                  </Card>
-                </div>
-
-                <Card className="bg-white/[0.03] border-white/10 rounded-3xl p-5">
-                  <p className="text-sm font-black mb-1 flex items-center gap-2"><TrendingUp className="h-4 w-4 text-primary" />نسب التحسن — مقارنة بالشهر الماضي</p>
-                  <p className="text-xs text-zinc-500 mb-5">كل شريط يمثل مستوى الأداء الحالي. السهم يبيّن التغيير مقارنة بالشهر الماضي.</p>
-                  {(improvements.length > 0 ? improvements : [
-                    { label: "المشاهدات", value: 0, change: 0, color: "#3B82F6" },
-                    { label: "المحادثات", value: 0, change: 0, color: "#8B5CF6" },
-                    { label: "التقييم",   value: 0, change: 0, color: "#F59E0B" },
-                    { label: "معدل الرد", value: 0, change: 0, color: "#10B981" },
-                    { label: "إنهاء المحادثات", value: 0, change: 0, color: "#EC4899" },
-                  ]).map((item: any) => <ImprovementBar key={item.label} {...item} />)}
-                </Card>
               </div>
             )}
           </motion.div>
         )}
 
-        {/* ══════════════════════════════════════════════════════════════
-            معرض الأعمال
-        ══════════════════════════════════════════════════════════════ */}
+        {/* ══ معرض الأعمال ══ */}
         {activeTab === "portfolio" && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div>
-                <h2 className="text-2xl font-heading font-black">معرض أعمالك</h2>
-                <div className="flex items-center gap-2 mt-1">
-                  <p className="text-zinc-400 text-sm">{displayPortfolio.length} / {portfolioMax === 99 ? "∞" : portfolioMax} صورة</p>
-                  {portfolioMax < 99 && (
-                    <div className="w-24 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all bg-gradient-to-r ${planMeta.upgradeColor}`}
-                        style={{ width: `${Math.min((displayPortfolio.length / portfolioMax) * 100, 100)}%` }}
-                      />
-                    </div>
-                  )}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
+
+            {/* ── قسم الفيديو ─────────────────────────────────────────── */}
+            <div>
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+                <div>
+                  <h2 className="text-xl font-heading font-black flex items-center gap-2">
+                    <Video className="h-5 w-5 text-violet-400" />
+                    فيديو تعريفي
+                    <Badge className="bg-violet-500/20 text-violet-300 border-violet-500/30 text-xs flex items-center gap-1">
+                      <Crown className="h-3 w-3" /> احترافي وذهبي
+                    </Badge>
+                  </h2>
+                  <p className="text-zinc-500 text-sm mt-1">أضف فيديو يعرض مهاراتك — يظهر للمشتركين فقط في صفحتك</p>
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                {portfolioMax < 99 && displayPortfolio.length >= portfolioMax && (
-                  <button onClick={() => setLocation("/subscription")} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-300 hover:bg-amber-400/20 transition-all">
-                    <Crown className="h-3 w-3" /> ترقية للمزيد
-                  </button>
+                {canVideo && (
+                  <label className="cursor-pointer">
+                    <Button className="gap-2 rounded-2xl font-black bg-violet-600 hover:bg-violet-700" asChild>
+                      <span><Upload className="h-4 w-4" />رفع فيديو</span>
+                    </Button>
+                    <input type="file" accept="video/*" className="hidden" onChange={handleVideoUpload} />
+                  </label>
                 )}
-                <label className={`cursor-pointer ${displayPortfolio.length >= portfolioMax ? "opacity-40 pointer-events-none" : ""}`}>
-                  <Button className="gap-2 rounded-2xl font-black" disabled={displayPortfolio.length >= portfolioMax}>
-                    <Upload className="h-4 w-4" />إضافة صورة
-                  </Button>
-                  <input type="file" accept="image/*" className="hidden" onChange={handleAddPortfolioPhoto} disabled={displayPortfolio.length >= portfolioMax} />
-                </label>
               </div>
+
+              {!canVideo ? (
+                /* مقفل للـ free وstandard */
+                <div className="border-2 border-dashed border-violet-500/20 rounded-3xl p-10 text-center space-y-4">
+                  <div className="w-16 h-16 rounded-2xl bg-violet-500/10 flex items-center justify-center mx-auto">
+                    <Lock className="h-7 w-7 text-violet-400" />
+                  </div>
+                  <div>
+                    <p className="font-black text-lg">الفيديو متاح للمشتركين</p>
+                    <p className="text-zinc-500 text-sm mt-1">ارقِ إلى خطة الاحترافي أو الذهبي لإضافة فيديو تعريفي</p>
+                  </div>
+                  <Button onClick={() => setLocation("/subscription")}
+                    className="gap-2 rounded-2xl font-black bg-gradient-to-r from-violet-500 to-purple-600 hover:opacity-90">
+                    <Crown className="h-4 w-4" /> ترقية الخطة
+                  </Button>
+                </div>
+              ) : portfolioVideo ? (
+                /* الفيديو موجود */
+                <div className="relative rounded-3xl overflow-hidden border border-violet-500/20 bg-black aspect-video max-w-2xl">
+                  <video src={portfolioVideo} controls className="w-full h-full object-contain" />
+                  <button onClick={handleRemoveVideo}
+                    className="absolute top-3 left-3 p-2 bg-red-500/80 rounded-full hover:bg-red-600 transition-colors">
+                    <Trash2 className="h-4 w-4 text-white" />
+                  </button>
+                  <div className="absolute top-3 right-3">
+                    <Badge className="bg-violet-500/80 text-white text-xs flex items-center gap-1">
+                      <Crown className="h-3 w-3" /> مرئي للمشتركين فقط
+                    </Badge>
+                  </div>
+                </div>
+              ) : (
+                /* لا يوجد فيديو */
+                <label className="flex flex-col items-center justify-center border-2 border-dashed border-violet-500/20 rounded-3xl py-16 cursor-pointer hover:border-violet-500/40 transition-colors text-zinc-500 hover:text-zinc-300 max-w-2xl">
+                  <Video className="h-12 w-12 mb-3 opacity-30" />
+                  <p className="font-bold">اضغط لرفع فيديو تعريفي</p>
+                  <p className="text-xs mt-1 text-zinc-600">MP4, MOV — حتى 50 ميغابايت</p>
+                  <input type="file" accept="video/*" className="hidden" onChange={handleVideoUpload} />
+                </label>
+              )}
             </div>
 
-            {displayPortfolio.length === 0 ? (
-              <label className="flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-3xl py-20 text-zinc-500 cursor-pointer hover:border-primary/30 hover:text-zinc-300 transition-all">
-                <ImageIcon className="h-14 w-14 mb-4 opacity-20" />
-                <p className="font-bold text-lg">أضف أول صورة لأعمالك</p>
-                <p className="text-sm mt-1">متاح {portfolioMax === 99 ? "عدد غير محدود" : portfolioMax} {portfolioMax !== 99 && "صور"} في خطة {planMeta.label}</p>
-                <input type="file" accept="image/*" className="hidden" onChange={handleAddPortfolioPhoto} />
-              </label>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {displayPortfolio.map((img: string, i: number) => (
-                  <motion.div key={i} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.05 }}
-                    className="aspect-square rounded-2xl overflow-hidden relative group border border-white/10 cursor-pointer">
-                    <img src={img} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                      {i === 0 && <span className="text-xs font-bold text-white bg-primary/80 px-2 py-1 rounded-full">الصورة الرئيسية</span>}
-                      <button className="h-9 w-9 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-colors" onClick={() => handleRemovePortfolioPhoto(i)}>
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </motion.div>
-                ))}
-                {displayPortfolio.length < portfolioMax ? (
-                  <label className="aspect-square rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-primary/30 transition-colors text-zinc-500 hover:text-zinc-300">
-                    <Upload className="h-6 w-6 mb-2" /><span className="text-xs font-bold">إضافة</span>
-                    <input type="file" accept="image/*" className="hidden" onChange={handleAddPortfolioPhoto} />
+            {/* ── قسم الصور ───────────────────────────────────────────── */}
+            <div>
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+                <div>
+                  <h2 className="text-xl font-heading font-black flex items-center gap-2">
+                    <ImageIcon className="h-5 w-5 text-primary" />
+                    صور الأعمال
+                  </h2>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-zinc-400 text-sm">{displayPortfolio.length} / {portfolioMax === 99 ? "∞" : portfolioMax} صورة</p>
+                    {portfolioMax < 99 && (
+                      <div className="w-24 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full transition-all bg-gradient-to-r ${planMeta.upgradeColor}`}
+                          style={{ width: `${Math.min((displayPortfolio.length / portfolioMax) * 100, 100)}%` }} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {portfolioMax < 99 && displayPortfolio.length >= portfolioMax && (
+                    <button onClick={() => setLocation("/subscription")} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-300 hover:bg-amber-400/20 transition-all">
+                      <Crown className="h-3 w-3" /> ترقية للمزيد
+                    </button>
+                  )}
+                  <label className={`cursor-pointer ${displayPortfolio.length >= portfolioMax ? "opacity-40 pointer-events-none" : ""}`}>
+                    <Button className="gap-2 rounded-2xl font-black" disabled={displayPortfolio.length >= portfolioMax}>
+                      <Upload className="h-4 w-4" />إضافة صورة
+                    </Button>
+                    <input type="file" accept="image/*" className="hidden" onChange={handleAddPortfolioPhoto} disabled={displayPortfolio.length >= portfolioMax} />
                   </label>
-                ) : (
-                  <button onClick={() => setLocation("/subscription")} className="aspect-square rounded-2xl border-2 border-dashed border-amber-400/20 flex flex-col items-center justify-center cursor-pointer hover:border-amber-400/40 transition-colors text-zinc-600 hover:text-amber-400">
-                    <Crown className="h-6 w-6 mb-2" />
-                    <span className="text-xs font-bold">ترقية الخطة</span>
-                    <span className="text-[10px] mt-0.5">للمزيد من الصور</span>
-                  </button>
-                )}
+                </div>
               </div>
-            )}
+
+              {displayPortfolio.length === 0 ? (
+                <label className="flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-3xl py-20 text-zinc-500 cursor-pointer hover:border-primary/30 hover:text-zinc-300 transition-all">
+                  <ImageIcon className="h-14 w-14 mb-4 opacity-20" />
+                  <p className="font-bold text-lg">أضف أول صورة لأعمالك</p>
+                  <p className="text-sm mt-1">متاح {portfolioMax === 99 ? "عدد غير محدود" : portfolioMax} {portfolioMax !== 99 && "صور"} في خطة {planMeta.label}</p>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleAddPortfolioPhoto} />
+                </label>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {displayPortfolio.map((img: string, i: number) => (
+                    <motion.div key={i} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.05 }}
+                      className="aspect-square rounded-2xl overflow-hidden relative group border border-white/10 cursor-pointer">
+                      <img src={img} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                        {i === 0 && <span className="text-xs font-bold text-white bg-primary/80 px-2 py-1 rounded-full">الصورة الرئيسية</span>}
+                        <button className="h-9 w-9 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-colors" onClick={() => handleRemovePortfolioPhoto(i)}>
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </motion.div>
+                  ))}
+                  {displayPortfolio.length < portfolioMax ? (
+                    <label className="aspect-square rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-primary/30 transition-colors text-zinc-500 hover:text-zinc-300">
+                      <Upload className="h-6 w-6 mb-2" /><span className="text-xs font-bold">إضافة</span>
+                      <input type="file" accept="image/*" className="hidden" onChange={handleAddPortfolioPhoto} />
+                    </label>
+                  ) : (
+                    <button onClick={() => setLocation("/subscription")} className="aspect-square rounded-2xl border-2 border-dashed border-amber-400/20 flex flex-col items-center justify-center cursor-pointer hover:border-amber-400/40 transition-colors text-zinc-600 hover:text-amber-400">
+                      <Crown className="h-6 w-6 mb-2" /><span className="text-xs font-bold">ترقية الخطة</span><span className="text-[10px] mt-0.5">للمزيد من الصور</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
 
-        {/* ══════════════════════════════════════════════════════════════
-            الإعدادات
-        ══════════════════════════════════════════════════════════════ */}
+        {/* ══ الإعدادات ══ */}
         {activeTab === "settings" && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-2xl">
-
-            {/* ── حالة التوفر ── */}
             <h2 className="text-2xl font-heading font-black">حالة التوفر</h2>
             <Card className="bg-white/[0.03] border-white/10 rounded-3xl">
               <CardContent className="p-6">
-                <p className="text-sm text-zinc-400 mb-4">تحكم في ظهورك للزبائن. عند تفعيل الحالة ستظهر نقطتك على خريطة الحرفيين.</p>
-                <StatusToggle
-                  initialStatus={realArtisan?.isOnline ?? false}
-                  onStatusChange={(status) => {
-                    queryClient.invalidateQueries({ queryKey: ["/api/artisans", artisan?.id] });
-                    toast({ title: status ? "✅ أنت الآن متاح للزبائن" : "⏸️ تم إخفاؤك عن الخريطة" });
-                  }}
-                />
+                <p className="text-sm text-zinc-400 mb-4">تحكم في ظهورك للزبائن.</p>
+                <StatusToggle initialStatus={realArtisan?.isOnline ?? false} onStatusChange={(status) => { queryClient.invalidateQueries({ queryKey: ["/api/artisans", artisan?.id] }); toast({ title: status ? "✅ أنت الآن متاح" : "⏸️ تم إخفاؤك" }); }} />
               </CardContent>
             </Card>
 
-            {/* ── موقعي على الخريطة ── */}
             <h2 className="text-2xl font-heading font-black">موقعي على الخريطة</h2>
             <Card className="bg-white/[0.03] border-white/10 rounded-3xl">
               <CardContent className="p-6">
-                <p className="text-sm text-zinc-400 mb-4">حدد موقعك الجغرافي ليظهر كنقطة حمراء على الخريطة للزبائن القريبين منك.</p>
-                <LocationPicker
-                  initialLat={realArtisan?.latitude}
-                  initialLng={realArtisan?.longitude}
-                  initialName={realArtisan?.locationName || realArtisan?.wilaya || ""}
-                  onSaved={(lat, lng, name) => {
-                    queryClient.invalidateQueries({ queryKey: ["/api/artisans", artisan?.id] });
-                    toast({ title: "📍 تم حفظ موقعك على الخريطة" });
-                  }}
-                />
+                <p className="text-sm text-zinc-400 mb-4">حدد موقعك الجغرافي.</p>
+                <LocationPicker initialLat={realArtisan?.latitude} initialLng={realArtisan?.longitude} initialName={realArtisan?.locationName || realArtisan?.wilaya || ""}
+                  onSaved={() => { queryClient.invalidateQueries({ queryKey: ["/api/artisans", artisan?.id] }); toast({ title: "📍 تم حفظ موقعك" }); }} />
               </CardContent>
             </Card>
 
@@ -844,7 +834,7 @@ export default function ArtisanDashboard() {
                   <Label className="text-xs font-black uppercase tracking-widest text-zinc-400">نبذة تعريفية</Label>
                   <textarea id="edit-desc" defaultValue={realArtisan?.description || ""} rows={3}
                     className="w-full bg-white/5 border border-white/10 rounded-xl text-white px-4 py-3 text-sm focus:outline-none focus:border-primary/50 resize-none"
-                    placeholder="اكتب نبذة عن نفسك وخدماتك..." />
+                    placeholder="اكتب نبذة عن نفسك..." />
                 </div>
                 <Button onClick={() => {
                   const g = (id: string) => (document.getElementById(id) as HTMLInputElement)?.value;
@@ -880,20 +870,15 @@ export default function ArtisanDashboard() {
               </CardContent>
             </Card>
 
-            {/* خطة الاشتراك */}
             <h2 className="text-2xl font-heading font-black">خطة الاشتراك</h2>
-            <Card className={`border rounded-3xl overflow-hidden`} style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+            <Card className="border rounded-3xl overflow-hidden" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br ${planMeta.upgradeColor} text-white`}>
-                      {planMeta.icon}
-                    </div>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br ${planMeta.upgradeColor} text-white`}>{planMeta.icon}</div>
                     <div>
                       <p className="font-black text-lg">خطة {planMeta.label}</p>
-                      <p className="text-xs text-zinc-500">
-                        {planKey === "free" ? "مجاني للأبد" : planKey === "standard" ? "2,000 دج/شهر" : planKey === "pro" ? "3,000 دج/شهر" : "5,000 دج/شهر"}
-                      </p>
+                      <p className="text-xs text-zinc-500">{planKey === "free" ? "مجاني" : planKey === "standard" ? "2,000 دج/شهر" : planKey === "pro" ? "3,000 دج/شهر" : "5,000 دج/شهر"}</p>
                     </div>
                   </div>
                   {planKey !== "gold" && (
@@ -902,19 +887,11 @@ export default function ArtisanDashboard() {
                     </Button>
                   )}
                 </div>
-                <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                  <div className="bg-white/5 rounded-xl p-2">
-                    <p className="text-sm font-black">{portfolioMax === 99 ? "∞" : portfolioMax}</p>
-                    <p className="text-[10px] text-zinc-500">صور المعرض</p>
-                  </div>
-                  <div className="bg-white/5 rounded-xl p-2">
-                    <p className="text-sm font-black">{canAnalytics ? "✓" : "✗"}</p>
-                    <p className="text-[10px] text-zinc-500">التحليلات</p>
-                  </div>
-                  <div className="bg-white/5 rounded-xl p-2">
-                    <p className="text-sm font-black">{planKey === "gold" ? "الأعلى" : planKey === "pro" ? "عالي" : planKey === "standard" ? "متوسط" : "عادي"}</p>
-                    <p className="text-[10px] text-zinc-500">الظهور</p>
-                  </div>
+                <div className="mt-4 grid grid-cols-4 gap-2 text-center">
+                  <div className="bg-white/5 rounded-xl p-2"><p className="text-sm font-black">{portfolioMax === 99 ? "∞" : portfolioMax}</p><p className="text-[10px] text-zinc-500">صور</p></div>
+                  <div className="bg-white/5 rounded-xl p-2"><p className="text-sm font-black">{canVideo ? "✓" : "✗"}</p><p className="text-[10px] text-zinc-500">فيديو</p></div>
+                  <div className="bg-white/5 rounded-xl p-2"><p className="text-sm font-black">{canAnalytics ? "✓" : "✗"}</p><p className="text-[10px] text-zinc-500">تحليلات</p></div>
+                  <div className="bg-white/5 rounded-xl p-2"><p className="text-sm font-black">{planKey === "gold" ? "الأعلى" : planKey === "pro" ? "عالي" : planKey === "standard" ? "متوسط" : "عادي"}</p><p className="text-[10px] text-zinc-500">الظهور</p></div>
                 </div>
               </CardContent>
             </Card>
@@ -933,8 +910,7 @@ export default function ArtisanDashboard() {
       <Footer />
 
       <CallUI callState={callState} callType={callType} remoteName={remoteName}
-        isMuted={isMuted} isCamOff={isCamOff}
-        localVideoRef={localVideoRef} remoteVideoRef={remoteVideoRef}
+        isMuted={isMuted} isCamOff={isCamOff} localVideoRef={localVideoRef} remoteVideoRef={remoteVideoRef}
         onAccept={acceptCall} onReject={rejectCall} onEnd={endCall}
         onToggleMute={toggleMute} onToggleCamera={toggleCamera} />
     </div>
