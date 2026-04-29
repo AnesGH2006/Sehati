@@ -32,7 +32,7 @@ export default function Profile() {
   const [showReviewForm, setShowReviewForm] = useState(false);
 
   // Fetch artisan
-  const { data: apiArtisan } = useQuery({
+  const { data: apiArtisan, isLoading: artisanLoading } = useQuery({
     queryKey: ["/api/artisans", id],
     queryFn: () => fetch(`/api/artisans/${id}`).then(r => r.ok ? r.json() : null).catch(() => null),
   });
@@ -79,11 +79,25 @@ export default function Profile() {
     },
   });
 
-  const mockArtisan = MOCK_ARTISANS.find(a => a.id === id) || MOCK_ARTISANS[0];
-  const raw = apiArtisan || null;
+  const fallbackArtisan = {
+    id: id,
+    name: "حرفي",
+    category: "",
+    daira: "",
+    wilaya: "",
+    image: `https://ui-avatars.com/api/?name=حرفي&background=2DD4BF&color=fff&size=400`,
+    rating: 0,
+    reviews: 0,
+    description: "",
+    isVerified: false,
+    priceStart: null,
+    phone: "",
+  };
+  const mockArtisan = MOCK_ARTISANS.find((a: any) => a.id === id) || fallbackArtisan;
+  const raw = apiArtisan && typeof apiArtisan === 'object' && !Array.isArray(apiArtisan) ? apiArtisan : null;
   const categoryLabel = raw
-    ? (CATEGORIES.find(c => c.id === raw.category)?.label || raw.category)
-    : mockArtisan.category;
+    ? (CATEGORIES.find(c => c.id === raw.category)?.label || raw.category || "")
+    : (mockArtisan?.category || "");
 
   const artisan = raw ? {
     ...raw,
