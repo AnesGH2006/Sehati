@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { MapPin, Crosshair, Save, Check, AlertCircle, Loader2 } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 
 interface LocationPickerProps {
   initialLat?: number;
@@ -24,6 +25,7 @@ export default function LocationPicker({
   const [gpsLoading, setGpsLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const { artisan } = useAuth();
 
   const detectLocation = () => {
     if (!navigator.geolocation) {
@@ -55,22 +57,23 @@ export default function LocationPicker({
   };
 
   const saveLocation = async () => {
+    if (!artisan?.id) { setError("يجب تسجيل الدخول أولاً"); return; }
     if (!lat || !lng) { setError("حدّد موقعك أولاً"); return; }
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/artisan/location", {
+      const res = await fetch(`/api/artisan/${artisan.id}/location`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ latitude: lat, longitude: lng, locationName }),
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setSaved(true);
         onSaved?.(lat, lng, locationName);
         setTimeout(() => setSaved(false), 3000);
       } else {
-        setError("فشل الحفظ");
+        setError(data.error || "فشل الحفظ");
       }
     } catch {
       setError("خطأ في الاتصال بالخادم");

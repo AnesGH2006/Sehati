@@ -9,6 +9,7 @@ import { sendVerificationEmail, sendPasswordResetEmail, generateOTP } from "serv
 import { saveSubscription, removeSubscription, sendPushToUser } from "server/Push";
 import nearbyRouter from "server/routes/nearby";
 import emergencyRouter from "server/routes/emergency";
+import artisanStatusRouter from "server/routes/artisan-status";
 
 const ADMIN_PASSWORD = "AlaaGH_Mil";
 const adminSessions = new Set<string>();
@@ -51,6 +52,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.use("/uploads", express.static(UPLOADS_DIR));
   app.use("/api/artisans", nearbyRouter);
   app.use("/api/emergency", emergencyRouter);
+  app.use("/api/artisan", artisanStatusRouter);
 
   app.post("/api/upload", (req: Request, res: Response) => {
     try {

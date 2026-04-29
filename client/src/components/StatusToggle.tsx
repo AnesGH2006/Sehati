@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Wifi, WifiOff, Loader2 } from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
 
 interface StatusToggleProps {
   initialStatus: boolean;
@@ -11,23 +13,33 @@ interface StatusToggleProps {
 export default function StatusToggle({ initialStatus, onStatusChange, variant = "compact" }: StatusToggleProps) {
   const [isOnline, setIsOnline] = useState(initialStatus);
   const [loading, setLoading] = useState(false);
+  const { artisan } = useAuth();
+  const { toast } = useToast();
 
   const handleToggle = async () => {
+    if (!artisan?.id) {
+      toast({ title: "تنبيه", description: "يجب تسجيل الدخول أولاً", variant: "destructive" });
+      return;
+    }
     const newStatus = !isOnline;
     setLoading(true);
     try {
-      const res = await fetch("/api/artisan/status", {
+      const res = await fetch(`/api/artisan/${artisan.id}/status`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ isOnline: newStatus }),
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setIsOnline(newStatus);
         onStatusChange?.(newStatus);
+        toast({ title: newStatus ? "متاح الآن ✅" : "غير متاح", description: data.message });
+      } else {
+        toast({ title: "خطأ", description: data.error || "فشل تحديث الحالة", variant: "destructive" });
       }
     } catch (err) {
       console.error("فشل تحديث الحالة:", err);
+      toast({ title: "خطأ", description: "تعذّر الاتصال بالخادم", variant: "destructive" });
     } finally {
       setLoading(false);
     }
