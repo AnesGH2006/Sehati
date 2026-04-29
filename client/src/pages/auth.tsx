@@ -59,7 +59,7 @@ function GoogleButton({ loading }: { loading: boolean }) {
 
 export default function Auth() {
   const [, setLocation] = useLocation();
-  const { loginCustomer } = useAuth();
+  const { loginCustomer, loginArtisan } = useAuth();
   const { toast } = useToast();
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -87,6 +87,25 @@ export default function Auth() {
         toast({ title: "تأكيد مطلوب", description: "أدخل رمز التحقق المرسل لبريدك" }); return;
       }
       if (!res.ok) { toast({ title: "خطأ", description: data.message, variant: "destructive" }); return; }
+
+      // إذا كان حرفي → نوجّهه إلى لوحة التحكم مع الحفاظ على بياناته (التقييمات، الاشتراك، إلخ)
+      if (data.user.role === "artisan" && data.artisan) {
+        loginArtisan({
+          id: data.artisan.id,
+          name: data.artisan.name,
+          email: data.artisan.email || data.user.email,
+          phone: data.artisan.phone || data.user.phone || "",
+          category: data.artisan.category,
+          wilaya: data.artisan.wilaya,
+          daira: data.artisan.daira,
+          subscriptionType: data.artisan.subscriptionType || "free",
+          imageUrl: data.artisan.imageUrl || "",
+        });
+        toast({ title: "مرحباً بك! 👋", description: `أهلاً ${data.artisan.name}` });
+        setLocation("/artisan/dashboard");
+        return;
+      }
+
       loginCustomer({ id: data.user.id, name: data.user.name, phone: data.user.phone || "" });
       toast({ title: "مرحباً بك! 👋", description: `أهلاً ${data.user.name}` });
       setLocation("/");
@@ -305,9 +324,12 @@ export default function Auth() {
                     {loading ? "جاري الدخول..." : "تسجيل الدخول"}
                   </Button>
                   <div className="text-center text-sm text-muted-foreground">
-                    هل أنت حرفي؟{" "}
+                    سجل دخولك بنفس البريد وكلمة المرور سواء كنت زبوناً أو حرفياً.
+                  </div>
+                  <div className="text-center text-sm text-muted-foreground">
+                    حرفي جديد؟{" "}
                     <Button variant="link" className="p-0 h-auto font-bold" onClick={() => setLocation("/subscription")}>
-                      سجل عبر باقات الاشتراك
+                      أنشئ حسابك عبر باقات الاشتراك
                     </Button>
                   </div>
                 </CardFooter>

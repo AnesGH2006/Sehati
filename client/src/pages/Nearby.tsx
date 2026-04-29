@@ -89,10 +89,31 @@ export default function NearbyPage() {
   // ─── Init Map ─────────────────────────────────────────
   useEffect(() => {
     if (!mapDivRef.current || mapRef.current) return;
-    const map = L.map(mapDivRef.current, { center: [userLat, userLng], zoom: 13, zoomControl: false });
+    const div = mapDivRef.current;
+    const map = L.map(div, { center: [userLat, userLng], zoom: 13, zoomControl: false });
     L.control.zoom({ position: "topleft" }).addTo(map);
     mapRef.current = map;
-    return () => { map.remove(); mapRef.current = null; };
+
+    // إعادة حساب حجم الخريطة بعد ما تنتهي حركة الانتقال (page transition) حتى تظهر البلاطات
+    const t1 = setTimeout(() => map.invalidateSize(), 100);
+    const t2 = setTimeout(() => map.invalidateSize(), 500);
+    const t3 = setTimeout(() => map.invalidateSize(), 1500);
+
+    // كل ما تغيّر حجم النافذة، نخبر Leaflet
+    const onResize = () => map.invalidateSize();
+    window.addEventListener("resize", onResize);
+
+    // مراقبة تغيّر حجم العنصر نفسه (يحلّ مشكلة الخريطة الفارغة في الـ flex/transition)
+    const ro = new ResizeObserver(() => map.invalidateSize());
+    ro.observe(div);
+
+    return () => {
+      clearTimeout(t1); clearTimeout(t2); clearTimeout(t3);
+      window.removeEventListener("resize", onResize);
+      ro.disconnect();
+      map.remove();
+      mapRef.current = null;
+    };
   }, []);
 
   // ─── Tile layer ───────────────────────────────────────
@@ -268,31 +289,23 @@ export default function NearbyPage() {
         {showFilters && <FiltersPanel />}
       </div>
 
-      {/* ── Desktop layout: side by side ── */}
-      <div className="hidden md:flex flex-1 overflow-hidden">
-        <div className="w-80 flex-shrink-0 overflow-y-auto border-l border-border/30 bg-background/50">
+      {/* ── Main content area: holds the (single) map + the layout-specific UI overlay ── */}
+      <div className="flex-1 relative overflow-hidden min-h-0">
+
+        {/* الخريطة الوحيدة — تبقى في نفس المكان لكل المقاسات حتى لا يضيع الـ ref */}
+        <div ref={mapDivRef} className="absolute inset-0 w-full h-full" style={{ minHeight: 400 }} />
+        {isLoading && <LoadingOverlay />}
+
+        {/* قائمة جانبية للديسكتوب */}
+        <div className="hidden md:block absolute top-0 right-0 bottom-0 w-80 overflow-y-auto border-l border-border/30 bg-background/95 backdrop-blur-sm z-[400]">
           <CardsList />
         </div>
-        <div className="flex-1 relative">
-          <div ref={mapDivRef} className="w-full h-full" />
-          {isLoading && <LoadingOverlay />}
-        </div>
-      </div>
 
-      {/* ── Mobile layout: map on top, sliding list from bottom ── */}
-      <div className="flex md:hidden flex-1 flex-col overflow-hidden relative">
-        {/* Map */}
-        <div className="flex-1 relative" style={{ minHeight: listExpanded ? "35%" : "65%" }}>
-          <div ref={mapDivRef} className="w-full h-full" />
-          {isLoading && <LoadingOverlay />}
-        </div>
-
-        {/* Bottom sheet */}
+        {/* قائمة سفلية متحركة للموبايل */}
         <div
-          className="flex-shrink-0 bg-background border-t border-border/40 overflow-hidden transition-all duration-300"
-          style={{ height: listExpanded ? "65%" : "44px" }}
+          className="md:hidden absolute left-0 right-0 bottom-0 bg-background/95 backdrop-blur-sm border-t border-border/40 overflow-hidden transition-all duration-300 z-[400]"
+          style={{ height: listExpanded ? "60%" : "44px" }}
         >
-          {/* Handle / toggle */}
           <button
             onClick={() => setListExpanded(e => !e)}
             className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-muted/30 transition-colors"
@@ -306,8 +319,6 @@ export default function NearbyPage() {
               {listExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
             </div>
           </button>
-
-          {/* Cards */}
           {listExpanded && (
             <div className="overflow-y-auto h-[calc(100%-44px)]">
               <CardsList />
