@@ -15,7 +15,15 @@ import { CallUI } from "@/components/CallUI";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 
-const EMOJI_LIST = ["😊","😂","❤️","😍","🥰","👍","🙏","🔥","✨","💯","😎","🤝","👋","🎉","💪","🤔","😭","😤","🥺","💬"];
+const EMOJI_CATEGORIES = {
+  "😊 مشاعر": ["😀","😃","😄","😁","😆","😅","🤣","😂","🙂","🙃","😉","😊","😇","🥰","😍","🤩","😘","😗","😚","😙","🥲","😋","😛","😜","🤪","😝","🤑","🤗","🤭","🤫","🤔","🤐","🤨","😐","😑","😶","😏","😒","🙄","😬","🤥","😌","😔","😪","🤤","😴","😷","🤒","🤕","🤢","🤮","🤧","🥵","🥶","🥴","😵","💫","🤯","🤠","🥳","🥸","😎","🤓","🧐","😕","😟","🙁","☹️","😮","😯","😲","😳","🥺","😦","😧","😨","😰","😥","😢","😭","😱","😖","😣","😞","😓","😩","😫","🥱","😤","😡","😠","🤬","😈","👿","💀","☠️","💩","🤡","👹","👺","👻","👽","👾","🤖"],
+  "👋 تحيات": ["👋","🤚","🖐","✋","🖖","👌","🤌","🤏","✌️","🤞","🤟","🤘","🤙","👈","👉","👆","🖕","👇","☝️","👍","👎","✊","👊","🤛","🤜","👏","🙌","👐","🤲","🤝","🙏"],
+  "❤️ قلوب": ["❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💔","❣️","💕","💞","💓","💗","💖","💘","💝","💟","☮️","✝️","☪️","🕉","☸️","✡️","🔯","🕎","☯️","☦️","🛐","⛎"],
+  "🎉 احتفال": ["🎉","🎊","🎈","🎁","🎀","🎗","🎟","🎫","🏆","🥇","🥈","🥉","🏅","🎖","🏵","🎭","🎨","🎪","🎢","🎡","🎠","🎮","🕹","🎲","🧩","🎯","🎳","🎰","🎻","🎸","🎺","🎷","🎹","🥁"],
+  "🔥 شائع": ["🔥","✨","⭐","🌟","💫","⚡","🌈","🎯","💯","💪","🚀","👑","💎","🌺","🦋","🌸","🌻","🍀","🎵","🎶","💥","🎭","🌙","☀️","❄️","🌊","🍕","🍔","☕","🧁"],
+};
+
+const EMOJI_LIST = Object.values(EMOJI_CATEGORIES).flat();
 const FINISH_SIGNAL = "__CHAT_FINISHED__";
 
 function formatTime(date: Date | string) {
@@ -536,10 +544,9 @@ const callTargetId = isArtisan
                           <div className="flex gap-2 items-center">
                             <input
                               autoFocus
-                              value={editingMsg.content}
-                              onChange={e => setEditingMsg({ ...editingMsg, content: e.target.value })}
+                              onChange={e => setEditingMsg(prev => prev ? { ...prev, content: e.target.value } : null)}
                               onKeyDown={e => {
-                                if (e.key === "Enter") editMsgMutation.mutate({ id: msg.id, content: editingMsg.content });
+                                if (e.key === "Enter") if (editingMsg) editMsgMutation.mutate({ id: msg.id, content: editingMsg.content });
                                 if (e.key === "Escape") setEditingMsg(null);
                               }}
                               className="flex-1 bg-primary/20 text-white rounded-xl px-3 py-2 text-sm border border-primary/40 focus:outline-none"

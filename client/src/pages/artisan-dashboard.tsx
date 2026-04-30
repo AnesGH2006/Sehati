@@ -177,8 +177,7 @@ export default function ArtisanDashboard() {
   const [selectedConv, setSelectedConv] = useState<any>(null);
   const [replyText, setReplyText] = useState("");
   const chatScrollRef = useRef<HTMLDivElement>(null);
-  const { user } = useAuth();
-  const { location } = useArtisanLocation(user?.artisanId ?? null);
+  const { location } = useArtisanLocation(artisan?.id ?? null);
 
   const myId   = String(artisan?.id || "");
   const myName = artisan?.name || "حرفي";

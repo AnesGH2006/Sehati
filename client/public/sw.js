@@ -8,7 +8,7 @@ const PRECACHE = [
   "/logo.png",
 ];
 
-// Install: cache essential assets
+// ── Install ─────────────────────────────────────────────────────
 self.addEventListener("install", (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME)
@@ -17,7 +17,7 @@ self.addEventListener("install", (e) => {
   );
 });
 
-// Activate: delete old caches
+// ── Activate ────────────────────────────────────────────────────
 self.addEventListener("activate", (e) => {
   e.waitUntil(
     caches.keys()
@@ -28,17 +28,13 @@ self.addEventListener("activate", (e) => {
   );
 });
 
-// Fetch: network-first for API, stale-while-revalidate for assets, offline fallback
+// ── Fetch ───────────────────────────────────────────────────────
 self.addEventListener("fetch", (e) => {
   const { request } = e;
   if (request.method !== "GET") return;
-
   const url = new URL(request.url);
-
-  // Skip API calls
   if (url.pathname.startsWith("/api/")) return;
 
-  // Navigation: return cached or offline page
   if (request.mode === "navigate") {
     e.respondWith(
       fetch(request)
@@ -54,7 +50,6 @@ self.addEventListener("fetch", (e) => {
     return;
   }
 
-  // Static assets: stale-while-revalidate
   e.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {
       const cached = await cache.match(request);
@@ -62,29 +57,17 @@ self.addEventListener("fetch", (e) => {
         if (res.ok) cache.put(request, res.clone());
         return res;
       }).catch(() => null);
-
       return cached || (await fetchPromise) || Response.error();
     })
   );
 });
 
-// Background sync: notify clients when back online
+// ── Message ─────────────────────────────────────────────────────
 self.addEventListener("message", (e) => {
   if (e.data?.type === "SKIP_WAITING") self.skipWaiting();
 });
-// public/sw.js
-// ─── Service Worker لحرفتي ────────────────────────────────────
 
-// ── تثبيت ──────────────────────────────────────────────────────
-self.addEventListener("install", (event) => {
-  self.skipWaiting();
-});
-
-self.addEventListener("activate", (event) => {
-  event.waitUntil(clients.claim());
-});
-
-// ── استقبال Push ───────────────────────────────────────────────
+// ── Push ────────────────────────────────────────────────────────
 self.addEventListener("push", (event) => {
   if (!event.data) return;
 
@@ -97,16 +80,16 @@ self.addEventListener("push", (event) => {
 
   const title   = data.title || "حرفتي";
   const options = {
-    body:    data.body  || "",
-    icon:    data.icon  || "/icon-192.png",
-    badge:   data.badge || "/icon-192.png",
-    data:    { url: data.url || "/" },
-    dir:     "rtl",
-    lang:    "ar",
-    vibrate: [200, 100, 200],
-    tag:     data.type || "general",       // يمنع تكرار نفس نوع الإشعار
+    body:     data.body  || "",
+    icon:     data.icon  || "/icon-192.png",
+    badge:    data.badge || "/icon-192.png",
+    data:     { url: data.url || "/" },
+    dir:      "rtl",
+    lang:     "ar",
+    vibrate:  [200, 100, 200],
+    tag:      data.type || "general",
     renotify: true,
-    actions: data.type === "message" ? [
+    actions:  data.type === "message" ? [
       { action: "open",    title: "فتح المحادثة" },
       { action: "dismiss", title: "تجاهل"        },
     ] : [],
@@ -117,17 +100,15 @@ self.addEventListener("push", (event) => {
   );
 });
 
-// ── النقر على الإشعار ──────────────────────────────────────────
+// ── Notification Click ──────────────────────────────────────────
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-
   if (event.action === "dismiss") return;
 
   const url = event.notification.data?.url || "/";
 
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
-      // إذا التطبيق مفتوح، انتقل للـ URL فيه
       for (const client of clientList) {
         if (client.url.includes(self.location.origin) && "focus" in client) {
           client.focus();
@@ -135,10 +116,7 @@ self.addEventListener("notificationclick", (event) => {
           return;
         }
       }
-      // وإلا افتح نافذة جديدة
-      if (clients.openWindow) {
-        return clients.openWindow(url);
-      }
+      if (clients.openWindow) return clients.openWindow(url);
     })
   );
 });

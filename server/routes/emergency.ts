@@ -63,7 +63,7 @@ router.post("/", async (req: Request, res: Response) => {
         title: `🚨 طلب طارئ — ${category}`,
         body: description.slice(0, 80),
         url: `/artisan/dashboard`,
-        type: "emergency",
+        type: "general",
       });
     }
 
