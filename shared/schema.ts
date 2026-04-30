@@ -35,6 +35,7 @@ export const artisans = pgTable("artisans", {
   yearsOfExperience:     integer("years_of_experience").notNull().default(0),
   imageUrl:              text("image_url"),
   portfolioImages:       text("portfolio_images").array().notNull().default([]),
+  portfolioVideos:       text("portfolio_videos").array().notNull().default([]),
   languages:             text("languages").array().notNull().default(["العربية"]),
   workingHours:          text("working_hours"),
   subscriptionType:      text("subscription_type", {

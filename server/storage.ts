@@ -205,6 +205,9 @@ class PostgresStorage implements IStorage {
     if (safeUpdates.portfolioImages) {
       safeUpdates.portfolioImages = safeUpdates.portfolioImages.filter((img: string) => !img.startsWith("data:"));
     }
+    if (safeUpdates.portfolioVideos) {
+      safeUpdates.portfolioVideos = safeUpdates.portfolioVideos.filter((v: string) => !v.startsWith("data:"));
+    }
     const [updated] = await db.update(artisans).set(safeUpdates).where(eq(artisans.id, id)).returning();
     return updated;
   }

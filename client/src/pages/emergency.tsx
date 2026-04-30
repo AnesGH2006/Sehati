@@ -41,17 +41,39 @@ export default function EmergencyPage() {
   const [result, setResult]         = useState<EmergencyResult | null>(null);
   const [userLat, setUserLat]       = useState<number | null>(null);
   const [userLng, setUserLng]       = useState<number | null>(null);
+  const [locating, setLocating]     = useState(false);
 
   const user = customer || artisan;
 
   // ─── تحديد الموقع ────────────────────────────────────
   const locateUser = () => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(pos => {
-      setUserLat(pos.coords.latitude);
-      setUserLng(pos.coords.longitude);
-      toast({ title: "✅ تم تحديد موقعك", description: "سيتم إرسال أقرب حرفي إليك" });
-    });
+    if (locating) return;
+    if (!navigator.geolocation) {
+      toast({ title: "❌ غير مدعوم", description: "متصفحك لا يدعم تحديد الموقع", variant: "destructive" });
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserLat(pos.coords.latitude);
+        setUserLng(pos.coords.longitude);
+        setLocating(false);
+        toast({ title: "✅ تم تحديد موقعك", description: "سيتم إرسال أقرب حرفي إليك" });
+      },
+      (err) => {
+        setLocating(false);
+        const msg =
+          err.code === err.PERMISSION_DENIED
+            ? "تم رفض الإذن. فعّل خدمة الموقع في إعدادات المتصفح"
+            : err.code === err.POSITION_UNAVAILABLE
+            ? "تعذّر الوصول للموقع. تأكد من تفعيل GPS"
+            : err.code === err.TIMEOUT
+            ? "انتهت مهلة الاستجابة. حاول مجدداً"
+            : "خطأ في تحديد الموقع";
+        toast({ title: "❌ تعذّر تحديد الموقع", description: msg, variant: "destructive" });
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
   };
 
   // ─── إرسال الطلب ─────────────────────────────────────
@@ -164,24 +186,35 @@ export default function EmergencyPage() {
         </div>
 
         {/* موقعك */}
-        <div className={`rounded-xl border p-3 mb-5 flex items-center gap-3 cursor-pointer transition-all ${
-          userLat ? "border-primary/40 bg-primary/5" : "border-border/40 hover:border-primary/30"
-        }`} onClick={locateUser}>
-          <MapPin className={`h-5 w-5 flex-shrink-0 ${userLat ? "text-primary" : "text-muted-foreground"}`} />
+        <button
+          type="button"
+          data-testid="button-locate-emergency"
+          disabled={locating}
+          onClick={locateUser}
+          className={`w-full rounded-xl border p-3 mb-5 flex items-center gap-3 text-right transition-all disabled:opacity-60 ${
+            userLat ? "border-primary/40 bg-primary/5" : "border-border/40 hover:border-primary/30"
+          }`}>
+          {locating ? (
+            <Loader2 className="h-5 w-5 flex-shrink-0 text-primary animate-spin" />
+          ) : (
+            <MapPin className={`h-5 w-5 flex-shrink-0 ${userLat ? "text-primary" : "text-muted-foreground"}`} />
+          )}
           <div className="flex-1">
             <p className="text-sm font-medium text-foreground">
-              {userLat ? "✅ تم تحديد موقعك" : "اضغط لتحديد موقعك"}
+              {locating ? "جاري تحديد موقعك..." : userLat ? "✅ تم تحديد موقعك" : "اضغط لتحديد موقعك"}
             </p>
             <p className="text-xs text-muted-foreground">
-              {userLat ? "سيتم إرسال أقرب حرفي إليك" : "اختياري — لإرسال أقرب حرفي"}
+              {userLat
+                ? `${userLat.toFixed(4)}, ${userLng?.toFixed(4)} — سيتم إرسال أقرب حرفي إليك`
+                : "اختياري — لإرسال أقرب حرفي"}
             </p>
           </div>
-          {!userLat && (
-            <Button variant="outline" size="sm" className="rounded-full text-xs border-primary/40 text-primary">
+          {!userLat && !locating && (
+            <span className="rounded-full text-xs border border-primary/40 text-primary px-3 py-1.5 font-medium">
               تحديد
-            </Button>
+            </span>
           )}
-        </div>
+        </button>
 
         {/* التخصص */}
         <div className="mb-5">

@@ -168,6 +168,7 @@ export default function Profile() {
   const portfolioImages = artisan.portfolioImages?.length > 0
     ? artisan.portfolioImages
     : [1, 2, 3, 4, 5, 6].map(i => `https://picsum.photos/seed/${artisan.id * 10 + i}/400/400`);
+  const portfolioVideos: string[] = artisan.portfolioVideos || [];
 
   // Calculate rating distribution
   const ratingCounts = [5, 4, 3, 2, 1].map(star => ({
@@ -350,17 +351,33 @@ export default function Profile() {
                 </TabsContent>
 
                 {/* Portfolio Tab */}
-                <TabsContent value="portfolio" className="mt-6">
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {portfolioImages.map((img: any, i: number) => (
-                      <div key={i} className="aspect-square rounded-xl overflow-hidden bg-muted group relative">
-                        <img src={typeof img === 'string' ? img : img.url || img}
-                          alt="Project" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <Button variant="secondary" size="sm">عرض</Button>
-                        </div>
+                <TabsContent value="portfolio" className="mt-6 space-y-6">
+                  {portfolioVideos.length > 0 && (
+                    <div>
+                      <h4 className="font-bold mb-3 text-foreground">فيديوهات الأعمال</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {portfolioVideos.map((vid, i) => (
+                          <div key={i} className="aspect-video rounded-xl overflow-hidden bg-black border border-border" data-testid={`video-portfolio-${i}`}>
+                            <video src={vid} controls preload="metadata" playsInline className="w-full h-full object-contain" />
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    </div>
+                  )}
+
+                  <div>
+                    {portfolioVideos.length > 0 && <h4 className="font-bold mb-3 text-foreground">صور الأعمال</h4>}
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {portfolioImages.map((img: any, i: number) => (
+                        <div key={i} className="aspect-square rounded-xl overflow-hidden bg-muted group relative">
+                          <img src={typeof img === 'string' ? img : img.url || img} loading="lazy"
+                            alt="Project" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <Button variant="secondary" size="sm">عرض</Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </TabsContent>
 

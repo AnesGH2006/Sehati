@@ -327,12 +327,20 @@ export default function ArtisanDashboard() {
     setPortfolioImages(next);
   };
 
-  // ── رفع الفيديو ───────────────────────────────────────────────────────────
+  // ── رفع فيديوهات الأعمال (متعددة) ─────────────────────────────────────────
+  const MAX_VIDEOS = 3;
   const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 50 * 1024 * 1024) {
       toast({ title: "الفيديو كبير جداً", description: "الحد الأقصى 50 ميغابايت", variant: "destructive" });
+      e.target.value = "";
+      return;
+    }
+    const cur: string[] = serverArtisan?.portfolioVideos || [];
+    if (cur.length >= MAX_VIDEOS) {
+      toast({ title: "وصلت للحد الأقصى", description: `يمكنك رفع ${MAX_VIDEOS} فيديوهات كحد أقصى`, variant: "destructive" });
+      e.target.value = "";
       return;
     }
     const reader = new FileReader();
@@ -345,7 +353,8 @@ export default function ArtisanDashboard() {
         });
         const { url } = await r.json();
         if (url) {
-          updateMutation.mutate({ portfolioVideo: url });
+          const next = [...cur, url];
+          updateMutation.mutate({ portfolioVideos: next });
           toast({ title: "✅ تم رفع الفيديو بنجاح" });
         }
       } catch {
@@ -353,10 +362,13 @@ export default function ArtisanDashboard() {
       }
     };
     reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
-  const handleRemoveVideo = () => {
-    updateMutation.mutate({ portfolioVideo: null });
+  const handleRemoveVideo = (idx: number) => {
+    const cur: string[] = serverArtisan?.portfolioVideos || [];
+    const next = cur.filter((_, i) => i !== idx);
+    updateMutation.mutate({ portfolioVideos: next });
     toast({ title: "تم حذف الفيديو" });
   };
 
@@ -375,7 +387,7 @@ export default function ArtisanDashboard() {
   }
 
   const displayPortfolio: string[] = serverArtisan?.portfolioImages?.length > 0 ? serverArtisan.portfolioImages : portfolioImages;
-  const portfolioVideo = realArtisan?.portfolioVideo || null;
+  const portfolioVideos: string[] = serverArtisan?.portfolioVideos || [];
   const dailyData    = analytics?.dailyConversations   || [];
   const monthlyData  = analytics?.monthlyConversations  || [];
   const ratingDist   = analytics?.ratingDistribution   || [];
@@ -700,14 +712,17 @@ export default function ArtisanDashboard() {
                 <div>
                   <h2 className="text-xl font-heading font-black flex items-center gap-2">
                     <Video className="h-5 w-5 text-violet-400" />
-                    فيديو تعريفي
+                    فيديوهات الأعمال
                     <Badge className="bg-violet-500/20 text-violet-300 border-violet-500/30 text-xs flex items-center gap-1">
                       <Crown className="h-3 w-3" /> احترافي وذهبي
                     </Badge>
                   </h2>
-                  <p className="text-zinc-500 text-sm mt-1">أضف فيديو يعرض مهاراتك — يظهر للمشتركين فقط في صفحتك</p>
+                  <p className="text-zinc-500 text-sm mt-1">
+                    أضف حتى {MAX_VIDEOS} فيديوهات لعرض مهاراتك — تظهر في صفحتك للمشتركين
+                    {canVideo && <span className="text-violet-300 mr-1">· {portfolioVideos.length} / {MAX_VIDEOS}</span>}
+                  </p>
                 </div>
-                {canVideo && (
+                {canVideo && portfolioVideos.length < MAX_VIDEOS && (
                   <label className="cursor-pointer">
                     <Button className="gap-2 rounded-2xl font-black bg-violet-600 hover:bg-violet-700" asChild>
                       <span><Upload className="h-4 w-4" />رفع فيديو</span>
@@ -724,34 +739,44 @@ export default function ArtisanDashboard() {
                     <Lock className="h-7 w-7 text-violet-400" />
                   </div>
                   <div>
-                    <p className="font-black text-lg">الفيديو متاح للمشتركين</p>
-                    <p className="text-zinc-500 text-sm mt-1">ارقِ إلى خطة الاحترافي أو الذهبي لإضافة فيديو تعريفي</p>
+                    <p className="font-black text-lg">الفيديوهات متاحة للمشتركين</p>
+                    <p className="text-zinc-500 text-sm mt-1">ارقِ إلى خطة الاحترافي أو الذهبي لإضافة فيديوهات لأعمالك</p>
                   </div>
                   <Button onClick={() => setLocation("/subscription")}
                     className="gap-2 rounded-2xl font-black bg-gradient-to-r from-violet-500 to-purple-600 hover:opacity-90">
                     <Crown className="h-4 w-4" /> ترقية الخطة
                   </Button>
                 </div>
-              ) : portfolioVideo ? (
-                /* الفيديو موجود */
-                <div className="relative rounded-3xl overflow-hidden border border-violet-500/20 bg-black aspect-video max-w-2xl">
-                  <video src={portfolioVideo} controls className="w-full h-full object-contain" />
-                  <button onClick={handleRemoveVideo}
-                    className="absolute top-3 left-3 p-2 bg-red-500/80 rounded-full hover:bg-red-600 transition-colors">
-                    <Trash2 className="h-4 w-4 text-white" />
-                  </button>
-                  <div className="absolute top-3 right-3">
-                    <Badge className="bg-violet-500/80 text-white text-xs flex items-center gap-1">
-                      <Crown className="h-3 w-3" /> مرئي للمشتركين فقط
-                    </Badge>
-                  </div>
+              ) : portfolioVideos.length > 0 ? (
+                /* قائمة الفيديوهات */
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {portfolioVideos.map((vid, i) => (
+                    <div key={i} className="relative rounded-3xl overflow-hidden border border-violet-500/20 bg-black aspect-video">
+                      <video src={vid} controls preload="metadata" playsInline className="w-full h-full object-contain" />
+                      <button onClick={() => handleRemoveVideo(i)}
+                        className="absolute top-3 left-3 p-2 bg-red-500/80 rounded-full hover:bg-red-600 transition-colors z-10"
+                        data-testid={`button-remove-video-${i}`}>
+                        <Trash2 className="h-4 w-4 text-white" />
+                      </button>
+                      <div className="absolute top-3 right-3 z-10">
+                        <Badge className="bg-violet-500/80 text-white text-[10px]">فيديو {i + 1}</Badge>
+                      </div>
+                    </div>
+                  ))}
+                  {portfolioVideos.length < MAX_VIDEOS && (
+                    <label className="flex flex-col items-center justify-center border-2 border-dashed border-violet-500/20 rounded-3xl aspect-video cursor-pointer hover:border-violet-500/40 transition-colors text-zinc-500 hover:text-zinc-300">
+                      <Upload className="h-8 w-8 mb-2 opacity-50" />
+                      <span className="text-xs font-bold">إضافة فيديو</span>
+                      <input type="file" accept="video/*" className="hidden" onChange={handleVideoUpload} />
+                    </label>
+                  )}
                 </div>
               ) : (
                 /* لا يوجد فيديو */
                 <label className="flex flex-col items-center justify-center border-2 border-dashed border-violet-500/20 rounded-3xl py-16 cursor-pointer hover:border-violet-500/40 transition-colors text-zinc-500 hover:text-zinc-300 max-w-2xl">
                   <Video className="h-12 w-12 mb-3 opacity-30" />
-                  <p className="font-bold">اضغط لرفع فيديو تعريفي</p>
-                  <p className="text-xs mt-1 text-zinc-600">MP4, MOV — حتى 50 ميغابايت</p>
+                  <p className="font-bold">اضغط لرفع أول فيديو</p>
+                  <p className="text-xs mt-1 text-zinc-600">MP4, MOV — حتى 50 ميغابايت — حتى {MAX_VIDEOS} فيديوهات</p>
                   <input type="file" accept="video/*" className="hidden" onChange={handleVideoUpload} />
                 </label>
               )}

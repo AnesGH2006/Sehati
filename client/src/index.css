@@ -186,3 +186,43 @@
     background: linear-gradient(90deg, transparent, hsl(175 60% 50% / 0.3), transparent);
   }
 }
+
+/* ─── خفّ الواجهة على الهواتف الضعيفة ─────────────────────────────
+   - يخفّض حجم الـ blur الذي يستهلك GPU
+   - يوقف التحريك المستمر للخلفيات
+   - يحترم تفضيل المستخدم لتقليل الحركة */
+@media (max-width: 768px) {
+  /* خفض حدّة الـ blur على الموبايل (المؤثرات الكبيرة جدا تبطّء الهواتف الضعيفة) */
+  [class*="blur-[120px]"],
+  [class*="blur-[100px]"],
+  [class*="blur-[80px]"] {
+    filter: blur(40px) !important;
+    opacity: 0.5 !important;
+  }
+  /* إيقاف نبضات الخلفيات الزخرفية على الموبايل */
+  .animate-pulse[class*="absolute"][class*="rounded-full"][class*="blur"] {
+    animation: none !important;
+  }
+  /* تقليل قوة الـ backdrop-blur (مكلف جداً على GPU الضعيف) */
+  .backdrop-blur-xl { backdrop-filter: blur(8px); }
+  .backdrop-blur-2xl { backdrop-filter: blur(10px); }
+  .backdrop-blur-3xl { backdrop-filter: blur(12px); }
+}
+
+/* احترام تفضيل تقليل الحركة للنظام */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-pulse,
+  .animate-spin,
+  .animate-bounce,
+  .animate-ping {
+    animation: none !important;
+  }
+}
