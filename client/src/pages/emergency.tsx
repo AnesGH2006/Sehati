@@ -7,6 +7,7 @@ import { AlertTriangle, Phone, MapPin, Send, CheckCircle, MessageCircle, Loader2
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { categoryLabel } from "@/lib/constants";
 
 // ─── التخصصات ─────────────────────────────────────────
 const CATEGORIES = [
@@ -33,7 +34,7 @@ interface EmergencyResult {
 
 export default function EmergencyPage() {
   const [, setLocation] = useLocation();
-  const { customer, artisan, isLoggedIn, isArtisan } = useAuth();
+  const { customer, artisan, isLoggedIn, isArtisan, ensureGuest } = useAuth();
   const { toast } = useToast();
 
   const [category, setCategory]     = useState("");
@@ -79,12 +80,14 @@ export default function EmergencyPage() {
   // ─── إرسال الطلب ─────────────────────────────────────
   const { mutate: sendEmergency, isPending } = useMutation({
     mutationFn: async () => {
+      // ضمان وجود معرّف زائر مستقر للزوّار غير المسجّلين
+      const me = user || ensureGuest();
       const res = await fetch("/api/emergency", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customerId:   user?.id || "guest",
-          customerName: (user as any)?.name || "زبون",
+          customerId:   me.id,
+          customerName: (me as any).name || "زبون",
           category,
           description,
           latitude:  userLat,
@@ -130,7 +133,7 @@ export default function EmergencyPage() {
               </div>
               <div>
                 <p className="font-bold text-foreground">{result.artisan.name}</p>
-                <p className="text-sm text-primary">{result.artisan.category}</p>
+                <p className="text-sm text-primary">{categoryLabel(result.artisan.category)}</p>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                   <span>⭐ {result.artisan.rating.toFixed(1)}</span>
                   {result.artisan.distanceKm && (

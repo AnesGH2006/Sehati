@@ -23,10 +23,14 @@ interface AuthContextType {
   customer: CustomerSession | null;
   loginArtisan: (a: ArtisanSession) => void;
   loginCustomer: (c: CustomerSession) => void;
+  /** يُنشئ جلسة زبون-زائر (بدون تسجيل) إذا لم تكن موجودة، ويُعيدها. */
+  ensureGuest: () => CustomerSession;
   logout: () => void;
   isArtisan: boolean;
   isCustomer: boolean;
   isLoggedIn: boolean;
+  /** صحيح إذا كان الزبون الحالي عبارة عن جلسة زائر تلقائية. */
+  isGuest: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -34,10 +38,12 @@ const AuthContext = createContext<AuthContextType>({
   customer: null,
   loginArtisan: () => {},
   loginCustomer: () => {},
+  ensureGuest: () => ({ id: "guest", name: "زائر", phone: "" }),
   logout: () => {},
   isArtisan: false,
   isCustomer: false,
   isLoggedIn: false,
+  isGuest: false,
 });
 
 function loadFromStorage<T>(key: string): T | null {
@@ -45,6 +51,11 @@ function loadFromStorage<T>(key: string): T | null {
     const v = localStorage.getItem(key);
     return v ? JSON.parse(v) : null;
   } catch { return null; }
+}
+
+function makeGuestId(): string {
+  const rnd = Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
+  return `guest-${rnd}`;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -65,12 +76,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("herfati_artisan");
   };
 
+  const ensureGuest = (): CustomerSession => {
+    if (customer) return customer;
+    if (artisan) {
+      // الحرفي مسجَّل أصلاً — لا تنشئ زائرًا. نُعيد كائن وهمي.
+      return { id: `artisan-${artisan.id}`, name: artisan.name, phone: artisan.phone };
+    }
+    let id = localStorage.getItem("herfati_guest_id");
+    if (!id) {
+      id = makeGuestId();
+      localStorage.setItem("herfati_guest_id", id);
+    }
+    const guest: CustomerSession = { id, name: "زائر", phone: "" };
+    setCustomer(guest);
+    localStorage.setItem("herfati_customer", JSON.stringify(guest));
+    return guest;
+  };
+
   const logout = () => {
     setArtisan(null);
     setCustomer(null);
     localStorage.removeItem("herfati_artisan");
     localStorage.removeItem("herfati_customer");
+    localStorage.removeItem("herfati_guest_id");
   };
+
+  const isGuest = !!customer && customer.id.startsWith("guest-");
 
   return (
     <AuthContext.Provider value={{
@@ -78,10 +109,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       customer,
       loginArtisan,
       loginCustomer,
+      ensureGuest,
       logout,
       isArtisan: !!artisan,
-      isCustomer: !!customer,
-      isLoggedIn: !!(artisan || customer),
+      isCustomer: !!customer && !isGuest,
+      isLoggedIn: !!(artisan || (customer && !isGuest)),
+      isGuest,
     }}>
       {children}
     </AuthContext.Provider>

@@ -45,6 +45,16 @@ Preferred communication style: Simple, everyday language.
 - Subscription (`/subscription`): Tiered pricing plans for customers and artisans
 - Auth (`/auth`): Login and registration with role selection
 
+### Guest Customer Mode
+- Customers do **not** need to register to chat with artisans, send emergency requests, or post reviews.
+- `useAuth().ensureGuest()` in `client/src/lib/auth.tsx` lazily creates a stable guest session (id stored in `localStorage.herfati_guest_id`, name "زائر") on first interaction.
+- `isLoggedIn` stays `false` for guests so the navbar still surfaces Login / Join CTAs; `isGuest` is exposed if a feature needs to differentiate.
+- Artisan accounts still require real registration via the existing auth flow.
+
+### Arabic Craft Labels
+- All UI surfaces (dashboard, profile, chat header, nearby map popups & list, admin, emergency result) translate the raw English category id ("tailoring", "carpentry", …) via the `categoryLabel(id)` helper exported from `client/src/lib/constants.ts`.
+- Database & API still store the canonical English id; only the display layer is Arabic.
+
 ## External Dependencies
 
 ### Database

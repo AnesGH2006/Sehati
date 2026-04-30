@@ -17,7 +17,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LOCATIONS, DAIRAS } from "@/lib/constants";
+import { LOCATIONS, DAIRAS, categoryLabel } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -431,7 +431,7 @@ export default function ArtisanDashboard() {
                       <BadgeCheck className="h-5 w-5 text-primary shrink-0" />
                     </div>
                     <p className="text-zinc-400 text-sm mt-0.5 truncate" data-testid="text-artisan-meta">
-                      {realArtisan?.category || artisan?.category} • {realArtisan?.wilaya ? `${realArtisan.wilaya} - ` : ""}{realArtisan?.daira || artisan?.daira}
+                      {categoryLabel(realArtisan?.category || artisan?.category)} • {realArtisan?.wilaya ? `${realArtisan.wilaya} - ` : ""}{realArtisan?.daira || artisan?.daira}
                     </p>
                     <div className="flex items-center gap-2 mt-3 flex-wrap">
                       <StatusToggle
@@ -515,7 +515,7 @@ export default function ArtisanDashboard() {
               <InfoItem icon={<Banknote />}   label="السعر الأدنى"      value={`${realArtisan?.priceStart || "–"} دج`} />
               <InfoItem icon={<Briefcase />}  label="سنوات الخبرة"      value={`${realArtisan?.yearsOfExperience || "–"} سنوات`} />
               <InfoItem icon={<MapPin />}     label="الموقع"            value={`${realArtisan?.wilaya || ""} - ${realArtisan?.daira || artisan?.daira || "–"}`} />
-              <InfoItem icon={<BadgeCheck />} label="المهنة"            value={realArtisan?.category || artisan?.category || "–"} />
+              <InfoItem icon={<BadgeCheck />} label="المهنة"            value={categoryLabel(realArtisan?.category || artisan?.category) || "–"} />
             </div>
 
             <Card className="bg-white/[0.03] border-white/10 rounded-3xl overflow-hidden">

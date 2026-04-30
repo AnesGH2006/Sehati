@@ -3,6 +3,7 @@
 // تثبيت: npm install leaflet @types/leaflet
 
 import { useEffect, useRef, useState } from "react";
+import { categoryLabel } from "@/lib/constants";
 
 interface ArtisanLocation {
   id: number;
@@ -128,7 +129,7 @@ export default function ArtisansMap({ height = "450px", onlineOnly = true }: Art
       filtered.forEach((artisan) => {
         if (!artisan.latitude || !artisan.longitude) return;
 
-        const craftLabel = artisan.craft || artisan.category || "";
+        const craftLabel = artisan.craft || categoryLabel(artisan.category) || "";
         const locLabel   = artisan.locationName || artisan.location_name || "";
 
         const popup = `

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Navbar } from "@/components/layout/navbar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MOCK_ARTISANS, CATEGORIES } from "@/lib/constants";
+import { MOCK_ARTISANS, CATEGORIES, categoryLabel } from "@/lib/constants";
 import { Send, Image as ImageIcon, Smile, X, ArrowRight, Phone, Video, Star, Heart, CheckCheck } from "lucide-react";
 import { useRoute, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
@@ -56,7 +56,12 @@ export default function Chat() {
   const [matchRoute, params] = useRoute("/chat/:id");
   const activeArtisanId = params ? parseInt(params.id) : null;
   const [, setLocation] = useLocation();
-  const { artisan: authArtisan, customer, isArtisan, isLoggedIn } = useAuth();
+  const { artisan: authArtisan, customer, isArtisan, isLoggedIn, ensureGuest } = useAuth();
+
+  // إذا فتح زائر صفحة محادثة بدون تسجيل، أنشئ له جلسة زائر تلقائياً
+  useEffect(() => {
+    if (!isArtisan && !customer && activeArtisanId) ensureGuest();
+  }, [isArtisan, customer, activeArtisanId]);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -106,8 +111,8 @@ export default function Chat() {
       ? (authArtisan?.imageUrl || `https://ui-avatars.com/api/?name=${authArtisan?.name}&background=2DD4BF&color=fff`)
       : (apiArtisan?.imageUrl || mockArtisan?.image || ""),
     category: isArtisan && authArtisan?.id === activeArtisanId
-      ? (authArtisan?.category || "")
-      : (apiArtisan?.category || mockArtisan?.category || ""),
+      ? categoryLabel(authArtisan?.category)
+      : (categoryLabel(apiArtisan?.category) || mockArtisan?.category || ""),
   } : null;
 
   const convId = activeArtisanId

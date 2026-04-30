@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "next-themes";
 import { Link } from "wouter";
+import { categoryLabel } from "@/lib/constants";
 
 interface NearbyArtisan {
   id: number;
@@ -154,7 +155,7 @@ export default function NearbyPage() {
         .bindPopup(`
           <div style="direction:rtl;font-family:sans-serif;min-width:160px;padding:4px 0">
             <div style="font-weight:700;font-size:14px;margin-bottom:4px">${a.name}</div>
-            <div style="color:#2DD4BF;font-size:12px;margin-bottom:6px">${a.category}</div>
+            <div style="color:#2DD4BF;font-size:12px;margin-bottom:6px">${categoryLabel(a.category)}</div>
             <div style="display:flex;gap:8px;font-size:12px;color:#9CA3AF">
               <span>⭐ ${a.rating.toFixed(1)}</span>
               <span>📍 ${a.distanceKm} كم</span>
@@ -381,7 +382,7 @@ function ArtisanCard({ artisan: a, selected, onClick }: {
               </svg>
             )}
           </div>
-          <p className="text-[11px] text-primary/80">{a.category}</p>
+          <p className="text-[11px] text-primary/80">{categoryLabel(a.category)}</p>
         </div>
         <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${avail ? "bg-primary/15 text-primary" : "bg-amber-500/15 text-amber-400"}`}>
           {avail ? "متاح" : "مشغول"}

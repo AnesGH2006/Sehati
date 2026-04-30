@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, MessageSquare, ChevronDown, ChevronUp, Shield, LogOut, Eye, EyeOff, Users, Star, UserCheck, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { categoryLabel } from "@/lib/constants";
 
 const ADMIN_STORAGE_KEY = "herfati_admin_session";
 
@@ -183,7 +184,7 @@ export default function Admin() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-bold text-lg">{artisan.name}</h3>
-                      <Badge variant="secondary" className="text-xs">{artisan.category}</Badge>
+                      <Badge variant="secondary" className="text-xs">{categoryLabel(artisan.category)}</Badge>
                       <Badge variant="outline" className="text-xs border-primary/30 text-primary">{artisan.subscriptionType}</Badge>
                     </div>
                     <p className="text-zinc-400 text-sm mt-1">{artisan.email} • {artisan.phone}</p>

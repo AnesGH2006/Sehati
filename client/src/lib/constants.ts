@@ -59,7 +59,14 @@ export const CATEGORIES = [
   { id: "welding",    label: "تلحيم(سودار)",           icon: "Flame"      },
   { id: "gardening",  label: "بستنة(فلاح)",            icon: "Flower2"    },
   { id: "tailoring",  label: "خياطة(خياط)",            icon: "Scissors"   },
+  { id: "gas",        label: "غاز",                    icon: "Flame"      },
 ];
+
+/** أعِد الاسم العربي للحرفة من معرّفها الإنجليزي. إذا لم يوجد رجّع القيمة كما هي. */
+export function categoryLabel(id?: string | null): string {
+  if (!id) return "";
+  return CATEGORIES.find(c => c.id === id)?.label || id;
+}
 
 export const MOCK_ARTISANS = [
 ];

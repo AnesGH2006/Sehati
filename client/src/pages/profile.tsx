@@ -18,7 +18,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 export default function Profile() {
   const [match, params] = useRoute("/profile/:id");
   const id = params ? parseInt(params.id) : 1;
-  const { isLoggedIn, isArtisan, customer, loginCustomer } = useAuth();
+  const { isLoggedIn, isArtisan, customer, loginCustomer, ensureGuest } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -48,7 +48,7 @@ export default function Profile() {
   const { data: conversations = [] } = useQuery({
     queryKey: ["/api/conversations", customer?.id],
     queryFn: () => fetch(`/api/conversations/${customer?.id}?role=customer`).then(r => r.ok ? r.json() : []).catch(() => []),
-    enabled: !!customer?.id && isLoggedIn && !isArtisan,
+    enabled: !!customer?.id && !isArtisan,
   });
   const hasConversation = conversations.some((c: any) => c.artisanId === id);
 
@@ -121,13 +121,13 @@ export default function Profile() {
   };
 
   const handleContactClick = () => {
-    if (!isLoggedIn) {
-      setShowLoginDialog(true);
-    } else if (isArtisan) {
+    if (isArtisan) {
       toast({ title: "تنبيه", description: "الحرفيون لا يمكنهم مراسلة بعضهم البعض", variant: "destructive" });
-    } else {
-      setLocation(`/chat/${artisan.id}`);
+      return;
     }
+    // ضيف بدون تسجيل: أنشئ جلسة زائر تلقائياً
+    if (!customer) ensureGuest();
+    setLocation(`/chat/${artisan.id}`);
   };
 
   const handleGuestLogin = (e: React.FormEvent) => {
@@ -148,18 +148,16 @@ export default function Profile() {
 
   const handleSubmitReview = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isLoggedIn || !customer) {
-      setShowLoginDialog(true);
-      return;
-    }
     if (reviewRating === 0) {
       toast({ title: "تنبيه", description: "اختر عدد النجوم أولاً", variant: "destructive" });
       return;
     }
+    // اسمح للزوّار بإرسال تقييم بدون تسجيل
+    const me = customer || ensureGuest();
     submitReview.mutate({
       artisanId: artisan.id,
-      customerId: customer.id,
-      customerName: customer.name,
+      customerId: me.id,
+      customerName: me.name,
       rating: reviewRating,
       comment: reviewComment,
     });
@@ -417,8 +415,8 @@ export default function Profile() {
                     </div>
                   )}
 
-                  {/* Add Review Button */}
-                  {isLoggedIn && !isArtisan && (
+                  {/* Add Review Button — متاح للزوّار وللزبائن */}
+                  {!isArtisan && (
                     <div>
                       {!hasConversation ? (
                         <div className="flex items-center gap-3 p-4 bg-muted/30 rounded-xl border border-dashed border-border text-muted-foreground text-sm">
@@ -480,15 +478,6 @@ export default function Profile() {
                         </form>
                       )}
                     </div>
-                  )}
-
-                  {!isLoggedIn && (
-                    <button
-                      onClick={() => setShowLoginDialog(true)}
-                      className="text-sm text-primary underline underline-offset-2"
-                    >
-                      سجّل دخولك لإضافة تقييم
-                    </button>
                   )}
 
                   {/* Reviews List */}
