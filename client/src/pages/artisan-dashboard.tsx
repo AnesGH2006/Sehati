@@ -454,7 +454,7 @@ export default function ArtisanDashboard() {
                 {/* Quick stats strip */}
                 <div className="grid grid-cols-3 gap-2 lg:gap-3 lg:w-auto lg:min-w-[400px]">
                   <MiniStat icon={<Eye className="h-3.5 w-3.5" />}           label="مشاهدات" value={analytics?.totalViews ?? 0} color="text-blue-400" />
-                  <MiniStat icon={<MessageSquare className="h-3.5 w-3.5" />} label="محادثات" value={analytics?.totalConversations ?? conversations.length} color="text-purple-400" />
+                  <MiniStat icon={<MessageSquare className="h-3.5 w-3.5" />} Converstaion label="محادثات" value={analytics?.totalConversations ?? conversations.length} color="text-purple-400" />
                   <MiniStat icon={<Star className="h-3.5 w-3.5" />}          label="تقييمات" value={reviews.length} color="text-amber-400" />
                 </div>
               </div>
