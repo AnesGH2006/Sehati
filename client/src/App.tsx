@@ -7,17 +7,15 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Auth from "@/pages/auth";
 import { ThemeProvider } from "next-themes";
-import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { AuthProvider } from "@/lib/auth";
 import SplashScreen from "@/components/splashscreen";
 import { InstallPrompt } from "@/components/install-prompt";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useAuth } from "@/lib/auth";
-import { useEffect, lazy, Suspense } from "react";
-import { Loader2 } from "lucide-react";
+import { useEffect, lazy, Suspense, useState } from "react";
+import PageLoader from "./components/PageLoader";
 
-// ─── صفحات ثقيلة محمّلة عند الطلب فقط (لتسريع الموبايل الضعيف) ────────────
 const Artisans         = lazy(() => import("@/pages/artisans"));
 const Profile          = lazy(() => import("@/pages/profile"));
 const Chat             = lazy(() => import("@/pages/chat"));
@@ -28,15 +26,7 @@ const Admin            = lazy(() => import("@/pages/admin"));
 const NearbyPage       = lazy(() => import("@/pages/Nearby"));
 const EmergencyPage    = lazy(() => import("@/pages/emergency"));
 
-function PageFallback() {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <Loader2 className="h-6 w-6 animate-spin text-primary" />
-    </div>
-  );
-}
-
-// ── معالج Google OAuth ────────────────────────────────────────────────────────
+// ── Google OAuth ──────────────────────────────────────────────────────────────
 function GoogleAuthHandler() {
   const { loginCustomer } = useAuth();
   const [, setLocation] = useLocation();
@@ -45,21 +35,17 @@ function GoogleAuthHandler() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("google_auth") !== "1") return;
 
-    const id       = params.get("id")    || "";
-    const name     = params.get("name")  || "";
-    const phone    = params.get("phone") || "";
-    const role     = params.get("role")  || "customer";
+    const id        = params.get("id")        || "";
+    const name      = params.get("name")      || "";
+    const phone     = params.get("phone")     || "";
+    const role      = params.get("role")      || "customer";
     const artisanId = params.get("artisanId") || "";
 
     if (!id || !name) return;
 
-    // حفظ المستخدم في الـ auth state (CustomerSession)
     loginCustomer({ id, name, phone });
-
-    // تنظيف الـ URL فوراً
     window.history.replaceState({}, document.title, "/");
 
-    // redirect حسب الدور
     if (role === "artisan" && artisanId) {
       setLocation("/artisan/dashboard");
     } else {
@@ -70,94 +56,54 @@ function GoogleAuthHandler() {
   return null;
 }
 
-// ── تسجيل الإشعارات بعد تحميل الـ Auth ──────────────────────────────────────
+// ── Push Notifications ────────────────────────────────────────────────────────
 function PushRegistrar() {
   const { customer, artisan, isArtisan } = useAuth();
-
-  const pushId = isArtisan && artisan?.id
-    ? String(artisan.id)
-    : customer?.id ?? null;
-
+  const pushId = isArtisan && artisan?.id ? String(artisan.id) : customer?.id ?? null;
   usePushNotifications(pushId);
-
   return null;
-}
-
-// ── Page Transition ───────────────────────────────────────────────────────────
-function PageTransition({ children }: { children: React.ReactNode }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -20, scale: 0.98 }}
-      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className="w-full flex-1 flex flex-col"
-    >
-      {children}
-    </motion.div>
-  );
 }
 
 // ── Router ────────────────────────────────────────────────────────────────────
 function Router() {
-  const { i18n } = useTranslation();
-  const isAr = i18n.language === "ar";
+  const [location] = useLocation();
+  const [displayLocation, setDisplayLocation] = useState(location);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  useEffect(() => {
+    if (location === displayLocation) return;
+
+    setIsTransitioning(true);
+
+    const timer = setTimeout(() => {
+      setDisplayLocation(location);
+      setIsTransitioning(false);
+    }, 700); // مدة ظهور الـ loader — عدّلها حسب ذوقك
+
+    return () => clearTimeout(timer);
+  }, [location]);
+
+  // أظهر الـ PageLoader أثناء الانتقال
+  if (isTransitioning) return <PageLoader />;
 
   return (
-    <AnimatePresence mode="wait" initial={false}>
-      <motion.div
-        key={i18n.language}
-        initial={{ opacity: 0, x: isAr ? -100 : 100 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: isAr ? 100 : -100 }}
-        transition={{ type: "spring", stiffness: 300, damping: 30, duration: 0.3 }}
-        className="min-h-screen flex flex-col overflow-x-hidden"
-      >
-        <Suspense fallback={<PageFallback />}>
-          <Switch>
-            <Route path="/">
-              <PageTransition><Home /></PageTransition>
-            </Route>
-            <Route path="/artisans">
-              <PageTransition><Artisans /></PageTransition>
-            </Route>
-            <Route path="/profile/:id">
-              <PageTransition><Profile /></PageTransition>
-            </Route>
-            <Route path="/chat/:id">
-              <PageTransition><Chat /></PageTransition>
-            </Route>
-            <Route path="/chat">
-              <PageTransition><Chat /></PageTransition>
-            </Route>
-            <Route path="/subscription">
-              <PageTransition><Subscription /></PageTransition>
-            </Route>
-            <Route path="/auth">
-              <PageTransition><Auth /></PageTransition>
-            </Route>
-            <Route path="/artisan/dashboard">
-              <PageTransition><ArtisanDashboard /></PageTransition>
-            </Route>
-            <Route path="/about">
-              <PageTransition><About /></PageTransition>
-            </Route>
-            <Route path="/admin">
-              <Admin />
-            </Route>
-            <Route path="/nearby">
-              <PageTransition><NearbyPage /></PageTransition>
-            </Route>
-            <Route path="/emergency">
-              <PageTransition><EmergencyPage /></PageTransition>
-            </Route>
-            <Route>
-              <PageTransition><NotFound /></PageTransition>
-            </Route>
-          </Switch>
-        </Suspense>
-      </motion.div>
-    </AnimatePresence>
+    <Suspense fallback={<PageLoader />}>
+      <Switch location={displayLocation}>
+        <Route path="/"                  component={Home}             />
+        <Route path="/artisans"          component={Artisans}         />
+        <Route path="/profile/:id"       component={Profile}          />
+        <Route path="/chat/:id"          component={Chat}             />
+        <Route path="/chat"              component={Chat}             />
+        <Route path="/subscription"      component={Subscription}     />
+        <Route path="/auth"              component={Auth}             />
+        <Route path="/artisan/dashboard" component={ArtisanDashboard} />
+        <Route path="/about"             component={About}            />
+        <Route path="/admin"             component={Admin}            />
+        <Route path="/nearby"            component={NearbyPage}       />
+        <Route path="/emergency"         component={EmergencyPage}    />
+        <Route                           component={NotFound}         />
+      </Switch>
+    </Suspense>
   );
 }
 

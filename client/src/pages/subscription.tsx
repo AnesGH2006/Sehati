@@ -68,7 +68,6 @@ const PLANS = [
     nameAr: "احترافي",
     price: 3000,
     icon: Crown,
-    tag: "الأكثر شيوعاً",
     color: "#c084fc",
     isDisabled: true, // غير متوفرة
     glow: "rgba(192,132,252,0.3)",
@@ -88,7 +87,6 @@ const PLANS = [
     nameAr: "ذهبي",
     price: 5000,
     icon: Sparkles,
-    tag: "الأفضل",
     color: "#fbbf24",
     isDisabled: true, // غير متوفرة
     glow: "rgba(251,191,36,0.3)",
