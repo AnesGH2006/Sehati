@@ -83,7 +83,7 @@ function ImprovementBar({ label, value, change, color }: { label: string; value:
 }
 const Conversation = self.addEventListener("notificationclick", (event) =>
   setLocation("/chat")
-                                           )                                 
+)                                 
 // ── KPI Card ──────────────────────────────────────────────────────────────────
 function KpiCard({ icon, label, value, change, color }: { icon: React.ReactNode; label: string; value: string; change?: number; color: string }) {
   const colorMap: Record<string, string> = {
