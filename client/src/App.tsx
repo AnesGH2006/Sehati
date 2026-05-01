@@ -15,6 +15,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useAuth } from "@/lib/auth";
 import { useEffect, lazy, Suspense, useState } from "react";
 import PageLoader from "./components/PageLoader";
+import { motion } from "framer-motion";
 
 const Artisans         = lazy(() => import("@/pages/artisans"));
 const Profile          = lazy(() => import("@/pages/profile"));
@@ -78,13 +79,22 @@ function Router() {
     const timer = setTimeout(() => {
       setDisplayLocation(location);
       setIsTransitioning(false);
-    }, 700); // مدة ظهور الـ loader — عدّلها حسب ذوقك
+    }, 1200); // زدناها من 700 إلى 1200
 
     return () => clearTimeout(timer);
   }, [location]);
 
   // أظهر الـ PageLoader أثناء الانتقال
-  if (isTransitioning) return <PageLoader />;
+  if (isTransitioning) return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      <PageLoader />
+    </motion.div>
+  );
 
   return (
     <Suspense fallback={<PageLoader />}>
