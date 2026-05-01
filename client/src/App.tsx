@@ -79,7 +79,7 @@ function Router() {
     const timer = setTimeout(() => {
       setDisplayLocation(location);
       setIsTransitioning(false);
-    }, 1200); // زدناها من 700 إلى 1200
+    }, 1500); // زدناها من 700 إلى 1200
 
     return () => clearTimeout(timer);
   }, [location]);
