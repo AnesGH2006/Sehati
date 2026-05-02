@@ -567,7 +567,7 @@ const callTargetId = isArtisan
                           } ${isImageUrl(msg.content) ? 'p-1' : 'px-4 py-2.5'}`}
                         >
                           {isImageUrl(msg.content) ? (
-                            <img src={msg.content} alt="صورة"
+                            <img src={msg.content.startsWith("uploads/") ? `/${msg.content}` : msg.content} alt="صورة"
                               className="max-w-[240px] max-h-[300px] rounded-xl object-cover block"
                               onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
                             />

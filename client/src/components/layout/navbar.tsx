@@ -63,7 +63,7 @@ export function Navbar() {
               </span>
             </Link>
           ))}
-          {isLoggedIn && (
+          {isLoggedIn && !isArtisan && (
             <Link href="/nearby">
               <span className={`text-sm font-medium transition-colors hover:text-primary cursor-pointer flex items-center gap-1 ${location === "/nearby" ? "text-primary font-bold" : "text-muted-foreground"}`}>
                 <MapPin className="h-3.5 w-3.5" />
@@ -94,13 +94,14 @@ export function Navbar() {
           </DropdownMenu>
 
           {/* زر طارئ — للزبون وغير المسجل فقط */}
+          {!isArtisan && (
             <Link href="/emergency">
               <Button size="sm" className="gap-1.5 rounded-full bg-red-500 hover:bg-red-600 text-white text-xs px-3">
                 <AlertTriangle className="h-3.5 w-3.5" />
                 طارئ
               </Button>
             </Link>
-          
+          )}
 
           {isLoggedIn ? (
             <DropdownMenu>
@@ -165,7 +166,7 @@ export function Navbar() {
                     </span>
                   </Link>
                 ))}
-                {isLoggedIn && (
+                {isLoggedIn && !isArtisan && (
                   <Link href="/nearby">
                     <span className={`text-lg font-medium transition-colors hover:text-primary cursor-pointer flex items-center gap-2 ${location === "/nearby" ? "text-primary font-bold" : "text-muted-foreground"}`} onClick={() => setIsOpen(false)}>
                       <MapPin className="h-4 w-4" />
