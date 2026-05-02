@@ -324,26 +324,7 @@
                                             <p className="text-muted-foreground leading-relaxed text-lg">
                                               {artisan.description || mockArtisan.description}
                                             </p>
-                                          </div>
-                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <div className="bg-secondary/5 p-4 rounded-xl border border-secondary/10">
-                                              <h4 className="font-bold mb-2">الخدمات المقدمة</h4>
-                                              <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                                                <li>التركيب والصيانة</li>
-                                                <li>التصليحات العاجلة</li>
-                                                <li>الاستشارات الفنية</li>
-                                                <li>التصميم والتنفيذ</li>
-                                              </ul>
-                                            </div>
-                                            <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
-                                              <h4 className="font-bold mb-2">أوقات العمل</h4>
-                                              <ul className="space-y-1 text-muted-foreground">
-                                                <li className="flex justify-between"><span>الأحد - الخميس</span> <span>08:00 - 18:00</span></li>
-                                                <li className="flex justify-between"><span>السبت</span> <span>09:00 - 14:00</span></li>
-                                                <li className="flex justify-between"><span>الجمعة</span> <span className="text-red-500">مغلق</span></li>
-                                              </ul>
-                                            </div>
-                                          </div>
+                                          </div>           
                                         </TabsContent>
 
                                         {/* Portfolio Tab */}
