@@ -36,7 +36,10 @@ function getConversationId(artisanId: number, customerId: string) {
 }
 
 function isImageUrl(content: string) {
-  return content?.startsWith("data:image") || content?.startsWith("/uploads/") || (content?.startsWith("http") && !content?.includes("__"));
+  return content?.startsWith("data:image") || 
+         content?.startsWith("/uploads/") || 
+         content?.startsWith("uploads/") ||
+         (content?.startsWith("http") && !content?.includes("__"));
 }
 
 function StarRating({ value, onChange, size = 32 }: { value: number; onChange?: (v: number) => void; size?: number }) {
