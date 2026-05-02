@@ -528,15 +528,7 @@ export default function ArtisanDashboard() {
               <InfoItem icon={<BadgeCheck />} label="المهنة"            value={categoryLabel(realArtisan?.category || artisan?.category) || "–"} />
             </div>
 
-            <Card className="bg-white/[0.03] border-white/10 rounded-3xl overflow-hidden">
-              <CardHeader className="p-5 border-b border-white/10">
-                <CardTitle className="flex items-center gap-3 text-lg font-heading font-black">
-                  <MapPin className="h-5 w-5 text-red-400" />خريطة الحرفيين المتاحين
-                  <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-xs">🔴 مباشر</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4"><ArtisansMap height="380px" onlineOnly={true} /></CardContent>
-            </Card>
+
 
             {/* المحادثات */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
