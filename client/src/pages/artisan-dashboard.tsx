@@ -56,7 +56,18 @@ function getPlan(sub: string | undefined): PlanKey {
 const FINISH_SIGNAL = "__CHAT_FINISHED__";
 const RATING_COLORS = ["#EF4444", "#F97316", "#EAB308", "#22C55E", "#3B82F6"];
 
-function isImageContent(c: string) { return c?.startsWith("data:image") || c?.startsWith("http"); }
+function isImageContent(c: string) {
+  return c?.startsWith("data:image") ||
+         c?.startsWith("/uploads/") ||
+         c?.startsWith("uploads/") ||
+         (c?.startsWith("http") && !c?.includes("__"));
+}
+
+function getImageSrc(content: string) {
+  if (content.startsWith("uploads/")) return `/${content}`;
+  return content;
+}
+
 function formatTime(d: any) {
   try { return new Date(d).toLocaleTimeString("ar-DZ", { hour: "2-digit", minute: "2-digit" }); }
   catch { return ""; }
@@ -81,9 +92,7 @@ function ImprovementBar({ label, value, change, color }: { label: string; value:
     </div>
   );
 }
-const Conversation = self.addEventListener("notificationclick", (event) =>
-  setLocation("/chat")
-)                                 
+
 // ── KPI Card ──────────────────────────────────────────────────────────────────
 function KpiCard({ icon, label, value, change, color }: { icon: React.ReactNode; label: string; value: string; change?: number; color: string }) {
   const colorMap: Record<string, string> = {
@@ -454,7 +463,7 @@ export default function ArtisanDashboard() {
                 {/* Quick stats strip */}
                 <div className="grid grid-cols-3 gap-2 lg:gap-3 lg:w-auto lg:min-w-[400px]">
                   <MiniStat icon={<Eye className="h-3.5 w-3.5" />}           label="مشاهدات" value={analytics?.totalViews ?? 0} color="text-blue-400" />
-                  <MiniStat onClick={() => setLocation("/artisan-dashboard")} icon={<MessageSquare className="h-3.5 w-3.5" />} Converstaion label="محادثات" value={analytics?.totalConversations ?? conversations.length} color="text-purple-400" />
+                  <MiniStat icon={<MessageSquare className="h-3.5 w-3.5" />} label="محادثات" value={analytics?.totalConversations ?? conversations.length} color="text-purple-400" />
                   <MiniStat icon={<Star className="h-3.5 w-3.5" />}          label="تقييمات" value={reviews.length} color="text-amber-400" />
                 </div>
               </div>
@@ -604,7 +613,14 @@ export default function ArtisanDashboard() {
                           return (
                             <div key={msg.id} className={`flex ${isMe ? "justify-start" : "justify-end"}`}>
                               <div className={`max-w-[75%] px-3 py-2 rounded-2xl text-sm ${isMe ? "bg-gradient-to-br from-primary to-primary/80 text-white rounded-br-sm" : "bg-white/10 text-white rounded-bl-sm"}`}>
-                                {isImageContent(msg.content) ? <img src={msg.content} alt="" className="max-w-full rounded-xl max-h-40 object-cover" /> : <p>{msg.content}</p>}
+                                {isImageContent(msg.content) ? (
+                                  <img
+                                    src={getImageSrc(msg.content)}
+                                    alt="صورة"
+                                    className="max-w-full rounded-xl max-h-40 object-cover"
+                                    onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                  />
+                                ) : <p>{msg.content}</p>}
                                 <span className="text-[10px] opacity-60 mt-0.5 block">{formatTime(msg.createdAt)}</span>
                               </div>
                             </div>
@@ -734,7 +750,6 @@ export default function ArtisanDashboard() {
               </div>
 
               {!canVideo ? (
-                /* مقفل للـ free وstandard */
                 <div className="border-2 border-dashed border-violet-500/20 rounded-3xl p-10 text-center space-y-4">
                   <div className="w-16 h-16 rounded-2xl bg-violet-500/10 flex items-center justify-center mx-auto">
                     <Lock className="h-7 w-7 text-violet-400" />
@@ -749,7 +764,6 @@ export default function ArtisanDashboard() {
                   </Button>
                 </div>
               ) : portfolioVideos.length > 0 ? (
-                /* قائمة الفيديوهات */
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {portfolioVideos.map((vid, i) => (
                     <div key={i} className="relative rounded-3xl overflow-hidden border border-violet-500/20 bg-black aspect-video">
@@ -773,7 +787,6 @@ export default function ArtisanDashboard() {
                   )}
                 </div>
               ) : (
-                /* لا يوجد فيديو */
                 <label className="flex flex-col items-center justify-center border-2 border-dashed border-violet-500/20 rounded-3xl py-16 cursor-pointer hover:border-violet-500/40 transition-colors text-zinc-500 hover:text-zinc-300 max-w-2xl">
                   <Video className="h-12 w-12 mb-3 opacity-30" />
                   <p className="font-bold">اضغط لرفع أول فيديو</p>
@@ -857,7 +870,6 @@ export default function ArtisanDashboard() {
         {activeTab === "settings" && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-5xl">
 
-            {/* ═══ القسم 1: التوفر والموقع ═══════════════════════════════ */}
             <section>
               <SectionHeader
                 icon={<MapPin className="h-4 w-4" />}
@@ -907,7 +919,6 @@ export default function ArtisanDashboard() {
               </div>
             </section>
 
-            {/* ═══ القسم 2: المعلومات الشخصية ═══════════════════════════ */}
             <section>
               <SectionHeader
                 icon={<BadgeCheck className="h-4 w-4" />}
@@ -973,7 +984,6 @@ export default function ArtisanDashboard() {
               </Card>
             </section>
 
-            {/* ═══ القسم 3: خطة الاشتراك ═══════════════════════════════ */}
             <section>
               <SectionHeader
                 icon={<Crown className="h-4 w-4" />}
@@ -1007,7 +1017,6 @@ export default function ArtisanDashboard() {
               </Card>
             </section>
 
-            {/* ═══ القسم 4: منطقة الخطر ═══════════════════════════════ */}
             <section>
               <SectionHeader
                 icon={<Trash2 className="h-4 w-4" />}
