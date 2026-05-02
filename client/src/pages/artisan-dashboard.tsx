@@ -630,6 +630,29 @@ export default function ArtisanDashboard() {
                       <div className="p-3 border-t border-white/10">
                         {chatFinished ? <p className="text-center text-xs text-zinc-500 py-1">تم إنهاء المحادثة</p> : (
                           <div className="flex items-center gap-2 bg-white/5 rounded-2xl px-3 py-2 border border-white/10">
+                            <label className="cursor-pointer text-zinc-400 hover:text-primary transition-colors shrink-0">
+                              <ImageIcon className="h-4 w-4" />
+                              <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  const base64 = reader.result as string;
+                                  fetch("/api/upload", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ data: base64 }),
+                                  })
+                                    .then(r => r.json())
+                                    .then(({ url }) => {
+                                      if (url) sendReplyMutation.mutate(url);
+                                    })
+                                    .catch(() => {});
+                                };
+                                reader.readAsDataURL(file);
+                                e.target.value = "";
+                              }} />
+                            </label>
                             <input type="text" className="flex-1 bg-transparent border-none focus:outline-none text-sm text-white placeholder:text-zinc-500" placeholder="اكتب ردك..."
                               value={replyText} onChange={e => setReplyText(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSendReply()} />
                             <button onClick={handleSendReply} disabled={!replyText.trim() || sendReplyMutation.isPending}
