@@ -493,7 +493,7 @@ const callTargetId = isArtisan
                   </Avatar>
                   <div className="text-center">
                     <p className="font-bold text-lg">{activeArtisan.name}</p>
-                    <p className="text-muted-foreground text-sm">{activeArtisan.category}</p>
+                <p className="text-muted-foreground text-sm">{activeArtisan.category}</p>
                   </div>
                   <p className="text-muted-foreground text-sm">ابدأ المحادثة مع {activeArtisan.name} 👋</p>
                 </div>

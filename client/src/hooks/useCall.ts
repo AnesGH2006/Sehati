@@ -24,6 +24,7 @@ export function useCall({ myId, myName }: UseCallProps) {
   const remoteIdRef = useRef<string | null>(null);
   const callTypeRef = useRef<CallType>("audio");
   const pendingCandidates = useRef<RTCIceCandidateInit[]>([]);
+  const socketReadyRef = useRef(false);
 
   useEffect(() => { remoteIdRef.current = remoteId; }, [remoteId]);
   useEffect(() => { callTypeRef.current = callType; }, [callType]);
@@ -159,10 +160,12 @@ export function useCall({ myId, myName }: UseCallProps) {
 
       socket.on("connect", () => {
         console.log("✅ Socket connected:", socket.id);
+        socketReadyRef.current = true;
       });
 
       socket.on("disconnect", () => {
         console.log("❌ Socket disconnected");
+        socketReadyRef.current = false;
       });
 
       // ── Incoming call ────────────────────────────────────────────────────
@@ -259,8 +262,8 @@ export function useCall({ myId, myName }: UseCallProps) {
 
   // ── Start call (caller side) ─────────────────────────────────────────────
   const startCall = useCallback(async (targetId: string, targetName: string, type: CallType) => {
-    if (!socketRef.current?.connected) {
-      alert("الاتصال بالسيرفر غير متاح، حاول مجدداً");
+    if (!socketRef.current) {
+      alert("الاتصال غير جاهز بعد، حاول مجدداً");
       return;
     }
     setRemoteId(targetId);
@@ -271,7 +274,13 @@ export function useCall({ myId, myName }: UseCallProps) {
     setCallState("calling");
 
     try {
+      if (!socketReadyRef.current || !socketRef.current.connected) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
       await getMedia(type);
+      if (!socketRef.current?.connected) {
+        throw new Error("الاتصال بالسيرفر غير متاح، حاول مجدداً");
+      }
       socketRef.current.emit("call:start", {
         to: targetId,
         from: myId,

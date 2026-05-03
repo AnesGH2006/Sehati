@@ -62,7 +62,7 @@ export function CallUI({
         dir="rtl"
       >
         {/* Background */}
-        <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" />
+        <div className="absolute inset-0 bg-black/90 backdrop-blur-md md:backdrop-blur-xl" />
 
         {/* Video streams (video calls only) */}
         {callType === "video" && callState === "active" && (
@@ -83,13 +83,13 @@ export function CallUI({
         )}
 
         {/* UI Overlay */}
-        <div className="relative z-20 flex flex-col items-center gap-6 p-8 w-full max-w-sm">
+        <div className="relative z-20 flex flex-col items-center gap-5 p-6 md:p-8 w-full max-w-sm">
 
           {/* Caller info */}
           {(callState === "calling" || callState === "incoming" || (callState === "active" && callType === "audio")) && (
             <div className="flex flex-col items-center gap-4">
               <div className="relative">
-                <Avatar className="h-28 w-28 border-4 border-white/20">
+                <Avatar className="h-24 w-24 md:h-28 md:w-28 border-4 border-white/20">
                   <AvatarFallback className="bg-primary/30 text-white text-4xl font-bold">
                     {remoteName?.[0] || "؟"}
                   </AvatarFallback>
@@ -98,7 +98,7 @@ export function CallUI({
                 {(callState === "calling" || callState === "incoming") && (
                   <>
                     <span className="absolute inset-0 rounded-full border-2 border-primary/40 animate-ping" />
-                    <span className="absolute -inset-3 rounded-full border border-primary/20 animate-ping" style={{ animationDelay: "0.3s" }} />
+                    <span className="absolute -inset-2 md:-inset-3 rounded-full border border-primary/20 animate-ping" style={{ animationDelay: "0.3s" }} />
                   </>
                 )}
               </div>
@@ -116,7 +116,7 @@ export function CallUI({
 
           {/* Active audio call - show name at top */}
           {(callState === "calling" || callState === "incoming" || (callState === "active" && callType === "audio")) && (
-            <div className="absolute top-6 right-6 text-white font-bold text-sm bg-black/40 px-3 py-1.5 rounded-full backdrop-blur">
+            <div className="absolute top-4 right-4 md:top-6 md:right-6 text-white font-bold text-sm bg-black/40 px-3 py-1.5 rounded-full backdrop-blur">
               {remoteName}
             </div>
           )}
