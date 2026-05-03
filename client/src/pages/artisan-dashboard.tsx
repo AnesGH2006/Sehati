@@ -567,7 +567,7 @@ export default function ArtisanDashboard() {
               <AnimatePresence>
                 {selectedConv && (
                   <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
-                    <Card className="bg-white/[0.03] border-white/10 rounded-3xl overflow-hidden flex flex-col h-[480px]">
+                    <Card className="bg-white/[0.03] border-white/10 rounded-3xl overflow-hidden flex flex-col h-[70vh] min-h-[560px]">
                       <CardHeader className="p-4 border-b border-white/10 flex-row items-center justify-between space-y-0">
                         <div className="flex items-center gap-3">
                           <Avatar className="h-9 w-9"><AvatarFallback className="bg-primary/20 text-primary font-black text-sm">{selectedConv.customerId?.slice(-1).toUpperCase()}</AvatarFallback></Avatar>
@@ -576,10 +576,10 @@ export default function ArtisanDashboard() {
                             <p className="text-xs text-green-400">{chatFinished ? "✅ تم إنهاء المحادثة" : "متصل"}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <button onClick={() => startCall(selectedConv.customerId, selectedConv.customerName || "زبون", "audio")} className="p-1.5 rounded-full bg-white/5 hover:bg-primary/20 text-zinc-400 hover:text-primary transition-colors"><Phone className="h-4 w-4" /></button>
-                          <button onClick={() => startCall(selectedConv.customerId, selectedConv.customerName || "زبون", "video")} className="p-1.5 rounded-full bg-white/5 hover:bg-primary/20 text-zinc-400 hover:text-primary transition-colors"><Video className="h-4 w-4" /></button>
-                          <button onClick={() => setLocation(`/chat/${selectedConv.artisanId}`)} className="p-1.5 rounded-full bg-white/5 hover:bg-blue-500/20 text-zinc-400 hover:text-blue-400 transition-colors"><ExternalLink className="h-4 w-4" /></button>
+                        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                          <button data-testid={`button-audio-call-${selectedConv.id}`} onClick={() => startCall(selectedConv.customerId, selectedConv.customerName || "زبون", "audio")} className="p-1.5 rounded-full bg-white/5 hover:bg-primary/20 text-zinc-400 hover:text-primary transition-colors"><Phone className="h-4 w-4" /></button>
+                          <button data-testid={`button-video-call-${selectedConv.id}`} onClick={() => startCall(selectedConv.customerId, selectedConv.customerName || "زبون", "video")} className="p-1.5 rounded-full bg-white/5 hover:bg-primary/20 text-zinc-400 hover:text-primary transition-colors"><Video className="h-4 w-4" /></button>
+                          <button data-testid={`button-open-chat-${selectedConv.id}`} onClick={() => setLocation(`/chat/${selectedConv.artisanId}`)} className="p-1.5 rounded-full bg-white/5 hover:bg-blue-500/20 text-zinc-400 hover:text-blue-400 transition-colors"><ExternalLink className="h-4 w-4" /></button>
                           {!chatFinished && convMessages.length > 0 && (
                             <button onClick={() => { if (confirm("هل تريد إنهاء هذه المحادثة؟")) finishChatMutation.mutate(); }} disabled={finishChatMutation.isPending}
                               className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors text-xs font-bold border border-green-500/20">
@@ -590,7 +590,7 @@ export default function ArtisanDashboard() {
                           <Button size="icon" variant="ghost" className="rounded-full h-8 w-8 text-zinc-400" onClick={() => setSelectedConv(null)}><X className="h-4 w-4" /></Button>
                         </div>
                       </CardHeader>
-                      <div className="flex-1 overflow-y-auto p-4 space-y-2" ref={chatScrollRef}>
+                      <div className="flex-1 overflow-y-auto p-4 md:p-5 space-y-2" ref={chatScrollRef}>
                         {convMessages.length === 0 ? (
                           <div className="h-full flex items-center justify-center text-zinc-500 text-sm">لا توجد رسائل</div>
                         ) : convMessages.map((msg: any) => {
@@ -645,9 +645,9 @@ export default function ArtisanDashboard() {
                                 e.target.value = "";
                               }} />
                             </label>
-                            <input type="text" className="flex-1 bg-transparent border-none focus:outline-none text-sm text-white placeholder:text-zinc-500" placeholder="اكتب ردك..."
+                            <input data-testid="input-dashboard-reply" type="text" className="flex-1 bg-transparent border-none focus:outline-none text-sm text-white placeholder:text-zinc-500" placeholder="اكتب ردك..."
                               value={replyText} onChange={e => setReplyText(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSendReply()} />
-                            <button onClick={handleSendReply} disabled={!replyText.trim() || sendReplyMutation.isPending}
+                            <button data-testid="button-dashboard-send-reply" onClick={handleSendReply} disabled={!replyText.trim() || sendReplyMutation.isPending}
                               className="p-1.5 bg-primary rounded-full text-white disabled:opacity-40 transition-all hover:bg-primary/80 active:scale-95"><Send className="h-4 w-4" /></button>
                           </div>
                         )}
