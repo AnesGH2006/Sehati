@@ -56,18 +56,33 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/upload", async (req: Request, res: Response) => {
     try {
-      const { data } = req.body as { data: string; filename: string };
-      if (!data || !data.startsWith("data:image")) return res.status(400).json({ message: "Invalid image data" });
-      const base64 = data.split(",")[1];
-      const buffer = Buffer.from(base64, "base64");
-      const name = `${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
-      const sharp = (await import("sharp")).default;
-      await sharp(buffer)
-        .resize(1200, 1200, { fit: "inside", withoutEnlargement: true })
-        .webp({ quality: 75 })
-        .toFile(path.join(UPLOADS_DIR, name));
+      const { data } = req.body as { data: string; filename?: string };
+      if (!data || typeof data !== "string") return res.status(400).json({ message: "Invalid upload data" });
+
+      const match = data.match(/^data:([^;]+);base64,(.+)$/);
+      if (!match) return res.status(400).json({ message: "Invalid upload data" });
+
+      const mime = match[1];
+      const base64 = match[2];
+      const extMap: Record<string, string> = {
+        "image/jpeg": "jpg",
+        "image/jpg": "jpg",
+        "image/png": "png",
+        "image/webp": "webp",
+        "image/gif": "gif",
+        "video/mp4": "mp4",
+        "video/webm": "webm",
+        "audio/webm": "webm",
+        "audio/ogg": "ogg",
+        "audio/mpeg": "mp3",
+      };
+      const ext = extMap[mime] || "bin";
+      const name = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      await fs.promises.writeFile(path.join(UPLOADS_DIR, name), Buffer.from(base64, "base64"));
       res.json({ url: `/uploads/${name}` });
-    } catch { res.status(500).json({ message: "Upload failed" }); }
+    } catch {
+      res.status(500).json({ message: "Upload failed" });
+    }
   });
 
   app.post("/api/auth/register", async (req: Request, res: Response) => {
@@ -276,7 +291,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         const nx = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
         monthlyConvs.push({ month: d.toLocaleDateString("ar-DZ", { month: "short" }), count: convList.filter((c: any) => { const t = new Date(c.createdAt); return t >= d && t < nx; }).length });
       }
-      function pct(c: number, p: number) { if (p === 0) return c > 0 ? 100 : 0; return Math.round(((c - p) / p) * 100); }
+      const pct = (c: number, p: number) => { if (p === 0) return c > 0 ? 100 : 0; return Math.round(((c - p) / p) * 100); };
       const totalConvs = convList.length;
       const replyRate = totalConvs > 0 ? Math.round((convList.filter((c: any) => c.lastMessage).length / totalConvs) * 100) : 100;
       const finishRate = totalConvs > 0 ? Math.round((convList.filter((c: any) => c.lastMessage === "__CHAT_FINISHED__").length / totalConvs) * 100) : 0;
@@ -303,7 +318,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
   app.post("/api/reviews", async (req: Request, res: Response) => {
     try {
-      const data = insertReviewSchema.parse(req.body);
+      const data = insertReviewSchema.parse(req.body) as { artisanId: number; customerId: string };
       if (await storage.hasReviewed(data.artisanId, data.customerId)) return res.status(409).json({ message: "لقد قيمت هذا الحرفي من قبل" });
       res.status(201).json(await storage.createReview(data));
     } catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: "Invalid data", errors: error.errors }); res.status(500).json({ message: "Failed to create review" }); }

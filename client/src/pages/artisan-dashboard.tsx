@@ -399,7 +399,7 @@ export default function ArtisanDashboard() {
         const r = await fetch("/api/upload", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ data: reader.result, filename: file.name }),
+          body: JSON.stringify({ data: reader.result }),
         });
         const { url } = await r.json();
         if (url) {
