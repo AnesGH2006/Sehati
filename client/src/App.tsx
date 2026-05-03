@@ -29,7 +29,7 @@ const EmergencyPage    = lazy(() => import("@/pages/emergency"));
 
 // ── Google OAuth ──────────────────────────────────────────────────────────────
 function GoogleAuthHandler() {
-  const { loginCustomer } = useAuth();
+  const { loginCustomer, loginArtisan } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
@@ -41,10 +41,28 @@ function GoogleAuthHandler() {
     const phone     = params.get("phone")     || "";
     const role      = params.get("role")      || "customer";
     const artisanId = params.get("artisanId") || "";
+    const category   = params.get("category")  || "";
+    const wilaya     = params.get("wilaya")    || "";
+    const daira      = params.get("daira")     || "";
+    const imageUrl   = params.get("imageUrl")   || "";
 
     if (!id || !name) return;
 
-    loginCustomer({ id, name, phone });
+    if (role === "artisan") {
+      loginArtisan({
+        id: Number(artisanId || id),
+        name,
+        email: params.get("email") || "",
+        phone,
+        category,
+        wilaya,
+        daira,
+        subscriptionType: params.get("subscriptionType") || "free",
+        imageUrl,
+      });
+    } else {
+      loginCustomer({ id, name, phone });
+    }
     window.history.replaceState({}, document.title, "/");
 
     if (role === "artisan" && artisanId) {

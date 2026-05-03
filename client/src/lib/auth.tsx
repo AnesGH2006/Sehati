@@ -79,7 +79,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const ensureGuest = (): CustomerSession => {
     if (customer) return customer;
     if (artisan) {
-      // الحرفي مسجَّل أصلاً — لا تنشئ زائرًا. نُعيد كائن وهمي.
       return { id: `artisan-${artisan.id}`, name: artisan.name, phone: artisan.phone };
     }
     let id = localStorage.getItem("herfati_guest_id");
@@ -102,6 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isGuest = !!customer && customer.id.startsWith("guest-");
+  const currentSession = artisan || customer;
 
   return (
     <AuthContext.Provider value={{
@@ -113,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       isArtisan: !!artisan,
       isCustomer: !!customer && !isGuest,
-      isLoggedIn: !!(artisan || (customer && !isGuest)),
+      isLoggedIn: !!currentSession && !isGuest,
       isGuest,
     }}>
       {children}
