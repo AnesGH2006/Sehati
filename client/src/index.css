@@ -207,6 +207,10 @@
   .backdrop-blur-xl { backdrop-filter: blur(8px); }
   .backdrop-blur-2xl { backdrop-filter: blur(10px); }
   .backdrop-blur-3xl { backdrop-filter: blur(12px); }
+  .shadow-2xl,
+  .shadow-3xl {
+    box-shadow: none !important;
+  }
 }
 
 /* احترام تفضيل تقليل الحركة للنظام */
