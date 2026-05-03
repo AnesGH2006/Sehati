@@ -54,14 +54,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.use("/api/emergency", emergencyRouter);
   app.use("/api/artisan", artisanStatusRouter);
 
-  app.post("/api/upload", (req: Request, res: Response) => {
+  app.post("/api/upload", async (req: Request, res: Response) => {
     try {
       const { data } = req.body as { data: string; filename: string };
       if (!data || !data.startsWith("data:image")) return res.status(400).json({ message: "Invalid image data" });
       const base64 = data.split(",")[1];
-      const ext = data.includes("image/png") ? "png" : data.includes("image/webp") ? "webp" : "jpg";
-      const name = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      fs.writeFileSync(path.join(UPLOADS_DIR, name), Buffer.from(base64, "base64"));
+      const buffer = Buffer.from(base64, "base64");
+      const name = `${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
+      const sharp = (await import("sharp")).default;
+      await sharp(buffer)
+        .resize(1200, 1200, { fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 75 })
+        .toFile(path.join(UPLOADS_DIR, name));
       res.json({ url: `/uploads/${name}` });
     } catch { res.status(500).json({ message: "Upload failed" }); }
   });
