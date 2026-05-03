@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Navbar } from "@/components/layout/navbar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MOCK_ARTISANS, CATEGORIES, categoryLabel } from "@/lib/constants";
-import { Send, Image as ImageIcon, Smile, X, ArrowRight, Phone, Video, Star, Heart, CheckCheck } from "lucide-react";
+import { Send, Image as ImageIcon, Smile, X, ArrowRight, Phone, Video, Star, Heart, CheckCheck, Mic, MicOff } from "lucide-react";
 import { useRoute, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth";
@@ -84,10 +84,13 @@ export default function Chat() {
   const [showRating, setShowRating] = useState(false);
   const [ratingValue, setRatingValue] = useState(0);
   const [ratingComment, setRatingComment] = useState("");
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const voiceChunksRef = useRef<BlobPart[]>([]);
 
-  const myId = isArtisan ? (authArtisan?.userId || String(authArtisan?.id)) : (customer?.id || "guest");
+  const myId = isArtisan ? (authArtisan?.id ? String(authArtisan.id) : "artisan") : (customer?.id || "guest");
   const myName = isArtisan ? (authArtisan?.name || "حرفي") : (customer?.name || "زبون");
   const myType: "artisan" | "customer" = isArtisan ? "artisan" : "customer";
 
@@ -112,8 +115,8 @@ export default function Chat() {
     enabled: !!activeArtisanId,
   });
 
-  const mockArtisan = activeArtisanId ? MOCK_ARTISANS.find(a => a.id === activeArtisanId) : null;
-  const activeArtisan = activeArtisanId ? {
+  const mockArtisan = activeArtisanId ? (MOCK_ARTISANS as any[]).find(a => a.id === activeArtisanId) : null;
+  const activeArtisan: any = activeArtisanId ? {
     id: activeArtisanId,
     name: isArtisan && authArtisan?.id === activeArtisanId
       ? (authArtisan?.name || "حرفي")
@@ -308,6 +311,38 @@ const callTargetId = isArtisan
     setShowEmoji(false);
   };
 
+  const handleVoiceClip = async () => {
+    if (chatFinished) return;
+    if (isRecordingVoice) {
+      mediaRecorderRef.current?.stop();
+      setIsRecordingVoice(false);
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      voiceChunksRef.current = [];
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+      recorder.ondataavailable = e => { if (e.data.size > 0) voiceChunksRef.current.push(e.data); };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop());
+        const blob = new Blob(voiceChunksRef.current, { type: recorder.mimeType || "audio/webm" });
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        const result = await uploadMutation.mutateAsync(base64);
+        if (result.url) sendMutation.mutate(result.url);
+      };
+      recorder.start();
+      setIsRecordingVoice(true);
+    } catch {
+      setIsRecordingVoice(false);
+    }
+  };
+
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -330,7 +365,7 @@ const callTargetId = isArtisan
       image: found.imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(found.name)}&background=2DD4BF&color=fff`,
       category: CATEGORIES.find(c => c.id === found.category)?.label || found.category,
     };
-    const mock = MOCK_ARTISANS.find(a => a.id === conv.artisanId);
+    const mock = (MOCK_ARTISANS as any[]).find(a => a.id === conv.artisanId);
     if (mock) return { id: mock.id, name: mock.name, image: mock.image, category: mock.category };
     return { id: conv.artisanId, name: `حرفي #${conv.artisanId}`, image: "", category: "" };
   };
@@ -395,7 +430,7 @@ const callTargetId = isArtisan
         {activeArtisan ? (
           <div className="flex-1 flex flex-col bg-background overflow-hidden">
             {/* Header */}
-            <div className="h-16 border-b flex items-center justify-between px-4 bg-card/80 backdrop-blur-sm shrink-0">
+            <div className="min-h-20 border-b flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-card/80 backdrop-blur-sm shrink-0">
               <div className="flex items-center gap-3">
                 <button onClick={() => setLocation("/chat")} className="md:hidden p-1">
                   <ArrowRight className="h-5 w-5" />
@@ -415,7 +450,7 @@ const callTargetId = isArtisan
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap justify-end">
                 <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground ml-2 border-l pl-3">
                   <span>أنت:</span>
                   <span className="font-bold text-foreground">{myName}</span>
@@ -466,11 +501,11 @@ const callTargetId = isArtisan
                   </span>
                 )}
 
-                <button className="p-2 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-primary"
+                <button data-testid="button-audio-call" className="p-2 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-primary"
                   onClick={() => startCall(callTargetId, activeArtisan.name, "audio")}>
                   <Phone className="h-5 w-5" />
                 </button>
-                <button className="p-2 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-primary"
+                <button data-testid="button-video-call" className="p-2 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-primary"
                   onClick={() => startCall(callTargetId, activeArtisan.name, "video")}>
                   <Video className="h-5 w-5" />
                 </button>
@@ -543,7 +578,7 @@ const callTargetId = isArtisan
                             {senderName}
                           </p>
                         )}
-                        {editingMsg?.id === msg.id ? (
+                        {editingMsg && editingMsg.id === msg.id ? (
                           <div className="flex gap-2 items-center">
                             <input
                               autoFocus
@@ -639,6 +674,10 @@ const callTargetId = isArtisan
                 <button onClick={() => fileInputRef.current?.click()}
                   className="p-2.5 rounded-full text-muted-foreground hover:text-primary hover:bg-muted/50 transition-colors shrink-0">
                   <ImageIcon className="h-5 w-5" />
+                </button>
+                <button data-testid="button-voice-clip" onClick={handleVoiceClip}
+                  className={`p-2.5 rounded-full transition-colors shrink-0 ${isRecordingVoice ? "bg-red-500/10 text-red-500 hover:bg-red-500/20" : "text-muted-foreground hover:text-primary hover:bg-muted/50"}`}>
+                  {isRecordingVoice ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
                 </button>
                 <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleFile} />
 

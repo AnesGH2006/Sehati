@@ -108,7 +108,7 @@ export function CallUI({
                   {callState === "calling" && "جاري الاتصال..."}
                   {callState === "incoming" && `مكالمة ${callType === "video" ? "بالكاميرا" : "صوتية"} واردة`}
                   {callState === "active" && "متصل الآن"}
-                  {callState === "ended" && "انتهت المكالمة"}
+                  {callState === "ended" ? "انتهت المكالمة" : ""}
                 </p>
               </div>
             </div>
