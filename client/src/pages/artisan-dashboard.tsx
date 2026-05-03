@@ -12,7 +12,7 @@ import {
   Phone, Mail, Briefcase, Banknote, Send, ArrowRight,
   Quote, Video, ExternalLink, CheckCheck, TrendingUp,
   BarChart2, ArrowUp, ArrowDown, Minus, Lock, Sparkles,
-  Crown, Zap, Play, Wifi, Crosshair,
+  Crown, Zap, Play, Wifi, Crosshair, Mic, MicOff,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
@@ -187,7 +187,10 @@ export default function ArtisanDashboard() {
   const [portfolioImages, setPortfolioImages] = useState<string[]>([]);
   const [selectedConv, setSelectedConv] = useState<any>(null);
   const [replyText, setReplyText] = useState("");
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const voiceChunksRef = useRef<BlobPart[]>([]);
   const { location } = useArtisanLocation(artisan?.id ?? null);
 
   const myId   = String(artisan?.id || "");
@@ -294,6 +297,43 @@ export default function ArtisanDashboard() {
   });
 
   const handleSendReply = () => { if (!replyText.trim() || chatFinished) return; sendReplyMutation.mutate(replyText); };
+  const handleVoiceClip = async () => {
+    if (!selectedConv || chatFinished) return;
+    if (isRecordingVoice) {
+      mediaRecorderRef.current?.stop();
+      setIsRecordingVoice(false);
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      voiceChunksRef.current = [];
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) voiceChunksRef.current.push(e.data); };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop());
+        const blob = new Blob(voiceChunksRef.current, { type: recorder.mimeType || "audio/webm" });
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        fetch("/api/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data: base64 }),
+        })
+          .then(r => r.json())
+          .then(({ url }) => { if (url) sendReplyMutation.mutate(url); })
+          .catch(() => {});
+      };
+      recorder.start();
+      setIsRecordingVoice(true);
+    } catch {
+      setIsRecordingVoice(false);
+    }
+  };
 
   const uploadImage = async (base64: string): Promise<string> => {
     const r = await fetch("/api/upload", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ data: base64 }) });
@@ -645,6 +685,9 @@ export default function ArtisanDashboard() {
                                 e.target.value = "";
                               }} />
                             </label>
+                            <button data-testid="button-voice-clip" onClick={handleVoiceClip} className={`shrink-0 rounded-full p-1.5 transition-colors ${isRecordingVoice ? "bg-red-500/20 text-red-400 hover:bg-red-500/30" : "text-zinc-400 hover:text-primary"}`}>
+                              {isRecordingVoice ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                            </button>
                             <input data-testid="input-dashboard-reply" type="text" className="flex-1 bg-transparent border-none focus:outline-none text-sm text-white placeholder:text-zinc-500" placeholder="اكتب ردك..."
                               value={replyText} onChange={e => setReplyText(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSendReply()} />
                             <button data-testid="button-dashboard-send-reply" onClick={handleSendReply} disabled={!replyText.trim() || sendReplyMutation.isPending}
