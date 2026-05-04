@@ -8,7 +8,7 @@ import crypto from "crypto";
 
 const GOOGLE_CLIENT_ID     = process.env.GOOGLE_CLIENT_ID     || "180429058585-98arm61fqvb5o505efa1d7m8f6b6uo52.apps.googleusercontent.com";
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "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";
-const APP_URL              = process.env.APP_URL               || "https://herfati--alaagh23dz.replit.app";
+const APP_URL              = process.env.APP_URL               || "https://herafi.onrender.com";
 
 export function setupGoogleAuth(app: Express) {
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
