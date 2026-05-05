@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Navbar } from "@/components/layout/navbar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MOCK_ARTISANS, CATEGORIES, categoryLabel } from "@/lib/constants";
-import { Send, Image as ImageIcon, Smile, X, ArrowRight, Phone, Video, Star, Heart, CheckCheck, Mic, MicOff } from "lucide-react";
+import { Send, Image as ImageIcon, Smile, X, ArrowRight, Phone, Video, Star, Heart, CheckCheck, Mic, MicOff, Pencil, Trash2 } from "lucide-react";
 import { useRoute, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth";
@@ -69,10 +69,10 @@ export default function Chat() {
   const [, setLocation] = useLocation();
   const { artisan: authArtisan, customer, isArtisan, isLoggedIn, ensureGuest } = useAuth();
 
-  // إذا فتح زائر صفحة محادثة بدون تسجيل، أنشئ له جلسة زائر تلقائياً
   useEffect(() => {
     if (!isArtisan && !customer && activeArtisanId) ensureGuest();
   }, [isArtisan, customer, activeArtisanId]);
+
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -85,6 +85,18 @@ export default function Chat() {
   const [ratingValue, setRatingValue] = useState(0);
   const [ratingComment, setRatingComment] = useState("");
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+
+  // ── Context menu state (long press) ──────────────────────────────────────
+  const [contextMenu, setContextMenu] = useState<{
+    msgId: number;
+    msgContent: string;
+    x: number;
+    y: number;
+    isImage: boolean;
+  } | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didLongPress = useRef(false);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -94,10 +106,51 @@ export default function Chat() {
   const myName = isArtisan ? (authArtisan?.name || "حرفي") : (customer?.name || "زبون");
   const myType: "artisan" | "customer" = isArtisan ? "artisan" : "customer";
 
-  // Redirect artisan to dashboard — chat is for customers only
   useEffect(() => {
     if (isArtisan) setLocation("/artisan/dashboard");
   }, [isArtisan]);
+
+  // ── Long press handlers ───────────────────────────────────────────────────
+  const handleMsgPressStart = (
+    e: React.TouchEvent | React.MouseEvent,
+    msg: any,
+    isMe: boolean
+  ) => {
+    if (!isMe) return;
+    didLongPress.current = false;
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+    longPressTimer.current = setTimeout(() => {
+      didLongPress.current = true;
+      // position the menu: keep it inside viewport
+      const menuWidth = 180;
+      const menuHeight = isImageUrl(msg.content) ? 60 : 110;
+      const x = Math.min(clientX, window.innerWidth - menuWidth - 8);
+      const y = Math.min(clientY, window.innerHeight - menuHeight - 8);
+      setContextMenu({
+        msgId: msg.id,
+        msgContent: msg.content,
+        x,
+        y,
+        isImage: isImageUrl(msg.content),
+      });
+    }, 500);
+  };
+
+  const handleMsgPressEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  const handleMsgClick = (e: React.MouseEvent, isMe: boolean) => {
+    // prevent closing context menu immediately on the tap that triggered it
+    if (didLongPress.current) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
 
   // ── WebRTC Call ────────────────────────────────────────────────────────
   const {
@@ -133,7 +186,6 @@ export default function Chat() {
     ? getConversationId(activeArtisanId, isArtisan ? "customer-chat" : myId)
     : null;
 
-  // ── Fetch real conversations for sidebar ─────────────────────────────────
   const { data: myConversations = [] } = useQuery<any[]>({
     queryKey: ["/api/conversations", myId, myType],
     queryFn: () => fetch(`/api/conversations/${myId}?role=${myType}`).then(r => r.ok ? r.json() : []).catch(() => []),
@@ -141,13 +193,11 @@ export default function Chat() {
     refetchInterval: 3000,
   });
 
-  // Fetch all artisans to map IDs to names in sidebar
   const { data: allArtisans = [] } = useQuery<any[]>({
     queryKey: ["/api/artisans"],
     queryFn: () => fetch("/api/artisans").then(r => r.json()),
   });
 
-  // Create conversation
   const createConvMutation = useMutation({
     mutationFn: () => fetch("/api/conversations", {
       method: "POST",
@@ -165,7 +215,6 @@ export default function Chat() {
     if (convId && activeArtisanId) createConvMutation.mutate();
   }, [convId]);
 
-  // Fetch messages
   const { data: messages = [] } = useQuery<any[]>({
     queryKey: ["/api/conversations", convId, "messages"],
     queryFn: () => convId ? fetch(`/api/conversations/${convId}/messages`).then(r => r.json()) : Promise.resolve([]),
@@ -173,17 +222,14 @@ export default function Chat() {
     refetchInterval: 2000,
   });
 
-  // ── Check if artisan finished the chat ──────────────────────────────────
   const chatFinished = messages.some((m: any) => m.content === FINISH_SIGNAL && m.senderType === "artisan");
 
-  // ── Real call target ID — resolved from actual messages ─────────────────
   const customerIdFromMessages = messages.find((m: any) => m.senderType === "customer")?.senderId;
   const artisanUserId = apiArtisan?.userId || String(activeArtisanId);
-const callTargetId = isArtisan
-  ? (customerIdFromMessages || "customer-chat")
-  : artisanUserId;
+  const callTargetId = isArtisan
+    ? (customerIdFromMessages || "customer-chat")
+    : artisanUserId;
 
-  // Check if already reviewed
   const { data: hasReviewed } = useQuery<boolean>({
     queryKey: ["/api/reviews/check", activeArtisanId, myId],
     queryFn: async () => {
@@ -223,13 +269,11 @@ const callTargetId = isArtisan
     },
   });
 
-  // ── Delete message ────────────────────────────────────────────────────────
   const deleteMsgMutation = useMutation({
     mutationFn: (id: number) => fetch(`/api/messages/${id}`, { method: "DELETE" }).then(r => r.json()),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/conversations", convId, "messages"] }),
   });
 
-  // ── Edit message ──────────────────────────────────────────────────────────
   const editMsgMutation = useMutation({
     mutationFn: ({ id, content }: { id: number; content: string }) =>
       fetch(`/api/messages/${id}`, {
@@ -243,7 +287,6 @@ const callTargetId = isArtisan
     },
   });
 
-  // ── Artisan: finish chat ─────────────────────────────────────────────────
   const finishChatMutation = useMutation({
     mutationFn: () => fetch("/api/messages", {
       method: "POST",
@@ -356,7 +399,6 @@ const callTargetId = isArtisan
     setLikedMsgs(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   };
 
-  // Get artisan info for a conversation (for sidebar)
   const getArtisanForConv = (conv: any) => {
     const found = allArtisans.find((a: any) => a.id === conv.artisanId);
     if (found) return {
@@ -394,7 +436,7 @@ const callTargetId = isArtisan
                 const displayImage = isArtisan ? "" : artisan?.image;
                 const displaySub = isArtisan ? conv.customerId?.slice(0, 12) : artisan?.category;
                 const convArtisanId = conv.artisanId;
-                const isActive = isArtisan 
+                const isActive = isArtisan
                   ? activeArtisanId === authArtisan?.id
                   : activeArtisanId === convArtisanId;
 
@@ -456,7 +498,6 @@ const callTargetId = isArtisan
                   <span className="font-bold text-foreground">{myName}</span>
                 </div>
 
-                {/* Artisan: finish chat button */}
                 {isArtisan && !chatFinished && messages.length > 0 && (
                   <button
                     onClick={() => {
@@ -478,7 +519,6 @@ const callTargetId = isArtisan
                   </span>
                 )}
 
-                {/* Customer: rate button - only after artisan finishes */}
                 {!isArtisan && chatFinished && !hasReviewed && (
                   <button
                     onClick={() => setShowRating(true)}
@@ -513,7 +553,7 @@ const callTargetId = isArtisan
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-1" ref={scrollRef}>
+            <div className="flex-1 overflow-y-auto p-4 space-y-1 relative" ref={scrollRef}>
               <div className="flex items-center gap-3 my-4">
                 <div className="flex-1 h-px bg-border/50" />
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">اليوم</span>
@@ -528,7 +568,7 @@ const callTargetId = isArtisan
                   </Avatar>
                   <div className="text-center">
                     <p className="font-bold text-lg">{activeArtisan.name}</p>
-                <p className="text-muted-foreground text-sm">{activeArtisan.category}</p>
+                    <p className="text-muted-foreground text-sm">{activeArtisan.category}</p>
                   </div>
                   <p className="text-muted-foreground text-sm">ابدأ المحادثة مع {activeArtisan.name} 👋</p>
                 </div>
@@ -536,7 +576,6 @@ const callTargetId = isArtisan
 
               <AnimatePresence initial={false}>
                 {messages.map((msg: any, i: number) => {
-                  // Hide the finish signal message — show a banner instead
                   if (msg.content === FINISH_SIGNAL) {
                     return (
                       <motion.div key={msg.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
@@ -561,6 +600,34 @@ const callTargetId = isArtisan
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       transition={{ duration: 0.2 }}
                       className={`flex items-end gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'} group`}
+                      onMouseDown={(e) => handleMsgPressStart(e, msg, isMe)}
+                      onMouseUp={handleMsgPressEnd}
+                      onMouseLeave={handleMsgPressEnd}
+                      onTouchStart={(e) => handleMsgPressStart(e, msg, isMe)}
+                      onTouchEnd={handleMsgPressEnd}
+                      onTouchCancel={handleMsgPressEnd}
+                      onContextMenu={(e) => {
+                        if (isMe) {
+                          e.preventDefault();
+                          handleMsgPressStart(e as any, msg, isMe);
+                          // fire immediately on right-click (no delay)
+                          if (longPressTimer.current) {
+                            clearTimeout(longPressTimer.current);
+                            longPressTimer.current = null;
+                          }
+                          const menuWidth = 180;
+                          const menuHeight = isImageUrl(msg.content) ? 60 : 110;
+                          const x = Math.min(e.clientX, window.innerWidth - menuWidth - 8);
+                          const y = Math.min(e.clientY, window.innerHeight - menuHeight - 8);
+                          setContextMenu({
+                            msgId: msg.id,
+                            msgContent: msg.content,
+                            x,
+                            y,
+                            isImage: isImageUrl(msg.content),
+                          });
+                        }
+                      }}
                     >
                       {!isMe && (
                         <div className="w-8 h-8 shrink-0">
@@ -582,9 +649,10 @@ const callTargetId = isArtisan
                           <div className="flex gap-2 items-center">
                             <input
                               autoFocus
+                              value={editingMsg.content}
                               onChange={e => setEditingMsg(prev => prev ? { ...prev, content: e.target.value } : null)}
                               onKeyDown={e => {
-                                if (e.key === "Enter") if (editingMsg) editMsgMutation.mutate({ id: msg.id, content: editingMsg.content });
+                                if (e.key === "Enter") editMsgMutation.mutate({ id: msg.id, content: editingMsg.content });
                                 if (e.key === "Escape") setEditingMsg(null);
                               }}
                               className="flex-1 bg-primary/20 text-white rounded-xl px-3 py-2 text-sm border border-primary/40 focus:outline-none"
@@ -594,36 +662,20 @@ const callTargetId = isArtisan
                             <button onClick={() => setEditingMsg(null)} className="text-xs text-muted-foreground">✕</button>
                           </div>
                         ) : (
-                        <div onDoubleClick={() => toggleLike(msg.id)}
-                          className={`rounded-2xl text-sm leading-relaxed cursor-default select-text transition-all overflow-hidden ${
-                            isMe
-                              ? 'bg-gradient-to-br from-primary to-primary/80 text-white rounded-br-md'
-                              : 'bg-muted text-foreground rounded-bl-md'
-                          } ${isImageUrl(msg.content) ? 'p-1' : 'px-4 py-2.5'}`}
-                        >
-                          {isImageUrl(msg.content) ? (
-                            <img src={msg.content.startsWith("uploads/") ? `/${msg.content}` : msg.content} alt="صورة"
-                              className="max-w-[240px] max-h-[300px] rounded-xl object-cover block"
-                              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                            />
-                          ) : msg.content}
-                        </div>
-                        )}
-                        {/* Delete/Edit buttons for own messages */}
-                        {isMe && !editingMsg && (
-                          <div className={`absolute top-0 ${isMe ? 'left-0 -translate-x-full pr-1' : 'right-0 translate-x-full pl-1'} hidden group-hover:flex items-center gap-1`}>
-                            {!isImageUrl(msg.content) && (
-                              <button
-                                onClick={() => setEditingMsg({ id: msg.id, content: msg.content })}
-                                className="p-1 rounded-full bg-muted hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors text-right"
-                                title="تعديل"
-                              >✏️</button>
-                            )}
-                            <button
-                              onClick={() => { if (confirm("حذف هذه الرسالة؟")) deleteMsgMutation.mutate(msg.id); }}
-                              className="p-1 rounded-full bg-muted hover:bg-red-500/20 text-muted-foreground hover:text-red-500 transition-colors text-xs"
-                              title="حذف"
-                            >🗑️</button>
+                          <div
+                            onDoubleClick={() => toggleLike(msg.id)}
+                            className={`rounded-2xl text-sm leading-relaxed cursor-default select-text transition-all overflow-hidden ${
+                              isMe
+                                ? 'bg-gradient-to-br from-primary to-primary/80 text-white rounded-br-md'
+                                : 'bg-muted text-foreground rounded-bl-md'
+                            } ${isImageUrl(msg.content) ? 'p-1' : 'px-4 py-2.5'}`}
+                          >
+                            {isImageUrl(msg.content) ? (
+                              <img src={msg.content.startsWith("uploads/") ? `/${msg.content}` : msg.content} alt="صورة"
+                                className="max-w-[240px] max-h-[300px] rounded-xl object-cover block"
+                                onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                              />
+                            ) : msg.content}
                           </div>
                         )}
                         {likedMsgs.has(msg.id) && (
@@ -637,6 +689,65 @@ const callTargetId = isArtisan
                     </motion.div>
                   );
                 })}
+              </AnimatePresence>
+
+              {/* ── Context Menu (long press / right click) ─────────────── */}
+              <AnimatePresence>
+                {contextMenu && (
+                  <>
+                    {/* backdrop to close */}
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="fixed inset-0 z-40"
+                      onClick={() => setContextMenu(null)}
+                      onContextMenu={(e) => { e.preventDefault(); setContextMenu(null); }}
+                    />
+                    {/* menu */}
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.85, y: -4 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.85, y: -4 }}
+                      transition={{ type: "spring", damping: 22, stiffness: 320 }}
+                      style={{
+                        position: "fixed",
+                        top: contextMenu.y,
+                        left: contextMenu.x,
+                        zIndex: 50,
+                        transformOrigin: "top right",
+                      }}
+                      className="bg-card border border-border/60 rounded-2xl shadow-2xl shadow-black/25 overflow-hidden min-w-[170px] backdrop-blur-md"
+                    >
+                      {!contextMenu.isImage && (
+                        <button
+                          onClick={() => {
+                            setEditingMsg({ id: contextMenu.msgId, content: contextMenu.msgContent });
+                            setContextMenu(null);
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-foreground hover:bg-primary/10 hover:text-primary transition-colors border-b border-border/30"
+                        >
+                          <Pencil className="h-4 w-4 shrink-0" />
+                          تعديل الرسالة
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          setContextMenu(null);
+                          setTimeout(() => {
+                            if (confirm("حذف هذه الرسالة؟")) {
+                              deleteMsgMutation.mutate(contextMenu.msgId);
+                            }
+                          }, 100);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-500/10 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4 shrink-0" />
+                        حذف الرسالة
+                      </button>
+                    </motion.div>
+                  </>
+                )}
               </AnimatePresence>
             </div>
 
