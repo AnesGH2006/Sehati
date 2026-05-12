@@ -1,12 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
-import { ArtisanCard } from "@/components/artisan/artisan-card";
-import { DAIRAS, CATEGORIES, LOCATIONS, MOCK_ARTISANS } from "@/lib/constants";
+import { DoctorCard } from "@/components/doctor/doctor-card";
+import { DAIRAS, SPECIALTIES, LOCATIONS, MOCK_DOCTORS } from "@/lib/constants";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Slider } from "@/components/ui/slider";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Search, SlidersHorizontal, X, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,94 +16,89 @@ import { useTranslation } from "react-i18next";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 
-export default function Artisans() {
+export default function Doctors() {
   const { t, i18n } = useTranslation();
 
-  const urlParams   = new URLSearchParams(window.location.search);
-  const initQuery   = urlParams.get("q")        ?? "";
-  const initCat     = urlParams.get("category") ?? "";
-  const initWilaya  = urlParams.get("wilaya")   ?? "";
-  const initDaira   = urlParams.get("daira")    ?? "";
+  const urlParams       = new URLSearchParams(window.location.search);
+  const initQuery       = urlParams.get("q")        ?? "";
+  const initSpecialty   = urlParams.get("specialty") ?? "";
+  const initWilaya      = urlParams.get("wilaya")   ?? "";
+  const initDaira       = urlParams.get("daira")    ?? "";
 
-  const [searchQuery,        setSearchQuery]        = useState(initQuery);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(initCat ? [initCat] : []);
-  const [selectedWilaya,     setSelectedWilaya]     = useState<string | null>(initWilaya || null);
-  const [selectedDairas,     setSelectedDairas]     = useState<string[]>(initDaira ? [initDaira] : []);
-  const [priceRange,         setPriceRange]         = useState([50000]);
+  const [searchQuery,          setSearchQuery]          = useState(initQuery);
+  const [selectedSpecialties,  setSelectedSpecialties]  = useState<string[]>(initSpecialty ? [initSpecialty] : []);
+  const [selectedWilaya,       setSelectedWilaya]       = useState<string | null>(initWilaya || null);
+  const [selectedDairas,       setSelectedDairas]       = useState<string[]>(initDaira ? [initDaira] : []);
 
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
-    const cat = p.get("category") ?? "";
-    if (cat) setSelectedCategories([cat]);
+    const sp = p.get("specialty") ?? "";
+    if (sp) setSelectedSpecialties([sp]);
   }, [window.location.search]);
 
-  const { data: apiArtisans = [] } = useQuery({
-    queryKey: ["/api/artisans"],
+  const { data: apiDoctors = [] } = useQuery({
+    queryKey: ["/api/doctors"],
     queryFn: async () => {
-      const res = await fetch("/api/artisans");
+      const res = await fetch("/api/doctors");
       if (!res.ok) return [];
       return res.json();
     },
     refetchInterval: 5000,
   });
 
-  const allArtisans = useMemo(() => {
-    const apiMapped = apiArtisans.map((a: any) => ({
-      id: a.id,
-      name: a.name,
-      category: CATEGORIES.find(c => c.id === a.category)?.label || a.category,
-      daira: a.daira,
-      wilaya: a.wilaya,
-      phone: a.phone || "06XXXXXXXX",
-      description: a.description || "",
-      rating: a.rating || 0,
-      reviews: a.reviewCount || 0,
-      priceStart: a.priceStart,
-      yearsOfExperience: a.yearsOfExperience || 1,
-      image: a.imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(a.name)}&background=2DD4BF&color=fff&size=400`,
-      isVerified: a.isVerified || false,
-      portfolioImages: a.portfolioImages || [],
+  const allDoctors = useMemo(() => {
+    const apiMapped = apiDoctors.map((d: any) => ({
+      id: d.id,
+      name: d.name,
+      specialty: SPECIALTIES.find(s => s.id === d.specialty)?.label || d.specialty,
+      daira: d.daira,
+      wilaya: d.wilaya,
+      phone: d.phone || "06XXXXXXXX",
+      description: d.description || "",
+      rating: d.rating || 0,
+      reviews: d.reviewCount || 0,
+      yearsOfExperience: d.yearsOfExperience || 1,
+      image: d.imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(d.name)}&background=2DD4BF&color=fff&size=400`,
+      isVerified: d.isVerified || false,
       isNew: true,
       isFromApi: true,
     }));
-    const mockMapped = MOCK_ARTISANS.map(m => ({ ...m, isFromApi: false }));
+    const mockMapped = MOCK_DOCTORS.map((m: any) => ({ ...m, isFromApi: false }));
     return [...apiMapped, ...mockMapped];
-  }, [apiArtisans]);
+  }, [apiDoctors]);
 
-  const filteredArtisans = useMemo(() => {
-    return allArtisans.filter((artisan: any) => {
+  const filteredDoctors = useMemo(() => {
+    return allDoctors.filter((doctor: any) => {
       const q = searchQuery.toLowerCase();
-      const matchesSearch = !q ||
-        artisan.name.toLowerCase().includes(q) ||
-        (artisan.description && artisan.description.toLowerCase().includes(q)) ||
-        artisan.category.toLowerCase().includes(q);
-      const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(artisan.category);
-      const matchesWilaya   = !selectedWilaya || artisan.wilaya === selectedWilaya;
-      const matchesDaira    = selectedDairas.length === 0 || selectedDairas.includes(artisan.daira);
-      const matchesPrice    = !artisan.priceStart || artisan.priceStart <= priceRange[0];
-      return matchesSearch && matchesCategory && matchesWilaya && matchesDaira && matchesPrice;
+      const matchesSearch    = !q ||
+        doctor.name.toLowerCase().includes(q) ||
+        (doctor.description && doctor.description.toLowerCase().includes(q)) ||
+        doctor.specialty.toLowerCase().includes(q);
+      const matchesSpecialty = selectedSpecialties.length === 0 || selectedSpecialties.includes(doctor.specialty);
+      const matchesWilaya    = !selectedWilaya || doctor.wilaya === selectedWilaya;
+      const matchesDaira     = selectedDairas.length === 0 || selectedDairas.includes(doctor.daira);
+      return matchesSearch && matchesSpecialty && matchesWilaya && matchesDaira;
     });
-  }, [allArtisans, searchQuery, selectedCategories, selectedWilaya, selectedDairas, priceRange]);
+  }, [allDoctors, searchQuery, selectedSpecialties, selectedWilaya, selectedDairas]);
 
-  const toggleCategory = (cat: string) =>
-    setSelectedCategories(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
+  const toggleSpecialty = (sp: string) =>
+    setSelectedSpecialties(prev => prev.includes(sp) ? prev.filter(s => s !== sp) : [...prev, sp]);
 
   const toggleDaira = (daira: string) =>
     setSelectedDairas(prev => prev.includes(daira) ? prev.filter(d => d !== daira) : [...prev, daira]);
 
   const clearFilters = () => {
     setSearchQuery("");
-    setSelectedCategories([]);
+    setSelectedSpecialties([]);
     setSelectedWilaya(null);
     setSelectedDairas([]);
-    setPriceRange([50000]);
-    window.history.replaceState({}, "", "/artisans");
+    window.history.replaceState({}, "", "/doctors");
   };
 
   const isRtl = i18n.language === 'ar';
 
   const activeFilterCount =
-    selectedCategories.length + selectedDairas.length +
+    selectedSpecialties.length + selectedDairas.length +
     (selectedWilaya ? 1 : 0) + (searchQuery ? 1 : 0);
 
   return (
@@ -120,7 +114,7 @@ export default function Artisans() {
               <div className="relative flex-1">
                 <Search className={`absolute ${isRtl ? 'right-3' : 'left-3'} top-2.5 h-4 w-4 text-muted-foreground`} />
                 <Input
-                  placeholder={t('artisans.search_name')}
+                  placeholder="ابحث بالاسم أو التخصص..."
                   className={isRtl ? "pr-9" : "pl-9"}
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
@@ -140,10 +134,9 @@ export default function Artisans() {
                 <SheetContent side={isRtl ? "right" : "left"} className="w-[300px]">
                   <div className="mt-6">
                     <Filters
-                      selectedCategories={selectedCategories} toggleCategory={toggleCategory}
-                      selectedWilaya={selectedWilaya} setSelectedWilaya={v => { setSelectedWilaya(v); setSelectedDairas([]); }}
+                      selectedSpecialties={selectedSpecialties} toggleSpecialty={toggleSpecialty}
+                      selectedWilaya={selectedWilaya} setSelectedWilaya={(v: string) => { setSelectedWilaya(v); setSelectedDairas([]); }}
                       selectedDairas={selectedDairas} toggleDaira={toggleDaira}
-                      priceRange={priceRange} setPriceRange={setPriceRange}
                       clearFilters={clearFilters} t={t} isRtl={isRtl}
                     />
                   </div>
@@ -151,7 +144,7 @@ export default function Artisans() {
               </Sheet>
             </div>
             <ActiveFilters
-              selectedCategories={selectedCategories} toggleCategory={toggleCategory}
+              selectedSpecialties={selectedSpecialties} toggleSpecialty={toggleSpecialty}
               selectedDairas={selectedDairas} toggleDaira={toggleDaira}
               selectedWilaya={selectedWilaya} clearWilaya={() => { setSelectedWilaya(null); setSelectedDairas([]); }}
             />
@@ -160,23 +153,22 @@ export default function Artisans() {
           {/* Desktop Sidebar */}
           <aside className="hidden md:block w-64 shrink-0 space-y-6 sticky top-24 h-fit" dir="rtl">
             <div className="space-y-1">
-              <h2 className="font-heading font-bold text-xl">{t('artisans.filter_title')}</h2>
-              <p className="text-xs text-muted-foreground">{t('artisans.filter_subtitle')}</p>
+              <h2 className="font-heading font-bold text-xl">تصفية النتائج</h2>
+              <p className="text-xs text-muted-foreground">ابحث بالتخصص أو المنطقة</p>
             </div>
             <div className="relative">
               <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder={t('artisans.search_name')}
+                placeholder="ابحث بالاسم أو التخصص..."
                 className="pr-9"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
               />
             </div>
             <Filters
-              selectedCategories={selectedCategories} toggleCategory={toggleCategory}
-              selectedWilaya={selectedWilaya} setSelectedWilaya={v => { setSelectedWilaya(v); setSelectedDairas([]); }}
+              selectedSpecialties={selectedSpecialties} toggleSpecialty={toggleSpecialty}
+              selectedWilaya={selectedWilaya} setSelectedWilaya={(v: string) => { setSelectedWilaya(v); setSelectedDairas([]); }}
               selectedDairas={selectedDairas} toggleDaira={toggleDaira}
-              priceRange={priceRange} setPriceRange={setPriceRange}
               clearFilters={clearFilters} t={t} isRtl={isRtl}
             />
           </aside>
@@ -185,16 +177,16 @@ export default function Artisans() {
           <div className="flex-1" dir="rtl">
             <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-heading font-bold mb-1">{t('artisans.title')}</h1>
+                <h1 className="text-3xl font-heading font-bold mb-1">الأطباء</h1>
                 <p className="text-muted-foreground text-sm">
-                  {filteredArtisans.length} حرفي
+                  {filteredDoctors.length} طبيب
                   {selectedWilaya && <span className="text-primary font-medium"> في {selectedWilaya}</span>}
-                  {selectedCategories.length === 1 && <span className="text-primary font-medium"> • {selectedCategories[0]}</span>}
+                  {selectedSpecialties.length === 1 && <span className="text-primary font-medium"> • {selectedSpecialties[0]}</span>}
                 </p>
               </div>
               <div className="hidden md:flex flex-wrap gap-2">
                 <ActiveFilters
-                  selectedCategories={selectedCategories} toggleCategory={toggleCategory}
+                  selectedSpecialties={selectedSpecialties} toggleSpecialty={toggleSpecialty}
                   selectedDairas={selectedDairas} toggleDaira={toggleDaira}
                   selectedWilaya={selectedWilaya} clearWilaya={() => { setSelectedWilaya(null); setSelectedDairas([]); }}
                 />
@@ -203,37 +195,40 @@ export default function Artisans() {
 
             <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               <AnimatePresence mode="popLayout">
-                {filteredArtisans.map((artisan: any) => (
+                {filteredDoctors.map((doctor: any) => (
                   <motion.div
-                    key={artisan.id} layout
+                    key={doctor.id} layout
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <ArtisanCard
-                      id={artisan.id} name={artisan.name}
-                      category={artisan.category} daira={artisan.daira}
-                      phone={artisan.phone || "06XXXXXXXX"}
-                      rating={artisan.rating} reviews={artisan.reviews}
-                      priceStart={artisan.priceStart}
-                      yearsOfExperience={artisan.yearsOfExperience}
-                      image={artisan.image} isVerified={artisan.isVerified}
-                      portfolioImages={artisan.portfolioImages} isNew={artisan.isNew}
+                    <DoctorCard
+                      id={doctor.id}
+                      name={doctor.name}
+                      specialty={doctor.specialty}
+                      daira={doctor.daira}
+                      phone={doctor.phone || "06XXXXXXXX"}
+                      rating={doctor.rating}
+                      reviews={doctor.reviews}
+                      yearsOfExperience={doctor.yearsOfExperience}
+                      image={doctor.image}
+                      isVerified={doctor.isVerified}
+                      isNew={doctor.isNew}
                     />
                   </motion.div>
                 ))}
               </AnimatePresence>
             </motion.div>
 
-            {filteredArtisans.length === 0 && (
+            {filteredDoctors.length === 0 && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                 className="text-center py-20 bg-muted/20 rounded-2xl border border-dashed"
               >
                 <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-30" />
-                <p className="text-muted-foreground font-medium">لم يُعثر على حرفيين بهذه المواصفات</p>
+                <p className="text-muted-foreground font-medium">لم يُعثر على أطباء بهذه المواصفات</p>
                 <Button variant="link" onClick={clearFilters} className="mt-2 text-primary">
-                  {t('artisans.reset_filters')}
+                  إعادة تعيين الفلاتر
                 </Button>
               </motion.div>
             )}
@@ -246,9 +241,9 @@ export default function Artisans() {
   );
 }
 
-// ── Active Filters Badges ─────────────────────────────────────────────────────
-function ActiveFilters({ selectedCategories, toggleCategory, selectedDairas, toggleDaira, selectedWilaya, clearWilaya, className }: any) {
-  if (!selectedCategories.length && !selectedDairas.length && !selectedWilaya) return null;
+// ── Active Filter Badges ──────────────────────────────────────────────────────
+function ActiveFilters({ selectedSpecialties, toggleSpecialty, selectedDairas, toggleDaira, selectedWilaya, clearWilaya, className }: any) {
+  if (!selectedSpecialties.length && !selectedDairas.length && !selectedWilaya) return null;
   return (
     <div className={`flex flex-wrap gap-2 ${className ?? ""}`}>
       {selectedWilaya && (
@@ -257,9 +252,9 @@ function ActiveFilters({ selectedCategories, toggleCategory, selectedDairas, tog
           <X className="w-3 h-3 cursor-pointer hover:text-destructive" onClick={clearWilaya} />
         </Badge>
       )}
-      {selectedCategories.map((cat: string) => (
-        <Badge key={cat} variant="secondary" className="gap-1 px-3 py-1">
-          {cat} <X className="w-3 h-3 cursor-pointer hover:text-destructive" onClick={() => toggleCategory(cat)} />
+      {selectedSpecialties.map((sp: string) => (
+        <Badge key={sp} variant="secondary" className="gap-1 px-3 py-1">
+          {sp} <X className="w-3 h-3 cursor-pointer hover:text-destructive" onClick={() => toggleSpecialty(sp)} />
         </Badge>
       ))}
       {selectedDairas.map((daira: string) => (
@@ -271,24 +266,24 @@ function ActiveFilters({ selectedCategories, toggleCategory, selectedDairas, tog
   );
 }
 
-// ── Sidebar Filters ────────────────────────────────────────────────────────────
-function Filters({ selectedCategories, toggleCategory, selectedWilaya, setSelectedWilaya, selectedDairas, toggleDaira, priceRange, setPriceRange, clearFilters, t, isRtl }: any) {
+// ── Sidebar Filters ───────────────────────────────────────────────────────────
+function Filters({ selectedSpecialties, toggleSpecialty, selectedWilaya, setSelectedWilaya, selectedDairas, toggleDaira, clearFilters, t, isRtl }: any) {
   return (
     <div className="space-y-4">
-      <Accordion type="multiple" defaultValue={["categories", "location"]} className="w-full">
+      <Accordion type="multiple" defaultValue={["specialties", "location"]} className="w-full">
 
-        <AccordionItem value="categories">
-          <AccordionTrigger className="font-heading font-bold">{t('artisans.category')}</AccordionTrigger>
+        <AccordionItem value="specialties">
+          <AccordionTrigger className="font-heading font-bold">التخصص</AccordionTrigger>
           <AccordionContent>
             <div className="space-y-2 pt-2 max-h-52 overflow-y-auto pr-1">
-              {CATEGORIES.map(cat => (
-                <div key={cat.id} className="flex items-center gap-2">
+              {SPECIALTIES.map(sp => (
+                <div key={sp.id} className="flex items-center gap-2">
                   <Checkbox
-                    id={`cat-${cat.id}`}
-                    checked={selectedCategories.includes(cat.label)}
-                    onCheckedChange={() => toggleCategory(cat.label)}
+                    id={`sp-${sp.id}`}
+                    checked={selectedSpecialties.includes(sp.label)}
+                    onCheckedChange={() => toggleSpecialty(sp.label)}
                   />
-                  <Label htmlFor={`cat-${cat.id}`} className="text-sm font-normal cursor-pointer">{cat.label}</Label>
+                  <Label htmlFor={`sp-${sp.id}`} className="text-sm font-normal cursor-pointer">{sp.label}</Label>
                 </div>
               ))}
             </div>
@@ -296,7 +291,7 @@ function Filters({ selectedCategories, toggleCategory, selectedWilaya, setSelect
         </AccordionItem>
 
         <AccordionItem value="location">
-          <AccordionTrigger className="font-heading font-bold">{t('artisans.location')}</AccordionTrigger>
+          <AccordionTrigger className="font-heading font-bold">المنطقة</AccordionTrigger>
           <AccordionContent>
             <div className="space-y-4 pt-2">
               <div className="space-y-2">
@@ -332,32 +327,10 @@ function Filters({ selectedCategories, toggleCategory, selectedWilaya, setSelect
           </AccordionContent>
         </AccordionItem>
 
-        <AccordionItem value="price">
-          <AccordionTrigger className="font-heading font-bold">{t('artisans.max_price')}</AccordionTrigger>
-          <AccordionContent>
-            <div className="pt-4 px-2 space-y-4">
-              <div className="text-center font-bold text-primary text-lg">
-                {priceRange[0] === 50000 ? "الكل" : `${priceRange[0].toLocaleString()} دج`}
-              </div>
-              <Slider
-                value={priceRange}
-                onValueChange={setPriceRange}
-                max={50000}
-                min={0}
-                step={1000}
-                className="w-full"
-              />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>0 دج</span>
-                <span>50,000 دج</span>
-              </div>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
       </Accordion>
 
       <Button variant="ghost" className="w-full text-muted-foreground" onClick={clearFilters}>
-        {t('artisans.reset')}
+        إعادة تعيين الفلاتر
       </Button>
     </div>
   );

@@ -15,16 +15,16 @@ router.post("/", async (req: Request, res: Response) => {
     }
 
     // 1. ابحث عن حرفيين بنفس التخصص
-    const allArtisans = await storage.getArtisans({ category });
+    const allDoctors = await storage.getDoctor({ category });
 
-    if (allArtisans.length === 0) {
+    if (allDoctors.length === 0) {
       return res.status(404).json({ error: "لا يوجد حرفي متاح في هذا التخصص حالياً" });
     }
 
     // 2. رتّبهم حسب المسافة إذا متوفرة
-    let sorted = allArtisans;
+    let sorted = allDoctors;
     if (latitude && longitude) {
-      const withDist = allArtisans
+      const withDist = allDoctors
         .filter((a: any) => a.latitude && a.longitude)
         .map((a: any) => ({
           ...a,

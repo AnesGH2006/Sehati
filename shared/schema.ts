@@ -1,4 +1,4 @@
-import { pgTable, text, integer, boolean, timestamp, real, serial, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, boolean, timestamp, real, serial, doublePrecision, date, time } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -9,35 +9,48 @@ export const users = pgTable("users", {
   email:        text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   phone:        text("phone"),
-  role:         text("role", { enum: ["customer", "artisan"] }).notNull().default("customer"),
-  artisanId:    integer("artisan_id"),
+  role:         text("role", { enum: ["patient", "doctor"] }).notNull().default("patient"),
+  doctorId:     integer("doctor_id"),
   isVerified:   boolean("is_verified").notNull().default(false),
   otp:          text("otp"),
   otpExpiry:    timestamp("otp_expiry"),
   createdAt:    timestamp("created_at").notNull().defaultNow(),
 });
 
-// ── Artisans ──────────────────────────────────────────────────────────────────
-export const artisans = pgTable("artisans", {
+// ── Doctors ───────────────────────────────────────────────────────────────────
+export const doctors = pgTable("doctors", {
   id:                    integer("id").primaryKey().generatedAlwaysAsIdentity(),
   userId:                text("user_id").references(() => users.id, { onDelete: "set null" }),
   name:                  text("name").notNull(),
   email:                 text("email").notNull(),
   phone:                 text("phone").notNull(),
-  category:              text("category").notNull(),
+
+  // ── المعلومات الطبية ──────────────────────────────────
+  specialty:             text("specialty").notNull(),           // التخصص (مثال: طب عام، قلب، أطفال...)
+  licenseNumber:         text("license_number"),                // رقم الترخيص الطبي
+  clinicName:            text("clinic_name"),                   // اسم العيادة
+  consultationFee:       integer("consultation_fee").notNull().default(1000), // سعر الكشف
+
   wilaya:                text("wilaya").notNull().default("الجزائر"),
   daira:                 text("daira").notNull(),
+  clinicAddress:         text("clinic_address"),                // عنوان العيادة التفصيلي
+
   description:           text("description"),
-  priceStart:            integer("price_start").notNull().default(1000),
   rating:                real("rating").notNull().default(0),
   reviewCount:           integer("review_count").notNull().default(0),
   isVerified:            boolean("is_verified").notNull().default(false),
   yearsOfExperience:     integer("years_of_experience").notNull().default(0),
   imageUrl:              text("image_url"),
-  portfolioImages:       text("portfolio_images").array().notNull().default([]),
-  portfolioVideos:       text("portfolio_videos").array().notNull().default([]),
+
+  // ── أوقات العمل والمواعيد ─────────────────────────────
+  workingDays:           text("working_days").array().notNull().default(["السبت","الأحد","الاثنين","الثلاثاء","الأربعاء"]),
+  workingHoursStart:     text("working_hours_start").notNull().default("08:00"), // وقت بداية العمل
+  workingHoursEnd:       text("working_hours_end").notNull().default("17:00"),   // وقت نهاية العمل
+  appointmentDuration:   integer("appointment_duration").notNull().default(30),  // مدة الموعد بالدقائق
+
   languages:             text("languages").array().notNull().default(["العربية"]),
-  workingHours:          text("working_hours"),
+
+  // ── الاشتراك ──────────────────────────────────────────
   subscriptionType:      text("subscription_type", {
                            enum: ["free", "standard", "pro", "gold"],
                          }).notNull().default("free"),
@@ -48,7 +61,7 @@ export const artisans = pgTable("artisans", {
   isOnline:              boolean("is_online").notNull().default(false),
   lastSeen:              timestamp("last_seen").defaultNow(),
 
-  // ── الموقع الجغرافي على الخريطة ──────────────────────
+  // ── الموقع الجغرافي ───────────────────────────────────
   latitude:              doublePrecision("latitude"),
   longitude:             doublePrecision("longitude"),
   locationName:          text("location_name"),
@@ -60,12 +73,35 @@ export const artisans = pgTable("artisans", {
   createdAt:             timestamp("created_at").notNull().defaultNow(),
 });
 
+// ── Appointments ──────────────────────────────────────────────────────────────
+export const appointments = pgTable("appointments", {
+  id:             integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  doctorId:       integer("doctor_id").notNull().references(() => doctors.id, { onDelete: "cascade" }),
+  patientId:      text("patient_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  patientName:    text("patient_name").notNull(),
+  patientPhone:   text("patient_phone"),
+
+  appointmentDate: text("appointment_date").notNull(), // YYYY-MM-DD
+  appointmentTime: text("appointment_time").notNull(), // HH:MM
+
+  status:         text("status", {
+                    enum: ["pending", "confirmed", "cancelled", "completed"],
+                  }).notNull().default("pending"),
+
+  notes:          text("notes"),                        // ملاحظات المريض
+  doctorNotes:    text("doctor_notes"),                 // ملاحظات الطبيب
+  isUrgent:       boolean("is_urgent").notNull().default(false),
+
+  createdAt:      timestamp("created_at").notNull().defaultNow(),
+  updatedAt:      timestamp("updated_at").notNull().defaultNow(),
+});
+
 // ── Conversations ─────────────────────────────────────────────────────────────
 export const conversations = pgTable("conversations", {
   id:            text("id").primaryKey(),
-  artisanId:     integer("artisan_id").notNull().references(() => artisans.id, { onDelete: "cascade" }),
-  customerId:    text("customer_id").notNull(),
-  customerName:  text("customer_name"),
+  doctorId:      integer("doctor_id").notNull().references(() => doctors.id, { onDelete: "cascade" }),
+  patientId:     text("patient_id").notNull(),
+  patientName:   text("patient_name"),
   lastMessageAt: timestamp("last_message_at").notNull().defaultNow(),
   lastMessage:   text("last_message"),
   createdAt:     timestamp("created_at").notNull().defaultNow(),
@@ -77,7 +113,7 @@ export const messages = pgTable("messages", {
   conversationId: text("conversation_id").notNull().references(() => conversations.id, { onDelete: "cascade" }),
   senderId:       text("sender_id").notNull(),
   receiverId:     text("receiver_id").notNull(),
-  senderType:     text("sender_type", { enum: ["customer", "artisan"] }).notNull(),
+  senderType:     text("sender_type", { enum: ["patient", "doctor"] }).notNull(),
   content:        text("content").notNull(),
   isRead:         boolean("is_read").notNull().default(false),
   createdAt:      timestamp("created_at").notNull().defaultNow(),
@@ -85,36 +121,41 @@ export const messages = pgTable("messages", {
 
 // ── Reviews ───────────────────────────────────────────────────────────────────
 export const reviews = pgTable("reviews", {
-  id:           integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  artisanId:    integer("artisan_id").notNull().references(() => artisans.id, { onDelete: "cascade" }),
-  customerId:   text("customer_id").notNull(),
-  customerName: text("customer_name").notNull(),
-  rating:       integer("rating").notNull(),
-  comment:      text("comment"),
-  createdAt:    timestamp("created_at").notNull().defaultNow(),
+  id:          integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  doctorId:    integer("doctor_id").notNull().references(() => doctors.id, { onDelete: "cascade" }),
+  patientId:   text("patient_id").notNull(),
+  patientName: text("patient_name").notNull(),
+  rating:      integer("rating").notNull(),
+  comment:     text("comment"),
+  createdAt:   timestamp("created_at").notNull().defaultNow(),
 });
 
-// ── Artisan Views ─────────────────────────────────────────────────────────────
-export const artisanViews = pgTable("artisan_views", {
+// ── Doctor Views ──────────────────────────────────────────────────────────────
+export const doctorViews = pgTable("doctor_views", {
   id:        serial("id").primaryKey(),
-  artisanId: integer("artisan_id").notNull().references(() => artisans.id, { onDelete: "cascade" }),
+  doctorId:  integer("doctor_id").notNull().references(() => doctors.id, { onDelete: "cascade" }),
   viewerIp:  text("viewer_ip").notNull().default("unknown"),
   viewerId:  text("viewer_id"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-export type User              = typeof users.$inferSelect;
-export type Artisan           = typeof artisans.$inferSelect;
-export type Conversation      = typeof conversations.$inferSelect;
-export type Message           = typeof messages.$inferSelect;
-export type Review            = typeof reviews.$inferSelect;
-export type ArtisanView       = typeof artisanViews.$inferSelect;
-export type InsertArtisanView = typeof artisanViews.$inferInsert;
+export type User            = typeof users.$inferSelect;
+export type Doctor          = typeof doctors.$inferSelect;
+export type Appointment     = typeof appointments.$inferSelect;
+export type Conversation    = typeof conversations.$inferSelect;
+export type Message         = typeof messages.$inferSelect;
+export type Review          = typeof reviews.$inferSelect;
+export type DoctorView      = typeof doctorViews.$inferSelect;
+export type InsertDoctorView = typeof doctorViews.$inferInsert;
 
 // ── Insert Schemas (Zod) ──────────────────────────────────────────────────────
-export const insertArtisanSchema = createInsertSchema(artisans).omit({
+export const insertDoctorSchema = createInsertSchema(doctors).omit({
   id: true, rating: true, reviewCount: true, createdAt: true,
+});
+
+export const insertAppointmentSchema = createInsertSchema(appointments).omit({
+  id: true, createdAt: true, updatedAt: true,
 });
 
 export const insertConversationSchema = createInsertSchema(conversations).omit({
@@ -129,11 +170,12 @@ export const insertReviewSchema = createInsertSchema(reviews).omit({
   id: true, createdAt: true,
 });
 
-export const insertArtisanViewSchema = createInsertSchema(artisanViews).omit({
+export const insertDoctorViewSchema = createInsertSchema(doctorViews).omit({
   id: true, createdAt: true,
 });
 
-export type InsertArtisan      = z.infer<typeof insertArtisanSchema>;
+export type InsertDoctor       = z.infer<typeof insertDoctorSchema>;
+export type InsertAppointment  = z.infer<typeof insertAppointmentSchema>;
 export type InsertConversation = z.infer<typeof insertConversationSchema>;
 export type InsertMessage      = z.infer<typeof insertMessageSchema>;
 export type InsertReview       = z.infer<typeof insertReviewSchema>;

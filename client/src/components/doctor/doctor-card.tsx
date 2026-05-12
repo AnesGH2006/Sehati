@@ -22,7 +22,7 @@ interface ArtisanCardProps {
   isNew?: boolean;
 }
 
-export function ArtisanCard({ id, name, category, daira, phone, rating, reviews, priceStart, yearsOfExperience = 7, image, isVerified, portfolioImages = [], isNew = false }: ArtisanCardProps) {
+export function DoctorCard({ id, name, category, daira, phone, rating, reviews, priceStart, yearsOfExperience = 7, image, isVerified, portfolioImages = [], isNew = false }: ArtisanCardProps) {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === 'ar';
 

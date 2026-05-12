@@ -12,33 +12,43 @@ export const LOCATIONS: Record<string, string[]> = {
 
 export const DAIRAS = Object.keys(LOCATIONS);
 
-export const CATEGORIES = [
-  { id: "carpentry",  label: "نجارة(نجار)",           icon: "Hammer"     },
-  { id: "plumbing",   label: "سباكة(بلومبي)",          icon: "Wrench"     },
-  { id: "electrical", label: "كهرباء (فولتاجي)",       icon: "Zap"        },
-  { id: "painting",   label: "دهانات(صباغ)",           icon: "Paintbrush" },
-  { id: "masonry",    label: "بناء(ماصون)",            icon: "BrickWall"  },
-  { id: "mechanic",   label: "ميكانيك(ميكانيسيان)",    icon: "Car"        },
-  { id: "welding",    label: "تلحيم(سودار)",           icon: "Flame"      },
-  { id: "gardening",  label: "بستنة(فلاح)",            icon: "Flower2"    },
-  { id: "tailoring",  label: "خياطة(خياط)",            icon: "Scissors"   },
-  { id: "gas",        label: "غاز",                    icon: "Flame"      },
+export const SPECIALTIES = [
+  { id: "general",        label: "طب عام",                  icon: "Stethoscope"  },
+  { id: "pediatrics",     label: "طب الأطفال",              icon: "Baby"         },
+  { id: "cardiology",     label: "طب القلب",                icon: "HeartPulse"   },
+  { id: "dentistry",      label: "طب الأسنان",              icon: "Smile"        },
+  { id: "ophthalmology",  label: "طب العيون",               icon: "Eye"          },
+  { id: "neurology",      label: "طب الأعصاب",              icon: "Brain"        },
+  { id: "gynecology",     label: "طب النساء والتوليد",      icon: "UserRound"    },
+  { id: "dermatology",    label: "طب الجلدية",              icon: "Scan"         },
+  { id: "orthopedics",    label: "طب العظام",               icon: "Bone"         },
+  { id: "ent",            label: "أنف وأذن وحنجرة",         icon: "Ear"          },
+  { id: "urology",        label: "طب المسالك البولية",      icon: "Droplets"     },
+  { id: "gastro",         label: "أمراض الجهاز الهضمي",    icon: "Activity"     },
+  { id: "endocrinology",  label: "طب الغدد الصماء",         icon: "FlaskConical" },
+  { id: "psychiatry",     label: "الطب النفسي",             icon: "BrainCircuit" },
+  { id: "radiology",      label: "الأشعة والتصوير الطبي",  icon: "ScanLine"     },
+  { id: "surgery",        label: "الجراحة العامة",          icon: "Scissors"     },
+  { id: "oncology",       label: "طب الأورام",              icon: "Microscope"   },
+  { id: "nephrology",     label: "طب الكلى",                icon: "Filter"       },
+  { id: "pulmonology",    label: "طب الرئة والتنفس",        icon: "Wind"         },
+  { id: "rheumatology",   label: "أمراض الروماتيزم",        icon: "PersonStanding"},
 ];
 
-/** أعِد الاسم العربي للحرفة من معرّفها الإنجليزي. إذا لم يوجد رجّع القيمة كما هي. */
-export function categoryLabel(id?: string | null): string {
+/** Returns the Arabic label for a specialty by its id. Falls back to the id itself. */
+export function specialtyLabel(id?: string | null): string {
   if (!id) return "";
-  return CATEGORIES.find(c => c.id === id)?.label || id;
+  return SPECIALTIES.find(s => s.id === id)?.label || id;
 }
 
-export const MOCK_ARTISANS = [
+export const MOCK_DOCTORS = [
 ];
 
 export const MOCK_MESSAGES = [
   {
     id: 1,
-    senderId: "customer",
-    text: "السلام عليكم، هل أنت متاح لعمل يوم الغد؟",
+    senderId: "patient",
+    text: "السلام عليكم، هل لديك موعد متاح غداً؟",
     time: "10:30 AM",
     isMe: true,
   },

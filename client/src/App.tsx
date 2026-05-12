@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
-import Auth from "@/pages/auth";
+import Auth from "@/pages/my-appointments";
 import { ThemeProvider } from "next-themes";
 import { useTranslation } from "react-i18next";
 import { AuthProvider } from "@/lib/auth";
@@ -17,56 +17,57 @@ import { useEffect, lazy, Suspense, useState } from "react";
 import PageLoader from "./components/PageLoader";
 import { motion } from "framer-motion";
 
-const Artisans         = lazy(() => import("@/pages/artisans"));
-const Profile          = lazy(() => import("@/pages/profile"));
-const Chat             = lazy(() => import("@/pages/chat"));
-const Subscription     = lazy(() => import("@/pages/subscription"));
-const ArtisanDashboard = lazy(() => import("@/pages/artisan-dashboard"));
-const About            = lazy(() => import("@/pages/about"));
-const Admin            = lazy(() => import("@/pages/admin"));
-const NearbyPage       = lazy(() => import("@/pages/Nearby"));
-const EmergencyPage    = lazy(() => import("@/pages/emergency"));
+const Doctors         = lazy(() => import("@/pages/doctors"));
+const Profile         = lazy(() => import("@/pages/profile"));
+const Chat            = lazy(() => import("@/pages/chat"));
+const Subscription    = lazy(() => import("@/pages/subscription"));
+const DoctorDashboard = lazy(() => import("@/pages/doctor-dashboard"));
+const About           = lazy(() => import("@/pages/about"));
+const Admin           = lazy(() => import("@/pages/admin"));
+const NearbyPage      = lazy(() => import("@/pages/Nearby"));
+const EmergencyPage   = lazy(() => import("@/pages/emergency"));
+const MyAppointments  = lazy(() => import("@/pages/my-appointments"));
 
 // ── Google OAuth ──────────────────────────────────────────────────────────────
 function GoogleAuthHandler() {
-  const { loginCustomer, loginArtisan } = useAuth();
+  const { loginPatient, loginDoctor } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("google_auth") !== "1") return;
 
-    const id        = params.get("id")        || "";
-    const name      = params.get("name")      || "";
-    const phone     = params.get("phone")     || "";
-    const role      = params.get("role")      || "customer";
-    const artisanId = params.get("artisanId") || "";
-    const category   = params.get("category")  || "";
-    const wilaya     = params.get("wilaya")    || "";
-    const daira      = params.get("daira")     || "";
-    const imageUrl   = params.get("imageUrl")   || "";
+    const id       = params.get("id")       || "";
+    const name     = params.get("name")     || "";
+    const phone    = params.get("phone")    || "";
+    const role     = params.get("role")     || "patient";
+    const doctorId = params.get("doctorId") || "";
+    const specialty = params.get("specialty") || "";
+    const wilaya   = params.get("wilaya")   || "";
+    const daira    = params.get("daira")    || "";
+    const imageUrl = params.get("imageUrl") || "";
 
     if (!id || !name) return;
 
-    if (role === "artisan") {
-      loginArtisan({
-        id: Number(artisanId || id),
+    if (role === "doctor") {
+      loginDoctor({
+        id: Number(doctorId || id),
         name,
         email: params.get("email") || "",
         phone,
-        category,
+        specialty,
         wilaya,
         daira,
         subscriptionType: params.get("subscriptionType") || "free",
         imageUrl,
       });
     } else {
-      loginCustomer({ id, name, phone });
+      loginPatient({ id, name, phone });
     }
     window.history.replaceState({}, document.title, "/");
 
-    if (role === "artisan" && artisanId) {
-      setLocation("/artisan/dashboard");
+    if (role === "doctor" && doctorId) {
+      setLocation("/doctor/dashboard");
     } else {
       setLocation("/");
     }
@@ -77,8 +78,8 @@ function GoogleAuthHandler() {
 
 // ── Push Notifications ────────────────────────────────────────────────────────
 function PushRegistrar() {
-  const { customer, artisan, isArtisan } = useAuth();
-  const pushId = isArtisan && artisan?.id ? String(artisan.id) : customer?.id ?? null;
+  const { patient, doctor, isDoctor } = useAuth();
+  const pushId = isDoctor && doctor?.id ? String(doctor.id) : patient?.id ?? null;
   usePushNotifications(pushId);
   return null;
 }
@@ -91,18 +92,14 @@ function Router() {
 
   useEffect(() => {
     if (location === displayLocation) return;
-
     setIsTransitioning(true);
-
     const timer = setTimeout(() => {
       setDisplayLocation(location);
       setIsTransitioning(false);
-    }, 300); // زدناها من 700 إلى 1200
-
+    }, 300);
     return () => clearTimeout(timer);
   }, [location]);
 
-  // أظهر الـ PageLoader أثناء الانتقال
   if (isTransitioning) return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -117,19 +114,20 @@ function Router() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Switch location={displayLocation}>
-        <Route path="/"                  component={Home}             />
-        <Route path="/artisans"          component={Artisans}         />
-        <Route path="/profile/:id"       component={Profile}          />
-        <Route path="/chat/:id"          component={Chat}             />
-        <Route path="/chat"              component={Chat}             />
-        <Route path="/subscription"      component={Subscription}     />
-        <Route path="/auth"              component={Auth}             />
-        <Route path="/artisan/dashboard" component={ArtisanDashboard} />
-        <Route path="/about"             component={About}            />
-        <Route path="/admin"             component={Admin}            />
-        <Route path="/nearby"            component={NearbyPage}       />
-        <Route path="/emergency"         component={EmergencyPage}    />
-        <Route                           component={NotFound}         />
+        <Route path="/"                 component={Home}            />
+        <Route path="/doctors"          component={Doctors}         />
+        <Route path="/profile/:id"      component={Profile}         />
+        <Route path="/chat/:id"         component={Chat}            />
+        <Route path="/chat"             component={Chat}            />
+        <Route path="/subscription"     component={Subscription}    />
+        <Route path="/auth"             component={Auth}            />
+        <Route path="/doctor/dashboard" component={DoctorDashboard} />
+        <Route path="/about"            component={About}           />
+        <Route path="/admin"            component={Admin}           />
+        <Route path="/nearby"           component={NearbyPage}      />
+        <Route path="/emergency"        component={EmergencyPage}   />
+        <Route path="/my-appointments"  component={MyAppointments}  />
+        <Route                          component={NotFound}        />
       </Switch>
     </Suspense>
   );

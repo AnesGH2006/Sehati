@@ -19,7 +19,7 @@ export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const { t, i18n } = useTranslation();
-  const { artisan, customer, isLoggedIn, isArtisan, logout } = useAuth();
+  const { doctor, customer, isLoggedIn, isDoctor, logout } = useAuth();
   const isRtl = i18n.language === 'ar';
 
   useEffect(() => {
@@ -29,9 +29,9 @@ export function Navbar() {
 
   const navLinks = [
     { href: "/", label: t('nav.home') },
-    { href: "/artisans", label: t('nav.artisans') },
+    { href: "/doctors", label: isRtl ? "الأطباء" : "Doctors" },
     { href: "/subscription", label: t('nav.subscriptions') },
-    { href: "https://alaa--alaagh23alg.replit.app", label: t('nav.about') || "من نحن" },
+    { href: "https://alaa--alaagh23alg.replit.app", label: isRtl ? "من نحن" : "About Us" },
   ];
 
   const languages = [
@@ -39,8 +39,8 @@ export function Navbar() {
     { code: 'en', label: 'English' },
   ];
 
-  const displayName = artisan?.name || customer?.name || "";
-  const displayEmail = artisan?.email || "";
+  const displayName = doctor?.name || customer?.name || "";
+  const displayEmail = doctor?.email || "";
 
   const handleLogout = () => { logout(); setLocation("/"); };
 
@@ -48,13 +48,15 @@ export function Navbar() {
     <nav className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md" dir={isRtl ? "rtl" : "ltr"}>
       <div className="container flex h-16 items-center justify-between px-4 md:px-8">
 
+        {/* Logo */}
         <Link href="/">
           <div className="flex items-center gap-2 cursor-pointer">
-            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-white font-bold">ح</div>
-            <span className="text-xl font-bold font-heading text-primary">حرفتي</span>
+            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-white font-bold">ط</div>
+            <span className="text-xl font-bold font-heading text-primary">طبيبي</span>
           </div>
         </Link>
 
+        {/* Desktop Nav Links */}
         <div className="hidden md:flex items-center gap-6">
           {navLinks.map((link) => (
             <Link key={link.href} href={link.href}>
@@ -63,22 +65,25 @@ export function Navbar() {
               </span>
             </Link>
           ))}
-          {isLoggedIn && !isArtisan && (
+          {isLoggedIn && !isDoctor && (
             <Link href="/nearby">
               <span className={`text-sm font-medium transition-colors hover:text-primary cursor-pointer flex items-center gap-1 ${location === "/nearby" ? "text-primary font-bold" : "text-muted-foreground"}`}>
                 <MapPin className="h-3.5 w-3.5" />
-                {isRtl ? "حرفي قريب" : "Nearby"}
+                {isRtl ? "طبيب قريب" : "Nearby"}
               </span>
             </Link>
           )}
         </div>
 
+        {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-3">
+          {/* Dark mode toggle */}
           <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="rounded-full">
             <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
             <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
           </Button>
 
+          {/* Language switcher */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full"><Globe className="h-5 w-5" /></Button>
@@ -93,16 +98,17 @@ export function Navbar() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* زر طارئ — للزبون وغير المسجل فقط */}
-          {!isArtisan && (
+          {/* Emergency button — patients & guests only */}
+          {!isDoctor && (
             <Link href="/emergency">
               <Button size="sm" className="gap-1.5 rounded-full bg-red-500 hover:bg-red-600 text-white text-xs px-3">
                 <AlertTriangle className="h-3.5 w-3.5" />
-                طارئ
+                {isRtl ? "طارئ" : "Emergency"}
               </Button>
             </Link>
           )}
 
+          {/* Auth */}
           {isLoggedIn ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -118,12 +124,12 @@ export function Navbar() {
                   <p className="text-sm font-bold">{displayName}</p>
                   {displayEmail && <p className="text-xs text-muted-foreground">{displayEmail}</p>}
                   <p className="text-[10px] text-primary font-black uppercase tracking-widest mt-1">
-                    {isArtisan ? (isRtl ? "حرفي" : "Artisan") : (isRtl ? "زبون" : "Customer")}
+                    {isDoctor ? (isRtl ? "طبيب" : "Doctor") : (isRtl ? "مريض" : "Patient")}
                   </p>
                 </div>
                 <DropdownMenuSeparator />
-                {isArtisan && (
-                  <DropdownMenuItem onClick={() => setLocation("/artisan/dashboard")} className="cursor-pointer gap-2">
+                {isDoctor && (
+                  <DropdownMenuItem onClick={() => setLocation("/doctor/dashboard")} className="cursor-pointer gap-2">
                     <LayoutDashboard className="h-4 w-4" />
                     {isRtl ? "لوحة التحكم" : "Dashboard"}
                   </DropdownMenuItem>
@@ -145,13 +151,14 @@ export function Navbar() {
               </Link>
               <Link href="/subscription">
                 <Button className="bg-primary hover:bg-primary/90 rounded-full">
-                  {isRtl ? "انضم كحرفي" : "Join as Artisan"}
+                  {isRtl ? "انضم كطبيب" : "Join as Doctor"}
                 </Button>
               </Link>
             </div>
           )}
         </div>
 
+        {/* Mobile Menu */}
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild className="md:hidden">
             <Button variant="ghost" size="icon"><Menu className="h-6 w-6" /></Button>
@@ -166,20 +173,20 @@ export function Navbar() {
                     </span>
                   </Link>
                 ))}
-                {isLoggedIn && !isArtisan && (
+                {isLoggedIn && !isDoctor && (
                   <Link href="/nearby">
                     <span className={`text-lg font-medium transition-colors hover:text-primary cursor-pointer flex items-center gap-2 ${location === "/nearby" ? "text-primary font-bold" : "text-muted-foreground"}`} onClick={() => setIsOpen(false)}>
                       <MapPin className="h-4 w-4" />
-                      {isRtl ? "حرفي قريب مني" : "Nearby Artisans"}
+                      {isRtl ? "طبيب قريب مني" : "Nearby Doctors"}
                     </span>
                   </Link>
                 )}
-                {/* زر طارئ موبايل — للزبون فقط */}
-                {!isArtisan && (
+                {/* Emergency — patients & guests only */}
+                {!isDoctor && (
                   <Link href="/emergency">
                     <span className="text-lg font-bold text-red-400 flex items-center gap-2 cursor-pointer" onClick={() => setIsOpen(false)}>
                       <AlertTriangle className="h-5 w-5" />
-                      طلب طارئ
+                      {isRtl ? "طلب طارئ" : "Emergency"}
                     </span>
                   </Link>
                 )}
@@ -210,11 +217,11 @@ export function Navbar() {
                       </div>
                       <div>
                         <p className="text-sm font-bold">{displayName}</p>
-                        <p className="text-xs text-primary font-bold">{isArtisan ? "حرفي" : "زبون"}</p>
+                        <p className="text-xs text-primary font-bold">{isDoctor ? (isRtl ? "طبيب" : "Doctor") : (isRtl ? "مريض" : "Patient")}</p>
                       </div>
                     </div>
-                    {isArtisan && (
-                      <Link href="/artisan/dashboard" onClick={() => setIsOpen(false)}>
+                    {isDoctor && (
+                      <Link href="/doctor/dashboard" onClick={() => setIsOpen(false)}>
                         <Button variant="outline" className="w-full justify-start gap-2">
                           <LayoutDashboard className="h-4 w-4" />
                           {isRtl ? "لوحة التحكم" : "Dashboard"}
@@ -231,12 +238,12 @@ export function Navbar() {
                     <Link href="/auth" onClick={() => setIsOpen(false)}>
                       <Button variant="outline" className="w-full gap-2">
                         <UserCircle className="h-4 w-4" />
-                        {isRtl ? "دخول كزبون" : "Login as Customer"}
+                        {isRtl ? "دخول كمريض" : "Login as Patient"}
                       </Button>
                     </Link>
                     <Link href="/subscription" onClick={() => setIsOpen(false)}>
                       <Button className="w-full bg-primary hover:bg-primary/90">
-                        {isRtl ? "انضم كحرفي" : "Join as Artisan"}
+                        {isRtl ? "انضم كطبيب" : "Join as Doctor"}
                       </Button>
                     </Link>
                   </div>
