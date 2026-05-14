@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Menu, User, Globe, Moon, Sun, Check, LogOut, LayoutDashboard, UserCircle, MapPin, AlertTriangle } from "lucide-react";
+import { Menu, User, Globe, Moon, Sun, Check, LogOut, LayoutDashboard, UserCircle, MapPin, AlertTriangle ,HeartCrackIcon } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -118,7 +118,7 @@ export function Navbar() {
                   </div>
                   <span className="text-sm font-bold max-w-[120px] truncate">{displayName}</span>
                     <DropdownMenuItem onClick={() => setLocation("/my-appointments")} className="cursor-pointer gap-2">
-                      <LayoutDashboard className="h-4 w-4" />
+                      <HeartCrackIcon className="h-4 w-4" />
                       {isRtl ? "مواعيدي" : "Appointments"}
                     </DropdownMenuItem>
                 </Button>
