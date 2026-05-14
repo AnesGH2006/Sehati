@@ -72,9 +72,9 @@
           // جلب مواعيد المريض
           const { data: appointments = [], isLoading } = useQuery<Appointment[]>({
             queryKey: ["/api/appointments/patient", me?.id],
-            queryFn: () => fetch(`/api/appointments/patient/${me?.id}`).then(r => r.json()),
-            enabled: !!me?.id,
-            refetchInterval: 15000,
+            queryFn: () => fetch(`/api/appointments/patient/${me?.id}`)
+            .then(r => r.json())
+            .then(data => Array.isArray(data) ? data : []),
           });
 
           // جلب بيانات الأطباء لإضافة الاسم والتخصص

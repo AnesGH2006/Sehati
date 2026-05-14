@@ -1,7 +1,7 @@
 // src/components/PageLoader.jsx
 // شاشة التحميل الكاملة — تظهر أثناء fetch أو isLoading
 
-export default function PageLoader({ text = "حرفتي" }) {
+export default function PageLoader({ text = "صحتي" }) {
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col items-center justify-center"

@@ -46,8 +46,8 @@ export default function SplashScreen() {
               transition={{ delay: 0.3 }}
               className="text-center"
             >
-              <p className="text-white font-bold text-xl tracking-tight font-display">حرفتي</p>
-              <p className="text-muted-foreground text-sm mt-0.5">حرفيين الجزائر</p>
+              <p className="text-white font-bold text-xl tracking-tight font-display">صحتي</p>
+              <p className="text-muted-foreground text-sm mt-0.5">اطباء الجزائر</p>
             </motion.div>
 
             {/* Loading dots */}

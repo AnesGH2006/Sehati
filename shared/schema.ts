@@ -77,7 +77,7 @@ export const doctors = pgTable("doctors", {
 export const appointments = pgTable("appointments", {
   id:              integer("id").primaryKey().generatedAlwaysAsIdentity(),
   doctorId:        integer("artisan_id").notNull().references(() => doctors.id, { onDelete: "cascade" }),
-  patientId:       text("patient_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  patientId: text("patient_id").notNull(),
   patientName:     text("patient_name").notNull(),
   patientPhone:    text("patient_phone"),
   appointmentDate: text("appointment_date").notNull(),

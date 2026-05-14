@@ -176,7 +176,7 @@ export default function Subscription() {
               <Stethoscope className="h-3 w-3" /> اختر خطتك
             </div>
             <h1 className="text-5xl md:text-6xl font-black tracking-tight leading-none mb-4">
-              انضم إلى طبيبي
+              انضم إلى صحتي
             </h1>
             <p className="text-zinc-500 text-lg">ابدأ مجاناً أو اختر خطة تناسب طموحك</p>
           </motion.div>
