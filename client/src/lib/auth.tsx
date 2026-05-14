@@ -1,124 +1,135 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 
-export interface ArtisanSession {
+// ── Types ─────────────────────────────────────────────────────────────────────
+export interface DoctorSession {
   id: number;
   name: string;
   email: string;
   phone: string;
-  category: string;
+  specialty: string;
   wilaya: string;
   daira: string;
   subscriptionType: string;
   imageUrl: string;
 }
 
-export interface CustomerSession {
+export interface PatientSession {
   id: string;
   name: string;
   phone: string;
 }
 
+// توافق مع الكود القديم
+export type ArtisanSession  = DoctorSession;
+export type CustomerSession = PatientSession;
+
 interface AuthContextType {
-  artisan: ArtisanSession | null;
-  customer: CustomerSession | null;
-  loginArtisan: (a: ArtisanSession) => void;
-  loginCustomer: (c: CustomerSession) => void;
-  /** يُنشئ جلسة زبون-زائر (بدون تسجيل) إذا لم تكن موجودة، ويُعيدها. */
-  ensureGuest: () => CustomerSession;
-  logout: () => void;
-  isArtisan: boolean;
-  isCustomer: boolean;
-  isLoggedIn: boolean;
-  /** صحيح إذا كان الزبون الحالي عبارة عن جلسة زائر تلقائية. */
-  isGuest: boolean;
+  // جديد
+  doctor:       DoctorSession  | null;
+  patient:      PatientSession | null;
+  loginDoctor:  (d: DoctorSession)  => void;
+  loginPatient: (p: PatientSession) => void;
+  isDoctor:     boolean;
+  isPatient:    boolean;
+
+  // قديم — للتوافق مع المكونات التي لم تُحوَّل بعد
+  artisan:      DoctorSession  | null;
+  customer:     PatientSession | null;
+  loginArtisan: (a: DoctorSession)  => void;
+  loginCustomer:(c: PatientSession) => void;
+  isArtisan:    boolean;
+  isCustomer:   boolean;
+
+  ensureGuest: () => PatientSession;
+  logout:      () => void;
+  isLoggedIn:  boolean;
+  isGuest:     boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
-  artisan: null,
-  customer: null,
-  loginArtisan: () => {},
-  loginCustomer: () => {},
+  doctor: null, patient: null,
+  loginDoctor: () => {}, loginPatient: () => {},
+  isDoctor: false, isPatient: false,
+  artisan: null, customer: null,
+  loginArtisan: () => {}, loginCustomer: () => {},
+  isArtisan: false, isCustomer: false,
   ensureGuest: () => ({ id: "guest", name: "زائر", phone: "" }),
   logout: () => {},
-  isArtisan: false,
-  isCustomer: false,
-  isLoggedIn: false,
-  isGuest: false,
+  isLoggedIn: false, isGuest: false,
 });
 
-function loadFromStorage<T>(key: string): T | null {
-  try {
-    const v = localStorage.getItem(key);
-    return v ? JSON.parse(v) : null;
-  } catch { return null; }
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function load<T>(key: string): T | null {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; }
+  catch { return null; }
 }
 
 function makeGuestId(): string {
-  const rnd = Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
-  return `guest-${rnd}`;
+  return `guest-${Math.random().toString(36).slice(2, 8)}${Date.now().toString(36).slice(-4)}`;
 }
 
+// ── Provider ──────────────────────────────────────────────────────────────────
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [artisan, setArtisan] = useState<ArtisanSession | null>(() => loadFromStorage("herfati_artisan"));
-  const [customer, setCustomer] = useState<CustomerSession | null>(() => loadFromStorage("herfati_customer"));
+  const [doctor,  setDoctor]  = useState<DoctorSession  | null>(() =>
+    load("tabib_doctor") || load("herfati_artisan")
+  );
+  const [patient, setPatient] = useState<PatientSession | null>(() =>
+    load("tabib_patient") || load("herfati_customer")
+  );
 
-  const loginArtisan = (data: ArtisanSession) => {
-    setArtisan(data);
-    setCustomer(null);
-    localStorage.setItem("herfati_artisan", JSON.stringify(data));
+  const loginDoctor = (data: DoctorSession) => {
+    setDoctor(data); setPatient(null);
+    localStorage.setItem("tabib_doctor", JSON.stringify(data));
+    localStorage.removeItem("tabib_patient");
+    localStorage.removeItem("herfati_artisan");
     localStorage.removeItem("herfati_customer");
   };
 
-  const loginCustomer = (data: CustomerSession) => {
-    setCustomer(data);
-    setArtisan(null);
-    localStorage.setItem("herfati_customer", JSON.stringify(data));
+  const loginPatient = (data: PatientSession) => {
+    setPatient(data); setDoctor(null);
+    localStorage.setItem("tabib_patient", JSON.stringify(data));
+    localStorage.removeItem("tabib_doctor");
     localStorage.removeItem("herfati_artisan");
+    localStorage.removeItem("herfati_customer");
   };
 
-  const ensureGuest = (): CustomerSession => {
-    if (customer) return customer;
-    if (artisan) {
-      return { id: `artisan-${artisan.id}`, name: artisan.name, phone: artisan.phone };
-    }
-    let id = localStorage.getItem("herfati_guest_id");
-    if (!id) {
-      id = makeGuestId();
-      localStorage.setItem("herfati_guest_id", id);
-    }
-    const guest: CustomerSession = { id, name: "زائر", phone: "" };
-    setCustomer(guest);
-    localStorage.setItem("herfati_customer", JSON.stringify(guest));
+  const ensureGuest = (): PatientSession => {
+    if (patient) return patient;
+    if (doctor) return { id: `doctor-${doctor.id}`, name: doctor.name, phone: doctor.phone };
+    let id = localStorage.getItem("tabib_guest_id");
+    if (!id) { id = makeGuestId(); localStorage.setItem("tabib_guest_id", id); }
+    const guest: PatientSession = { id, name: "زائر", phone: "" };
+    setPatient(guest);
+    localStorage.setItem("tabib_patient", JSON.stringify(guest));
     return guest;
   };
 
   const logout = () => {
-    setArtisan(null);
-    setCustomer(null);
-    localStorage.removeItem("herfati_artisan");
-    localStorage.removeItem("herfati_customer");
-    localStorage.removeItem("herfati_guest_id");
+    setDoctor(null); setPatient(null);
+    ["tabib_doctor","tabib_patient","tabib_guest_id",
+     "herfati_artisan","herfati_customer","herfati_guest_id"].forEach(k => localStorage.removeItem(k));
   };
 
-  const isGuest = !!customer && customer.id.startsWith("guest-");
-  const currentSession = artisan || customer;
+  const isGuest   = !!patient && patient.id.startsWith("guest-");
+  const isLoggedIn = !!(doctor || patient) && !isGuest;
 
-  return (
-    <AuthContext.Provider value={{
-      artisan,
-      customer,
-      loginArtisan,
-      loginCustomer,
-      ensureGuest,
-      logout,
-      isArtisan: !!artisan,
-      isCustomer: !!customer && !isGuest,
-      isLoggedIn: !!currentSession && !isGuest,
-      isGuest,
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const value: AuthContextType = {
+    // جديد
+    doctor, patient, loginDoctor, loginPatient,
+    isDoctor: !!doctor, isPatient: !!patient && !isGuest,
+
+    // قديم — aliases للتوافق
+    artisan:      doctor,
+    customer:     patient,
+    loginArtisan: loginDoctor,
+    loginCustomer: loginPatient,
+    isArtisan:    !!doctor,
+    isCustomer:   !!patient && !isGuest,
+
+    ensureGuest, logout, isLoggedIn, isGuest,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

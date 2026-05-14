@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { insertDoctorSchema, insertMessageSchema, insertConversationSchema, insertReviewSchema } from "@shared/schema";
 import { z } from "zod";
 import fs from "fs";
+import { sql } from "drizzle-orm";
 import path from "path";
 import { sendVerificationEmail, sendPasswordResetEmail, generateOTP } from "./Email";
 import { saveSubscription, removeSubscription, sendPushToUser } from "./Push";
@@ -214,64 +215,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.post("/api/doctors", async (req: Request, res: Response) => {
+    console.log("🔥 POST /api/doctors hit");
+    console.log("🔥 body:", JSON.stringify(req.body, null, 2));
     try {
-      const b = req.body;
-
-      // Required field check
-      const name      = b.name?.trim();
-      const email     = b.email?.trim();
-      const phone     = b.phone?.trim();
-      const specialty = b.specialty || b.SPECIALTIES;
-      const wilaya    = b.wilaya || "الجزائر";
-      const daira     = b.daira;
-
-      if (!name || !email || !phone || !specialty || !daira) {
-        return res.status(400).json({ message: "الحقول المطلوبة: name, email, phone, specialty, daira" });
-      }
-
-      // Use raw SQL to bypass Drizzle's column-name mismatch
-      // (DB column is still "SPECIALTIES" uppercase until migration runs)
-      const { rows } = await (db as any).execute(
-        `INSERT INTO doctors
-           (name, email, phone, "SPECIALTIES", wilaya, daira,
-            description, image_url, is_verified, years_of_experience,
-            subscription_type, subscription_duration,
-            consultation_fee, rating, review_count,
-            working_days, working_hours_start, working_hours_end,
-            appointment_duration, languages, is_online)
-         VALUES
-           ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,0,0,
-            ARRAY['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء'],
-            '08:00','17:00',30,ARRAY['العربية'],false)
-         RETURNING *`,
-        [
-          name,
-          email,
-          phone,
-          specialty,
-          wilaya,
-          daira,
-          b.description || "طبيب محترف في منصة طبيبي",
-          b.imageUrl || null,
-          false,
-          parseInt(b.yearsOfExperience) || 0,
-          b.subscriptionType || "free",
-          parseInt(b.subscriptionDuration) || 1,
-          parseInt(b.consultationFee) || 1000,
-        ]
-      );
-
-      const doctor = rows[0];
-
-      if (b.userId) {
-        try { await storage.linkUserToDoctor(b.userId, doctor.id); }
-        catch (linkErr) { console.warn("[linkUserToDoctor] failed:", linkErr); }
-      }
-
+      const doctor = await storage.createDoctor(req.body);
+      console.log("✅ doctor created:", doctor);
       res.status(201).json(doctor);
     } catch (error) {
-      console.error("[createDoctor]", error);
-      res.status(500).json({ message: "Failed to create doctor" });
+      console.error("❌ REAL ERROR:", error);
+      res.status(500).json({ message: String(error) });
     }
   });
 
@@ -407,12 +359,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/appointments/doctor/:doctorId", async (req: Request, res: Response) => {
     try { res.json(await storage.getAppointmentsByDoctor(parseInt(req.params.doctorId))); }
-    catch { res.status(500).json({ message: "Failed to fetch appointments" }); }
+    catch (err) { console.error("[appointments]", err); res.status(500).json({ message: "Failed to fetch appointments" }); }
   });
 
   app.get("/api/appointments/patient/:patientId", async (req: Request, res: Response) => {
     try { res.json(await storage.getAppointmentsByPatient(req.params.patientId)); }
-    catch { res.status(500).json({ message: "Failed to fetch appointments" }); }
+    catch (err) { console.error("[appointments]", err); res.status(500).json({ message: "Failed to fetch appointments" }); }
   });
 
   app.get("/api/appointments/slots/:doctorId", async (req: Request, res: Response) => {

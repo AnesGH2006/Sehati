@@ -289,13 +289,13 @@ class PostgresStorage implements IStorage {
   async getAppointmentsByDoctor(doctorId: number): Promise<Appointment[]> {
     return db.select().from(appointments)
       .where(eq(appointments.doctorId, doctorId))
-      .orderBy(desc(appointments.appointmentDate));
+      .orderBy(desc(appointments.createdAt));
   }
 
   async getAppointmentsByPatient(patientId: string): Promise<Appointment[]> {
     return db.select().from(appointments)
       .where(eq(appointments.patientId, patientId))
-      .orderBy(desc(appointments.appointmentDate));
+      .orderBy(desc(appointments.createdAt));
   }
 
   async updateAppointmentStatus(

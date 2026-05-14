@@ -113,7 +113,15 @@ export default function Subscription() {
 
   const registerMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", "/api/doctors", data);
+      const res = await fetch("/api/doctors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to create doctor");
+      }
       return res.json();
     },
     onSuccess: (data: any) => {

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { useDoctorLocation } from "@/hooks/useDoctorLocation";
+import  { useDoctorLocation } from "@/hooks/useDoctorLocation";
 import {
   MessageSquare, Star, Eye, Image as ImageIcon,
   MapPin, Save, BadgeCheck, Trash2, Upload, X,
@@ -155,7 +155,9 @@ export default function DoctorDashboard() {
   // ── Queries ───────────────────────────────────────────────────────────────
   const { data: serverDoctor, refetch } = useQuery<any>({
     queryKey: ["/api/doctors", doctor?.id],
-    queryFn:  () => fetch(`/api/doctors/${doctor?.id}`).then(r => r.json()),
+    queryFn: () => fetch(`/api/appointments/doctor/${doctor?.id}`)
+    .then(r => r.json())
+    .then(data => Array.isArray(data) ? data : []),
     enabled:  !!doctor?.id,
   });
   const realDoctor = serverDoctor || doctor;
