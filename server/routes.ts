@@ -5,11 +5,12 @@ import { insertDoctorSchema, insertMessageSchema, insertConversationSchema, inse
 import { z } from "zod";
 import fs from "fs";
 import path from "path";
-import { sendVerificationEmail, sendPasswordResetEmail, generateOTP } from "server/Email";
-import { saveSubscription, removeSubscription, sendPushToUser } from "server/Push";
+import { sendVerificationEmail, sendPasswordResetEmail, generateOTP } from "./Email";
+import { saveSubscription, removeSubscription, sendPushToUser } from "./Push";
 import nearbyRouter from "./routes/nearby";
 import emergencyRouter from "./routes/emergency";
 import doctorStatusRouter from "./routes/doctor-status";
+import { db } from "./db";
 
 const ADMIN_PASSWORD = "AlaaGH_Mil";
 const adminSessions = new Set<string>();
@@ -439,7 +440,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             title: statusText,
             body:  `${appointment.appointmentDate} - ${appointment.appointmentTime}`,
             url:   "/my-appointments",
-            type:  "appointment",
+            type:  "appointments",
           });
           if (sent) break;
         }

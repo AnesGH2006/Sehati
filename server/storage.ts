@@ -18,7 +18,7 @@ import {
   doctorViews,
   appointments,
 } from "@shared/schema";
-import { db } from "server/db";
+import { db } from "./db";
 import { eq, and, ilike, gte, lte, desc, or } from "drizzle-orm";
 import crypto from "crypto";
 
