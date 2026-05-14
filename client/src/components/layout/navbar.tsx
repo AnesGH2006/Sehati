@@ -117,6 +117,7 @@ export function Navbar() {
                     <User className="h-3.5 w-3.5 text-primary" />
                   </div>
                   <span className="text-sm font-bold max-w-[120px] truncate">{displayName}</span>
+                  <span className="text-[10px] text-primary font-black uppercase tracking-widest">مواعيدي</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align={isRtl ? "start" : "end"} className="w-56">

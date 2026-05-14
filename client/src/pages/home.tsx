@@ -5,7 +5,7 @@ import { ShieldCheck, Users, Sparkles, MapPin, Search, MessageSquare, Star, Cale
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { InstallPrompt } from "@/components/install-prompt";
+import { InstallPrompt } from "@/components/install-prompt.tsx";
 import { SPECIALTIES, DAIRAS, LOCATIONS } from "@/lib/constants";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";

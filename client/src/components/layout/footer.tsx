@@ -26,7 +26,7 @@ export function Footer() {
             <h3 className="font-heading font-bold text-lg mb-4">{t('nav.home')}</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><Link href="/"><span className="hover:text-primary transition-colors cursor-pointer">{t('nav.home')}</span></Link></li>
-              <li><Link href="/artisans"><span className="hover:text-primary transition-colors cursor-pointer">{t('nav.artisans')}</span></Link></li>
+              <li><Link href="/doctors"><span className="hover:text-primary transition-colors cursor-pointer">{t('nav.doctors')}</span></Link></li>
               <li><Link href="/subscription"><span className="hover:text-primary transition-colors cursor-pointer">{t('nav.subscriptions')}</span></Link></li>
               <li><Link href="/about"><span className="hover:text-primary transition-colors cursor-pointer">{t('footer.about')}</span></Link></li>
             </ul>
