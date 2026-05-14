@@ -2,33 +2,32 @@ import { useState, useMemo, useEffect } from "react";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { DoctorCard } from "@/components/doctor/doctor-card";
-import { DAIRAS, SPECIALTIES, LOCATIONS, MOCK_DOCTORS } from "@/lib/constants";
+import { DAIRAS, SPECIALTIES, LOCATIONS } from "@/lib/constants";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Slider } from "@/components/ui/slider";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Search, SlidersHorizontal, X, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
-import { useTranslation } from "react-i18next";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 
 export default function Doctors() {
-  const { t, i18n } = useTranslation();
-
-  const urlParams       = new URLSearchParams(window.location.search);
-  const initQuery       = urlParams.get("q")        ?? "";
-  const initSpecialty   = urlParams.get("specialty") ?? "";
-  const initWilaya      = urlParams.get("wilaya")   ?? "";
-  const initDaira       = urlParams.get("daira")    ?? "";
+  const urlParams     = new URLSearchParams(window.location.search);
+  const initQuery     = urlParams.get("q")         ?? "";
+  const initSpecialty = urlParams.get("specialty") ?? "";
+  const initWilaya    = urlParams.get("wilaya")    ?? "";
+  const initDaira     = urlParams.get("daira")     ?? "";
 
   const [searchQuery,          setSearchQuery]          = useState(initQuery);
   const [selectedSpecialties,  setSelectedSpecialties]  = useState<string[]>(initSpecialty ? [initSpecialty] : []);
   const [selectedWilaya,       setSelectedWilaya]       = useState<string | null>(initWilaya || null);
   const [selectedDairas,       setSelectedDairas]       = useState<string[]>(initDaira ? [initDaira] : []);
+  const [feeRange,             setFeeRange]             = useState([20000]);
 
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
@@ -47,39 +46,36 @@ export default function Doctors() {
   });
 
   const allDoctors = useMemo(() => {
-    const apiMapped = apiDoctors.map((d: any) => ({
-      id: d.id,
-      name: d.name,
-      specialty: SPECIALTIES.find(s => s.id === d.specialty)?.label || d.specialty,
-      daira: d.daira,
-      wilaya: d.wilaya,
-      phone: d.phone || "06XXXXXXXX",
-      description: d.description || "",
-      rating: d.rating || 0,
-      reviews: d.reviewCount || 0,
-      yearsOfExperience: d.yearsOfExperience || 1,
-      image: d.imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(d.name)}&background=2DD4BF&color=fff&size=400`,
-      isVerified: d.isVerified || false,
-      isNew: true,
-      isFromApi: true,
+    return apiDoctors.map((d: any) => ({
+      id:                 d.id,
+      name:               d.name,
+      specialty:          d.specialty,
+      daira:              d.daira,
+      wilaya:             d.wilaya,
+      phone:              d.phone || "",
+      description:        d.description || "",
+      rating:             d.rating || 0,
+      reviews:            d.reviewCount || 0,
+      consultationFee:    d.consultationFee,
+      yearsOfExperience:  d.yearsOfExperience || 0,
+      image:              d.imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(d.name)}&background=2DD4BF&color=fff&size=400`,
+      isVerified:         d.isVerified || false,
+      clinicName:         d.clinicName || "",
+      licenseNumber:      d.licenseNumber || "",
     }));
-    const mockMapped = MOCK_DOCTORS.map((m: any) => ({ ...m, isFromApi: false }));
-    return [...apiMapped, ...mockMapped];
   }, [apiDoctors]);
 
   const filteredDoctors = useMemo(() => {
     return allDoctors.filter((doctor: any) => {
       const q = searchQuery.toLowerCase();
-      const matchesSearch    = !q ||
-        doctor.name.toLowerCase().includes(q) ||
-        (doctor.description && doctor.description.toLowerCase().includes(q)) ||
-        doctor.specialty.toLowerCase().includes(q);
+      const matchesSearch    = !q || doctor.name.toLowerCase().includes(q) || doctor.specialty.toLowerCase().includes(q) || (doctor.clinicName && doctor.clinicName.toLowerCase().includes(q));
       const matchesSpecialty = selectedSpecialties.length === 0 || selectedSpecialties.includes(doctor.specialty);
       const matchesWilaya    = !selectedWilaya || doctor.wilaya === selectedWilaya;
       const matchesDaira     = selectedDairas.length === 0 || selectedDairas.includes(doctor.daira);
-      return matchesSearch && matchesSpecialty && matchesWilaya && matchesDaira;
+      const matchesFee       = !doctor.consultationFee || doctor.consultationFee <= feeRange[0];
+      return matchesSearch && matchesSpecialty && matchesWilaya && matchesDaira && matchesFee;
     });
-  }, [allDoctors, searchQuery, selectedSpecialties, selectedWilaya, selectedDairas]);
+  }, [allDoctors, searchQuery, selectedSpecialties, selectedWilaya, selectedDairas, feeRange]);
 
   const toggleSpecialty = (sp: string) =>
     setSelectedSpecialties(prev => prev.includes(sp) ? prev.filter(s => s !== sp) : [...prev, sp]);
@@ -88,14 +84,10 @@ export default function Doctors() {
     setSelectedDairas(prev => prev.includes(daira) ? prev.filter(d => d !== daira) : [...prev, daira]);
 
   const clearFilters = () => {
-    setSearchQuery("");
-    setSelectedSpecialties([]);
-    setSelectedWilaya(null);
-    setSelectedDairas([]);
+    setSearchQuery(""); setSelectedSpecialties([]); setSelectedWilaya(null);
+    setSelectedDairas([]); setFeeRange([20000]);
     window.history.replaceState({}, "", "/doctors");
   };
-
-  const isRtl = i18n.language === 'ar';
 
   const activeFilterCount =
     selectedSpecialties.length + selectedDairas.length +
@@ -104,73 +96,54 @@ export default function Doctors() {
   return (
     <div className="min-h-screen flex flex-col bg-background font-sans">
       <Navbar />
-
       <main className="flex-1 container px-4 md:px-8 py-8">
         <div className="flex flex-col md:flex-row gap-8">
 
-          {/* Mobile Filter Trigger */}
+          {/* Mobile Filter */}
           <div className="md:hidden flex flex-col gap-4">
             <div className="flex gap-2">
               <div className="relative flex-1">
-                <Search className={`absolute ${isRtl ? 'right-3' : 'left-3'} top-2.5 h-4 w-4 text-muted-foreground`} />
-                <Input
-                  placeholder="ابحث بالاسم أو التخصص..."
-                  className={isRtl ? "pr-9" : "pl-9"}
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                />
+                <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="ابحث عن طبيب..." className="pr-9" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
               </div>
               <Sheet>
                 <SheetTrigger asChild>
                   <Button variant="outline" size="icon" className="relative">
                     <SlidersHorizontal className="h-4 w-4" />
                     {activeFilterCount > 0 && (
-                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-white text-[10px] rounded-full flex items-center justify-center">
-                        {activeFilterCount}
-                      </span>
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-white text-[10px] rounded-full flex items-center justify-center">{activeFilterCount}</span>
                     )}
                   </Button>
                 </SheetTrigger>
-                <SheetContent side={isRtl ? "right" : "left"} className="w-[300px]">
+                <SheetContent side="right" className="w-[300px]">
                   <div className="mt-6">
-                    <Filters
-                      selectedSpecialties={selectedSpecialties} toggleSpecialty={toggleSpecialty}
-                      selectedWilaya={selectedWilaya} setSelectedWilaya={(v: string) => { setSelectedWilaya(v); setSelectedDairas([]); }}
+                    <Filters selectedSpecialties={selectedSpecialties} toggleSpecialty={toggleSpecialty}
+                      selectedWilaya={selectedWilaya} setSelectedWilaya={v => { setSelectedWilaya(v); setSelectedDairas([]); }}
                       selectedDairas={selectedDairas} toggleDaira={toggleDaira}
-                      clearFilters={clearFilters} t={t} isRtl={isRtl}
-                    />
+                      feeRange={feeRange} setFeeRange={setFeeRange} clearFilters={clearFilters} />
                   </div>
                 </SheetContent>
               </Sheet>
             </div>
-            <ActiveFilters
-              selectedSpecialties={selectedSpecialties} toggleSpecialty={toggleSpecialty}
+            <ActiveFilters selectedSpecialties={selectedSpecialties} toggleSpecialty={toggleSpecialty}
               selectedDairas={selectedDairas} toggleDaira={toggleDaira}
-              selectedWilaya={selectedWilaya} clearWilaya={() => { setSelectedWilaya(null); setSelectedDairas([]); }}
-            />
+              selectedWilaya={selectedWilaya} clearWilaya={() => { setSelectedWilaya(null); setSelectedDairas([]); }} />
           </div>
 
           {/* Desktop Sidebar */}
           <aside className="hidden md:block w-64 shrink-0 space-y-6 sticky top-24 h-fit" dir="rtl">
             <div className="space-y-1">
-              <h2 className="font-heading font-bold text-xl">تصفية النتائج</h2>
+              <h2 className="font-heading font-bold text-xl">فلترة الأطباء</h2>
               <p className="text-xs text-muted-foreground">ابحث بالتخصص أو المنطقة</p>
             </div>
             <div className="relative">
               <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="ابحث بالاسم أو التخصص..."
-                className="pr-9"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-              />
+              <Input placeholder="ابحث عن طبيب..." className="pr-9" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
             </div>
-            <Filters
-              selectedSpecialties={selectedSpecialties} toggleSpecialty={toggleSpecialty}
-              selectedWilaya={selectedWilaya} setSelectedWilaya={(v: string) => { setSelectedWilaya(v); setSelectedDairas([]); }}
+            <Filters selectedSpecialties={selectedSpecialties} toggleSpecialty={toggleSpecialty}
+              selectedWilaya={selectedWilaya} setSelectedWilaya={v => { setSelectedWilaya(v); setSelectedDairas([]); }}
               selectedDairas={selectedDairas} toggleDaira={toggleDaira}
-              clearFilters={clearFilters} t={t} isRtl={isRtl}
-            />
+              feeRange={feeRange} setFeeRange={setFeeRange} clearFilters={clearFilters} />
           </aside>
 
           {/* Main Content */}
@@ -185,36 +158,28 @@ export default function Doctors() {
                 </p>
               </div>
               <div className="hidden md:flex flex-wrap gap-2">
-                <ActiveFilters
-                  selectedSpecialties={selectedSpecialties} toggleSpecialty={toggleSpecialty}
+                <ActiveFilters selectedSpecialties={selectedSpecialties} toggleSpecialty={toggleSpecialty}
                   selectedDairas={selectedDairas} toggleDaira={toggleDaira}
-                  selectedWilaya={selectedWilaya} clearWilaya={() => { setSelectedWilaya(null); setSelectedDairas([]); }}
-                />
+                  selectedWilaya={selectedWilaya} clearWilaya={() => { setSelectedWilaya(null); setSelectedDairas([]); }} />
               </div>
             </div>
 
             <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               <AnimatePresence mode="popLayout">
                 {filteredDoctors.map((doctor: any) => (
-                  <motion.div
-                    key={doctor.id} layout
+                  <motion.div key={doctor.id} layout
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
-                    transition={{ duration: 0.3 }}
-                  >
+                    transition={{ duration: 0.3 }}>
                     <DoctorCard
-                      id={doctor.id}
-                      name={doctor.name}
-                      specialty={doctor.specialty}
-                      daira={doctor.daira}
-                      phone={doctor.phone || "06XXXXXXXX"}
-                      rating={doctor.rating}
-                      reviews={doctor.reviews}
+                      id={doctor.id} name={doctor.name}
+                      specialty={doctor.specialty} daira={doctor.daira}
+                      phone={doctor.phone} rating={doctor.rating}
+                      reviews={doctor.reviews} consultationFee={doctor.consultationFee}
                       yearsOfExperience={doctor.yearsOfExperience}
-                      image={doctor.image}
-                      isVerified={doctor.isVerified}
-                      isNew={doctor.isNew}
+                      image={doctor.image} isVerified={doctor.isVerified}
+                      clinicName={doctor.clinicName}
                     />
                   </motion.div>
                 ))}
@@ -223,29 +188,24 @@ export default function Doctors() {
 
             {filteredDoctors.length === 0 && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                className="text-center py-20 bg-muted/20 rounded-2xl border border-dashed"
-              >
+                className="text-center py-20 bg-muted/20 rounded-2xl border border-dashed">
                 <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-30" />
                 <p className="text-muted-foreground font-medium">لم يُعثر على أطباء بهذه المواصفات</p>
-                <Button variant="link" onClick={clearFilters} className="mt-2 text-primary">
-                  إعادة تعيين الفلاتر
-                </Button>
+                <Button variant="link" onClick={clearFilters} className="mt-2 text-primary">مسح الفلاتر</Button>
               </motion.div>
             )}
           </div>
         </div>
       </main>
-
       <Footer />
     </div>
   );
 }
 
-// ── Active Filter Badges ──────────────────────────────────────────────────────
-function ActiveFilters({ selectedSpecialties, toggleSpecialty, selectedDairas, toggleDaira, selectedWilaya, clearWilaya, className }: any) {
+function ActiveFilters({ selectedSpecialties, toggleSpecialty, selectedDairas, toggleDaira, selectedWilaya, clearWilaya }: any) {
   if (!selectedSpecialties.length && !selectedDairas.length && !selectedWilaya) return null;
   return (
-    <div className={`flex flex-wrap gap-2 ${className ?? ""}`}>
+    <div className="flex flex-wrap gap-2">
       {selectedWilaya && (
         <Badge className="gap-1 px-3 py-1 bg-primary/10 text-primary border-primary/30">
           <MapPin className="w-3 h-3" /> {selectedWilaya}
@@ -266,23 +226,17 @@ function ActiveFilters({ selectedSpecialties, toggleSpecialty, selectedDairas, t
   );
 }
 
-// ── Sidebar Filters ───────────────────────────────────────────────────────────
-function Filters({ selectedSpecialties, toggleSpecialty, selectedWilaya, setSelectedWilaya, selectedDairas, toggleDaira, clearFilters, t, isRtl }: any) {
+function Filters({ selectedSpecialties, toggleSpecialty, selectedWilaya, setSelectedWilaya, selectedDairas, toggleDaira, feeRange, setFeeRange, clearFilters }: any) {
   return (
     <div className="space-y-4">
       <Accordion type="multiple" defaultValue={["specialties", "location"]} className="w-full">
-
         <AccordionItem value="specialties">
-          <AccordionTrigger className="font-heading font-bold">التخصص</AccordionTrigger>
+          <AccordionTrigger className="font-heading font-bold">التخصص الطبي</AccordionTrigger>
           <AccordionContent>
             <div className="space-y-2 pt-2 max-h-52 overflow-y-auto pr-1">
               {SPECIALTIES.map(sp => (
                 <div key={sp.id} className="flex items-center gap-2">
-                  <Checkbox
-                    id={`sp-${sp.id}`}
-                    checked={selectedSpecialties.includes(sp.label)}
-                    onCheckedChange={() => toggleSpecialty(sp.label)}
-                  />
+                  <Checkbox id={`sp-${sp.id}`} checked={selectedSpecialties.includes(sp.label)} onCheckedChange={() => toggleSpecialty(sp.label)} />
                   <Label htmlFor={`sp-${sp.id}`} className="text-sm font-normal cursor-pointer">{sp.label}</Label>
                 </div>
               ))}
@@ -297,9 +251,7 @@ function Filters({ selectedSpecialties, toggleSpecialty, selectedWilaya, setSele
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">الولاية</Label>
                 <Select onValueChange={setSelectedWilaya} value={selectedWilaya || ""} dir="rtl">
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="اختر ولاية" />
-                  </SelectTrigger>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="اختر ولاية" /></SelectTrigger>
                   <SelectContent dir="rtl" className="max-h-60 overflow-y-auto">
                     <SelectItem value="all">كل الولايات</SelectItem>
                     {DAIRAS.map(w => <SelectItem key={w} value={w}>{w}</SelectItem>)}
@@ -312,11 +264,7 @@ function Filters({ selectedSpecialties, toggleSpecialty, selectedWilaya, setSele
                   <div className="space-y-2 max-h-40 overflow-y-auto pr-1 border rounded-md p-2 bg-muted/20">
                     {((LOCATIONS as any)[selectedWilaya] ?? []).map((daira: string) => (
                       <div key={daira} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`loc-${daira}`}
-                          checked={selectedDairas.includes(daira)}
-                          onCheckedChange={() => toggleDaira(daira)}
-                        />
+                        <Checkbox id={`loc-${daira}`} checked={selectedDairas.includes(daira)} onCheckedChange={() => toggleDaira(daira)} />
                         <Label htmlFor={`loc-${daira}`} className="text-xs font-normal cursor-pointer">{daira}</Label>
                       </div>
                     ))}
@@ -327,11 +275,22 @@ function Filters({ selectedSpecialties, toggleSpecialty, selectedWilaya, setSele
           </AccordionContent>
         </AccordionItem>
 
+        <AccordionItem value="fee">
+          <AccordionTrigger className="font-heading font-bold">سعر الكشف</AccordionTrigger>
+          <AccordionContent>
+            <div className="pt-4 px-2 space-y-4">
+              <div className="text-center font-bold text-primary text-lg">
+                {feeRange[0] === 20000 ? "الكل" : `${feeRange[0].toLocaleString()} دج`}
+              </div>
+              <Slider value={feeRange} onValueChange={setFeeRange} max={20000} min={0} step={500} className="w-full" />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>0 دج</span><span>20,000 دج</span>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
       </Accordion>
-
-      <Button variant="ghost" className="w-full text-muted-foreground" onClick={clearFilters}>
-        إعادة تعيين الفلاتر
-      </Button>
+      <Button variant="ghost" className="w-full text-muted-foreground" onClick={clearFilters}>مسح الفلاتر</Button>
     </div>
   );
 }

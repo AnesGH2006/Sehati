@@ -8,13 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "next-themes";
 import { Link } from "wouter";
-import { categoryLabel } from "@/lib/constants";
+import { specialtyLabel } from "@/lib/constants";
 
-interface NearbyArtisan {
+interface NearbyDoctor {
   id: number;
   userId: string;
   name: string;
-  category: string;
+  specialty: string;
   rating: number;
   reviewCount: number;
   status: "available" | "busy" | "offline";
@@ -25,10 +25,14 @@ interface NearbyArtisan {
   wilaya: string | null;
   distanceKm: number;
   imageUrl: string | null;
-  priceStart: number;
+  consultationFee: number;
 }
 
-const CRAFTS = ["الكل", "نجارة", "سباكة", "كهرباء", "دهانات", "بناء", "ميكانيك", "تلحيم", "خياطة"];
+const SPECIALTIES_FILTER = [
+  "الكل", "طب عام", "طب الأطفال", "طب القلب", "طب الأسنان",
+  "طب العيون", "طب الأعصاب", "طب النساء والتوليد", "طب الجلدية",
+  "طب العظام", "أنف وأذن وحنجرة",
+];
 
 function makePinIcon(selected = false, available = true) {
   const color = selected ? "#2DD4BF" : available ? "#2DD4BF" : "#6B7280";
@@ -63,29 +67,29 @@ export default function NearbyPage() {
   const [userLat, setUserLat]           = useState(36.7372);
   const [userLng, setUserLng]           = useState(3.0865);
   const [radius, setRadius]             = useState(10);
-  const [craft, setCraft]               = useState("الكل");
+  const [specialty, setSpecialty]       = useState("الكل");
   const [status, setStatus]             = useState("all");
   const [q, setQ]                       = useState("");
   const [sort, setSort]                 = useState<"distance" | "rating">("distance");
   const [locating, setLocating]         = useState(false);
   const [showFilters, setShowFilters]   = useState(false);
-  const [listExpanded, setListExpanded] = useState(false); // موبايل — القائمة مفتوحة أو لا
+  const [listExpanded, setListExpanded] = useState(false);
 
-  const { data, isLoading, isError, refetch } = useQuery<{ data: NearbyArtisan[] }>({
-    queryKey: ["nearby", userLat, userLng, radius, craft, status, q, sort],
+  const { data, isLoading, isError, refetch } = useQuery<{ data: NearbyDoctor[] }>({
+    queryKey: ["nearby", userLat, userLng, radius, specialty, status, q, sort],
     queryFn: async () => {
       const p = new URLSearchParams({ lat: String(userLat), lng: String(userLng), radius: String(radius), sort });
-      if (craft !== "الكل") p.set("craft", craft);
+      if (specialty !== "الكل") p.set("specialty", specialty);
       if (status !== "all") p.set("status", status);
       if (q.trim()) p.set("q", q.trim());
-      const res = await fetch(`/api/artisans/nearby?${p}`);
+      const res = await fetch(`/api/doctors/nearby?${p}`);
       if (!res.ok) throw new Error("fetch failed");
       return res.json();
     },
     staleTime: 30_000,
   });
 
-  const artisans = data?.data ?? [];
+  const doctors = data?.data ?? [];
 
   // ─── Init Map ─────────────────────────────────────────
   useEffect(() => {
@@ -94,20 +98,13 @@ export default function NearbyPage() {
     const map = L.map(div, { center: [userLat, userLng], zoom: 13, zoomControl: false });
     L.control.zoom({ position: "topleft" }).addTo(map);
     mapRef.current = map;
-
-    // إعادة حساب حجم الخريطة بعد ما تنتهي حركة الانتقال (page transition) حتى تظهر البلاطات
     const t1 = setTimeout(() => map.invalidateSize(), 100);
     const t2 = setTimeout(() => map.invalidateSize(), 500);
     const t3 = setTimeout(() => map.invalidateSize(), 1500);
-
-    // كل ما تغيّر حجم النافذة، نخبر Leaflet
     const onResize = () => map.invalidateSize();
     window.addEventListener("resize", onResize);
-
-    // مراقبة تغيّر حجم العنصر نفسه (يحلّ مشكلة الخريطة الفارغة في الـ flex/transition)
     const ro = new ResizeObserver(() => map.invalidateSize());
     ro.observe(div);
-
     return () => {
       clearTimeout(t1); clearTimeout(t2); clearTimeout(t3);
       window.removeEventListener("resize", onResize);
@@ -147,27 +144,26 @@ export default function NearbyPage() {
     const map = mapRef.current; if (!map) return;
     markersRef.current.forEach(m => m.remove());
     markersRef.current.clear();
-    artisans.forEach(a => {
-      const sel = a.id === selectedId;
-      const avail = a.status === "available";
-      L.marker([a.latitude, a.longitude], { icon: makePinIcon(sel, avail), zIndexOffset: sel ? 500 : 0 })
+    doctors.forEach(d => {
+      const sel = d.id === selectedId;
+      const avail = d.status === "available";
+      L.marker([d.latitude, d.longitude], { icon: makePinIcon(sel, avail), zIndexOffset: sel ? 500 : 0 })
         .addTo(map)
         .bindPopup(`
           <div style="direction:rtl;font-family:sans-serif;min-width:160px;padding:4px 0">
-            <div style="font-weight:700;font-size:14px;margin-bottom:4px">${a.name}</div>
-            <div style="color:#2DD4BF;font-size:12px;margin-bottom:6px">${categoryLabel(a.category)}</div>
+            <div style="font-weight:700;font-size:14px;margin-bottom:4px">د. ${d.name}</div>
+            <div style="color:#2DD4BF;font-size:12px;margin-bottom:6px">${specialtyLabel(d.specialty)}</div>
             <div style="display:flex;gap:8px;font-size:12px;color:#9CA3AF">
-              <span>⭐ ${a.rating.toFixed(1)}</span>
-              <span>📍 ${a.distanceKm} كم</span>
+              <span>⭐ ${d.rating.toFixed(1)}</span>
+              <span>📍 ${d.distanceKm} كم</span>
               <span style="color:${avail ? "#2DD4BF" : "#F59E0B"}">${avail ? "● متاح" : "● مشغول"}</span>
             </div>
-          </div>`, { className: "herfati-popup" })
-        .on("click", () => { setSelectedId(a.id); setListExpanded(true); scrollToCard(a.id); });
-      markersRef.current.set(a.id, L.marker([a.latitude, a.longitude]));
+          </div>`, { className: "tabeebi-popup" })
+        .on("click", () => { setSelectedId(d.id); setListExpanded(true); scrollToCard(d.id); });
+      markersRef.current.set(d.id, L.marker([d.latitude, d.longitude]));
     });
-  }, [artisans, selectedId]);
+  }, [doctors, selectedId]);
 
-  // invalidate map size when list panel toggles on mobile
   useEffect(() => {
     setTimeout(() => mapRef.current?.invalidateSize(), 320);
   }, [listExpanded]);
@@ -183,10 +179,10 @@ export default function NearbyPage() {
     }, () => setLocating(false), { enableHighAccuracy: true });
   }, []);
 
-  const flyTo = (a: NearbyArtisan) => {
-    setSelectedId(a.id);
-    mapRef.current?.flyTo([a.latitude, a.longitude], 16, { duration: 0.8 });
-    markersRef.current.get(a.id)?.openPopup();
+  const flyTo = (d: NearbyDoctor) => {
+    setSelectedId(d.id);
+    mapRef.current?.flyTo([d.latitude, d.longitude], 16, { duration: 0.8 });
+    markersRef.current.get(d.id)?.openPopup();
   };
 
   const scrollToCard = (id: number) => {
@@ -195,7 +191,6 @@ export default function NearbyPage() {
 
   const isDark = theme === "dark";
 
-  // ─── Shared: filters panel ────────────────────────────
   const FiltersPanel = () => (
     <div className="mt-3 pt-3 border-t border-border/30 flex flex-wrap gap-3 items-center">
       <div className="flex items-center gap-2 flex-wrap">
@@ -218,7 +213,6 @@ export default function NearbyPage() {
     </div>
   );
 
-  // ─── Shared: cards list ───────────────────────────────
   const CardsList = () => (
     <div className="flex flex-col gap-2 p-3">
       {isError && (
@@ -227,14 +221,14 @@ export default function NearbyPage() {
           <Button variant="outline" size="sm" onClick={() => refetch()} className="text-xs">إعادة المحاولة</Button>
         </div>
       )}
-      {!isLoading && !isError && artisans.length === 0 && (
+      {!isLoading && !isError && doctors.length === 0 && (
         <div className="py-8 text-center text-muted-foreground text-sm">
           <MapPin className="h-8 w-8 mx-auto mb-2 opacity-20" />
-          لا يوجد حرفي ضمن هذه المعايير
+          لا يوجد طبيب ضمن هذه المعايير
         </div>
       )}
-      {artisans.map(a => (
-        <ArtisanCard key={a.id} artisan={a} selected={a.id === selectedId} onClick={() => flyTo(a)} />
+      {doctors.map(d => (
+        <DoctorCard key={d.id} doctor={d} selected={d.id === selectedId} onClick={() => flyTo(d)} />
       ))}
     </div>
   );
@@ -242,15 +236,14 @@ export default function NearbyPage() {
   return (
     <div className="flex flex-col bg-background" style={{ height: "calc(100vh - 64px)" }} dir="rtl">
 
-      {/* ── Top Bar (shared desktop + mobile) ── */}
+      {/* Top Bar */}
       <div className="border-b border-border/40 bg-background/95 backdrop-blur-sm px-3 md:px-6 py-2.5 flex-shrink-0">
-        {/* Row 1 */}
         <div className="flex items-center gap-2 mb-2">
           <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <h1 className="font-bold text-foreground text-sm leading-tight">ابحث عن حرفي قريب</h1>
+            <h1 className="font-bold text-foreground text-sm leading-tight">ابحث عن طبيب قريب</h1>
             <p className="text-[10px] text-muted-foreground">
-              {isLoading ? "جاري البحث..." : `${artisans.length} حرفي ضمن ${radius} كم`}
+              {isLoading ? "جاري البحث..." : `${doctors.length} طبيب ضمن ${radius} كم`}
             </p>
           </div>
           <Button variant="outline" size="sm" onClick={locateUser} disabled={locating}
@@ -269,7 +262,7 @@ export default function NearbyPage() {
           </Button>
         </div>
 
-        {/* Row 2: Search */}
+        {/* Search */}
         <div className="relative mb-2">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input value={q} onChange={e => setQ(e.target.value)} placeholder="ابحث بالاسم أو التخصص..."
@@ -277,43 +270,39 @@ export default function NearbyPage() {
           {q && <button onClick={() => setQ("")} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"><X className="h-3 w-3" /></button>}
         </div>
 
-        {/* Row 3: Craft chips */}
+        {/* Specialty chips */}
         <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide">
-          {CRAFTS.map(c => (
-            <button key={c} onClick={() => setCraft(c)}
+          {SPECIALTIES_FILTER.map(s => (
+            <button key={s} onClick={() => setSpecialty(s)}
               className={`flex-shrink-0 text-[11px] px-2.5 py-1 rounded-full border transition-all ${
-                craft === c ? "bg-primary text-primary-foreground border-primary font-medium" : "border-border/40 text-muted-foreground hover:border-primary/40 hover:text-primary"
-              }`}>{c}</button>
+                specialty === s ? "bg-primary text-primary-foreground border-primary font-medium" : "border-border/40 text-muted-foreground hover:border-primary/40 hover:text-primary"
+              }`}>{s}</button>
           ))}
         </div>
 
         {showFilters && <FiltersPanel />}
       </div>
 
-      {/* ── Main content area: holds the (single) map + the layout-specific UI overlay ── */}
+      {/* Map + overlay */}
       <div className="flex-1 relative overflow-hidden min-h-0">
-
-        {/* الخريطة الوحيدة — تبقى في نفس المكان لكل المقاسات حتى لا يضيع الـ ref */}
         <div ref={mapDivRef} className="absolute inset-0 w-full h-full" style={{ minHeight: 400 }} />
         {isLoading && <LoadingOverlay />}
 
-        {/* قائمة جانبية للديسكتوب */}
+        {/* Desktop sidebar */}
         <div className="hidden md:block absolute top-0 right-0 bottom-0 w-80 overflow-y-auto border-l border-border/30 bg-background/95 backdrop-blur-sm z-[400]">
           <CardsList />
         </div>
 
-        {/* قائمة سفلية متحركة للموبايل */}
+        {/* Mobile bottom sheet */}
         <div
           className="md:hidden absolute left-0 right-0 bottom-0 bg-background/95 backdrop-blur-sm border-t border-border/40 overflow-hidden transition-all duration-300 z-[400]"
           style={{ height: listExpanded ? "60%" : "44px" }}
         >
-          <button
-            onClick={() => setListExpanded(e => !e)}
-            className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-muted/30 transition-colors"
-          >
+          <button onClick={() => setListExpanded(e => !e)}
+            className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-muted/30 transition-colors">
             <span className="text-xs font-medium text-foreground flex items-center gap-1.5">
               <MapPin className="h-3.5 w-3.5 text-primary" />
-              {artisans.length} حرفي قريب
+              {doctors.length} طبيب قريب
             </span>
             <div className="flex items-center gap-1 text-muted-foreground">
               <span className="text-[10px]">{listExpanded ? "إخفاء" : "عرض الكل"}</span>
@@ -321,23 +310,20 @@ export default function NearbyPage() {
             </div>
           </button>
           {listExpanded && (
-            <div className="overflow-y-auto h-[calc(100%-44px)]">
-              <CardsList />
-            </div>
+            <div className="overflow-y-auto h-[calc(100%-44px)]"><CardsList /></div>
           )}
         </div>
       </div>
 
-      {/* Popup styles */}
       <style>{`
-        .herfati-popup .leaflet-popup-content-wrapper {
+        .tabeebi-popup .leaflet-popup-content-wrapper {
           background: ${isDark ? "hsl(222 47% 11%)" : "white"};
           color: ${isDark ? "#f1f5f9" : "#1e293b"};
           border: 1px solid ${isDark ? "#2DD4BF33" : "#e2e8f0"};
           border-radius: 12px;
           box-shadow: 0 4px 24px ${isDark ? "#0008" : "#0002"};
         }
-        .herfati-popup .leaflet-popup-tip { background: ${isDark ? "hsl(222 47% 11%)" : "white"}; }
+        .tabeebi-popup .leaflet-popup-tip { background: ${isDark ? "hsl(222 47% 11%)" : "white"}; }
         .leaflet-control-zoom a {
           background: ${isDark ? "hsl(222 47% 11%)" : "white"} !important;
           color: ${isDark ? "#f1f5f9" : "#1e293b"} !important;
@@ -360,29 +346,29 @@ function LoadingOverlay() {
   );
 }
 
-function ArtisanCard({ artisan: a, selected, onClick }: {
-  artisan: NearbyArtisan; selected: boolean; onClick: () => void;
+function DoctorCard({ doctor: d, selected, onClick }: {
+  doctor: NearbyDoctor; selected: boolean; onClick: () => void;
 }) {
-  const avail = a.status === "available";
+  const avail = d.status === "available";
   return (
-    <div id={`card-${a.id}`} onClick={onClick}
+    <div id={`card-${d.id}`} onClick={onClick}
       className={`rounded-xl border p-3 cursor-pointer transition-all ${
         selected ? "border-primary/60 bg-primary/5" : "border-border/30 hover:border-primary/30 bg-card/50 hover:bg-card"
       }`}>
       <div className="flex items-start gap-2.5 mb-2">
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center text-primary font-bold flex-shrink-0">
-          {a.name[0]}
+          {d.name[0]}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1">
-            <span className="font-semibold text-sm text-foreground truncate">{a.name}</span>
-            {a.isVerified && (
+            <span className="font-semibold text-sm text-foreground truncate">د. {d.name}</span>
+            {d.isVerified && (
               <svg className="w-3.5 h-3.5 text-primary flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd"/>
               </svg>
             )}
           </div>
-          <p className="text-[11px] text-primary/80">{categoryLabel(a.category)}</p>
+          <p className="text-[11px] text-primary/80">{specialtyLabel(d.specialty)}</p>
         </div>
         <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${avail ? "bg-primary/15 text-primary" : "bg-amber-500/15 text-amber-400"}`}>
           {avail ? "متاح" : "مشغول"}
@@ -391,17 +377,17 @@ function ArtisanCard({ artisan: a, selected, onClick }: {
       <div className="flex items-center gap-3 text-[11px] text-muted-foreground mb-2">
         <span className="flex items-center gap-1">
           <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-          {a.rating.toFixed(1)} ({a.reviewCount})
+          {d.rating.toFixed(1)} ({d.reviewCount})
         </span>
         <span className="flex items-center gap-1">
           <MapPin className="h-3 w-3 text-primary" />
-          {a.distanceKm} كم
+          {d.distanceKm} كم
         </span>
-        {a.priceStart && (
-          <span className="mr-auto text-primary/80 font-medium">{a.priceStart.toLocaleString()} د.ج</span>
+        {d.consultationFee && (
+          <span className="mr-auto text-primary/80 font-medium">{d.consultationFee.toLocaleString()} دج</span>
         )}
       </div>
-      <Link href={`/profile/${a.id}`}>
+      <Link href={`/profile/${d.id}`}>
         <button onClick={e => e.stopPropagation()}
           className="w-full text-xs py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-medium">
           عرض الملف الشخصي ←

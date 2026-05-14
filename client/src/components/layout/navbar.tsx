@@ -51,8 +51,8 @@ export function Navbar() {
         {/* Logo */}
         <Link href="/">
           <div className="flex items-center gap-2 cursor-pointer">
-            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-white font-bold">ط</div>
-            <span className="text-xl font-bold font-heading text-primary">طبيبي</span>
+            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-white font-bold">ص</div>
+            <span className="text-xl font-bold font-heading text-primary">صحتي</span>
           </div>
         </Link>
 

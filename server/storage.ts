@@ -198,7 +198,7 @@ class PostgresStorage implements IStorage {
       specialty:            insertDoctor.specialty,
       licenseNumber:        insertDoctor.licenseNumber || null,
       clinicName:           insertDoctor.clinicName || null,
-      consultationFee:      insertDoctor.consultationFee || 1000,
+      consultationFee:      insertDoctor.consultationFee ?? 1000,
       wilaya:               insertDoctor.wilaya || "الجزائر",
       daira:                insertDoctor.daira,
       clinicAddress:        insertDoctor.clinicAddress || null,

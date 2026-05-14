@@ -13,9 +13,9 @@ export function Footer() {
           <div className="space-y-4 text-right">
             <div className="flex items-center gap-2 justify-start">
               <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-white font-bold">
-                ح
+                ص
               </div>
-              <span className="text-xl font-bold font-heading text-primary">حرفتي</span>
+              <span className="text-xl font-bold font-heading text-primary">صحتي</span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
               {t('hero.subtitle')}
@@ -64,7 +64,7 @@ export function Footer() {
         </div>
         
         <div className="border-t pt-6 text-center text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} حرفتي. {t('footer.rights')}.</p>
+          <p>© {new Date().getFullYear()} صحتي. {t('footer.rights')}.</p>
         </div>
       </div>
     </footer>

@@ -8,8 +8,8 @@ import { useAuth } from "@/lib/auth";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import {
-  Check, Mail, User, Banknote, Briefcase, Phone, Clock,
-  Star, Zap, Crown, Sparkles, X,
+  Check, Mail, User, Briefcase, Phone, Clock,
+  Star, Zap, Crown, Sparkles, Stethoscope,
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogDescription,
@@ -20,7 +20,7 @@ import {
   SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { motion, AnimatePresence } from "framer-motion";
-import { DAIRAS, CATEGORIES, LOCATIONS } from "@/lib/constants";
+import { DAIRAS, SPECIALTIES, LOCATIONS } from "@/lib/constants";
 import { useToast as useToastHook } from "@/hooks/use-toast";
 
 // ── تعريف الخطط ───────────────────────────────────────────────────────────────
@@ -32,14 +32,14 @@ const PLANS = [
     icon: Star,
     tag: null,
     color: "#71717a",
-    isDisabled: false, // مفعّلة حالياً
+    isDisabled: false,
     glow: "rgba(113,113,122,0.3)",
     gradient: "linear-gradient(145deg, #27272a 0%, #1c1c1f 100%)",
     btnGradient: "linear-gradient(135deg, #3f3f46, #27272a)",
     features: [
-      "ملف شخصي احترافي",
-      "1 صور في المعرض",
-      "تواصل مباشر مع الزبائن",
+      "ملف طبي احترافي",
+      "عرض التخصص والعيادة",
+      "تواصل مباشر مع المرضى",
       "ظهور عادي في البحث",
       "مجاني للأبد",
     ],
@@ -51,16 +51,16 @@ const PLANS = [
     icon: Zap,
     tag: null,
     color: "#38bdf8",
-    isDisabled: true, // غير متوفرة
+    isDisabled: true,
     glow: "rgba(56,189,248,0.25)",
     gradient: "linear-gradient(145deg, #0c1f33 0%, #0a1628 100%)",
     btnGradient: "linear-gradient(135deg, #0369a1, #0284c7)",
     features: [
       "كل مزايا المجاني",
-      "3 صور في المعرض",
       "ظهور أعلى في البحث",
-      "شارة القياسي على الملف",
+      "شارة الطبيب القياسي",
       "أولوية في نتائج الولاية",
+      "عرض مواعيد متاحة",
     ],
   },
   {
@@ -69,17 +69,16 @@ const PLANS = [
     price: 3000,
     icon: Crown,
     color: "#c084fc",
-    isDisabled: true, // غير متوفرة
+    isDisabled: true,
     glow: "rgba(192,132,252,0.3)",
     gradient: "linear-gradient(145deg, #1a0f2e 0%, #130b22 100%)",
     btnGradient: "linear-gradient(135deg, #7e22ce, #9333ea)",
     features: [
       "كل مزايا القياسي",
-      "5 صور في المعرض",
       "ظهور أعلى من القياسي",
       "صفحة التحليلات الكاملة",
       "إحصاءات المشاهدات والنمو",
-      "شارة الاحترافي المميزة",
+      "شارة الطبيب الاحترافي المميزة",
     ],
   },
   {
@@ -88,17 +87,17 @@ const PLANS = [
     price: 5000,
     icon: Sparkles,
     color: "#fbbf24",
-    isDisabled: true, // غير متوفرة
+    isDisabled: true,
     glow: "rgba(251,191,36,0.3)",
     gradient: "linear-gradient(145deg, #1f1400 0%, #170f00 100%)",
     btnGradient: "linear-gradient(135deg, #b45309, #d97706)",
     features: [
       "كل مزايا الاحترافي",
-      "صور غير محدودة",
       "أعلى ظهور في البحث",
       "شارة ذهبية مميزة",
       "الأولوية القصوى",
       "دعم مخصص على واتساب",
+      "إدارة المواعيد المتقدمة",
     ],
   },
 ];
@@ -108,26 +107,26 @@ export default function Subscription() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { loginArtisan } = useAuth();
+  const { loginDoctor } = useAuth();
   const [done, setDone] = useState(false);
   const isRtl = i18n.language === "ar";
 
   const registerMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", "/api/artisans", data);
+      const res = await apiRequest("POST", "/api/doctors", data);
       return res.json();
     },
     onSuccess: (data: any) => {
       setDone(true);
-      loginArtisan({
+      loginDoctor({
         id: data.id, name: data.name, email: data.email,
-        phone: data.phone, category: data.category,
+        phone: data.phone, specialty: data.specialty,
         wilaya: data.wilaya, daira: data.daira,
         subscriptionType: data.subscriptionType, imageUrl: data.imageUrl,
       });
       toast({ title: "تم التسجيل بنجاح! 🎉", description: "جاري التوجيه للوحة التحكم..." });
-      queryClient.invalidateQueries({ queryKey: ["/api/artisans"] });
-      setTimeout(() => setLocation("/artisan/dashboard"), 1500);
+      queryClient.invalidateQueries({ queryKey: ["/api/doctors"] });
+      setTimeout(() => setLocation("/doctor/dashboard"), 1500);
     },
     onError: (e: Error) =>
       toast({ title: "فشل التسجيل", description: e.message, variant: "destructive" }),
@@ -174,10 +173,10 @@ export default function Subscription() {
             className="text-center mb-14"
           >
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/8 bg-white/3 text-zinc-400 text-xs font-bold uppercase tracking-widest mb-5">
-              <Sparkles className="h-3 w-3" /> اختر خطتك
+              <Stethoscope className="h-3 w-3" /> اختر خطتك
             </div>
             <h1 className="text-5xl md:text-6xl font-black tracking-tight leading-none mb-4">
-              انضم إلى حرفتي
+              انضم إلى طبيبي
             </h1>
             <p className="text-zinc-500 text-lg">ابدأ مجاناً أو اختر خطة تناسب طموحك</p>
           </motion.div>
@@ -198,10 +197,10 @@ export default function Subscription() {
                   {plan.tag && (
                     <div
                       className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap"
-                      style={{ 
-                        background: plan.isDisabled ? '#27272a' : plan.btnGradient, 
-                        color: plan.isDisabled ? '#71717a' : "#fff", 
-                        boxShadow: plan.isDisabled ? 'none' : `0 0 16px ${plan.glow}` 
+                      style={{
+                        background: plan.isDisabled ? '#27272a' : plan.btnGradient,
+                        color: plan.isDisabled ? '#71717a' : "#fff",
+                        boxShadow: plan.isDisabled ? 'none' : `0 0 16px ${plan.glow}`
                       }}
                     >
                       {plan.tag}
@@ -283,6 +282,7 @@ export default function Subscription() {
             })}
           </div>
 
+          {/* Comparison Table */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -307,11 +307,11 @@ export default function Subscription() {
                 </thead>
                 <tbody>
                   {[
-                    { label: "صور المعرض",       vals: ["2", "3", "5", "∞"] },
-                    { label: "الظهور في البحث",    vals: ["عادي", "متوسط", "عالي", "الأعلى"] },
-                    { label: "صفحة التحليلات",    vals: [false, false, true, true] },
-                    { label: "شارة مميزة",          vals: [false, "قياسي", "Pro", "ذهبي"] },
-                    { label: "دعم واتساب",          vals: [false, false, false, true] },
+                    { label: "الظهور في البحث",      vals: ["عادي", "متوسط", "عالي", "الأعلى"] },
+                    { label: "صفحة التحليلات",        vals: [false, false, true, true] },
+                    { label: "شارة مميزة",            vals: [false, "قياسي", "Pro", "ذهبي"] },
+                    { label: "إدارة المواعيد",        vals: [false, true, true, true] },
+                    { label: "دعم واتساب",            vals: [false, false, false, true] },
                   ].map((row, ri) => (
                     <tr key={ri} className="border-b border-white/4 last:border-0 hover:bg-white/[0.012] transition-colors">
                       <td className="py-3 px-5 text-zinc-400">{row.label}</td>
@@ -339,20 +339,21 @@ export default function Subscription() {
   );
 }
 
+// ── Registration Dialog ───────────────────────────────────────────────────────
 function RegisterDialog({ plan, registerMutation, isRtl }: any) {
   const { toast } = useToastHook();
   const [open, setOpen] = useState(false);
   const [wilaya, setWilaya] = useState<string | null>(null);
   const [form, setForm] = useState({
-    name: "", email: "", phone: "", category: "", daira: "",
-    priceStart: "", yearsOfExperience: "",
+    name: "", email: "", phone: "", specialty: "", daira: "",
+    yearsOfExperience: "",
   });
 
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.phone || !form.category || !wilaya || !form.daira || !form.priceStart) {
+    if (!form.name || !form.email || !form.phone || !form.specialty || !wilaya || !form.daira) {
       toast({ title: "تنبيه", description: "الرجاء ملء جميع الحقول", variant: "destructive" }); return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
@@ -360,14 +361,13 @@ function RegisterDialog({ plan, registerMutation, isRtl }: any) {
     }
     registerMutation.mutate({
       name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim(),
-      category: form.category, wilaya, daira: form.daira,
-      priceStart: parseInt(form.priceStart) || 1000,
+      specialty: form.specialty, wilaya, daira: form.daira,
       yearsOfExperience: parseInt(form.yearsOfExperience) || 1,
       subscriptionType: plan.id,
       subscriptionDuration: 1,
-      description: "حرفي محترف في منصة حرفتي",
+      description: "طبيب محترف في منصة طبيبي",
       imageUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(form.name)}&background=2DD4BF&color=fff&size=400`,
-      isVerified: false, portfolioImages: [],
+      isVerified: false,
     });
     setOpen(false);
   };
@@ -418,7 +418,7 @@ function RegisterDialog({ plan, registerMutation, isRtl }: any) {
             </div>
           </div>
           <DialogDescription className="text-zinc-500 text-xs mt-2">
-            أدخل بياناتك لبدء رحلتك مع حرفتي
+            أدخل بياناتك لبدء رحلتك مع طبيبي
           </DialogDescription>
         </div>
 
@@ -427,7 +427,7 @@ function RegisterDialog({ plan, registerMutation, isRtl }: any) {
             <FLabel label="الاسم الكامل">
               <div className="relative">
                 <User className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-600" />
-                <input style={inputStyle} placeholder="محمد علي" value={form.name} onChange={e => set("name", e.target.value)} />
+                <input style={inputStyle} placeholder="د. محمد علي" value={form.name} onChange={e => set("name", e.target.value)} />
               </div>
             </FLabel>
             <FLabel label="البريد الإلكتروني">
@@ -445,26 +445,18 @@ function RegisterDialog({ plan, registerMutation, isRtl }: any) {
             </div>
           </FLabel>
 
-          <div className="grid grid-cols-2 gap-3">
-            <FLabel label="السعر الأدنى (دج)">
-              <div className="relative">
-                <Banknote className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-600" />
-                <input style={inputStyle} type="number" placeholder="1500" value={form.priceStart} onChange={e => set("priceStart", e.target.value)} />
-              </div>
-            </FLabel>
-            <FLabel label="سنوات الخبرة">
-              <div className="relative">
-                <Briefcase className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-600" />
-                <input style={inputStyle} type="number" placeholder="5" value={form.yearsOfExperience} onChange={e => set("yearsOfExperience", e.target.value)} />
-              </div>
-            </FLabel>
-          </div>
+          <FLabel label="سنوات الخبرة">
+            <div className="relative">
+              <Briefcase className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-600" />
+              <input style={inputStyle} type="number" placeholder="5" value={form.yearsOfExperience} onChange={e => set("yearsOfExperience", e.target.value)} />
+            </div>
+          </FLabel>
 
-          <FLabel label="المهنة">
-            <Select value={form.category} onValueChange={v => set("category", v)} dir="rtl">
-              <SelectTrigger className={selectTriggerStyle}><SelectValue placeholder="اختر مهنتك" /></SelectTrigger>
+          <FLabel label="التخصص الطبي">
+            <Select value={form.specialty} onValueChange={v => set("specialty", v)} dir="rtl">
+              <SelectTrigger className={selectTriggerStyle}><SelectValue placeholder="اختر تخصصك" /></SelectTrigger>
               <SelectContent className="bg-zinc-900 border-white/10 text-white max-h-60 overflow-y-auto">
-                {CATEGORIES.map(c => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
+                {SPECIALTIES.map(s => <SelectItem key={s.id} value={s.label}>{s.label}</SelectItem>)}
               </SelectContent>
             </Select>
           </FLabel>
