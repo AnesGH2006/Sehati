@@ -1,7 +1,7 @@
 {
-  "name": "Herfati",
-  "short_name": "Herafi",
-  "description": "تطبيق يهدف الى تسهيل عمل الحرفيين وزيادة دخلهم",
+  "name": "Sehati",
+  "short_name": "Sehati",
+  "description": "تطبيق يهدف الى تسهيل عمل الاطباء وزيادة دخلهم",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -11,7 +11,7 @@
   "orientation": "portrait-primary",
   "lang": "ar",
   "dir": "rtl",
-  "categories": ["Home", "Artisans", "Subscription"],
+  "categories": ["Home", "Doctors", "Subscription"],
   "icons": [
     {
       "src": "/logo.png",
@@ -34,16 +34,16 @@
   ],
   "shortcuts": [
     {
-      "name": "حرفيين",
-      "short_name": "حرفيين",
-      "description": "عرض الحرفيين",
-      "url": "/artisans",
+      "name": "اطباء",
+      "short_name": "اطباء"
+      "description": "عرض اطباء",
+      "url": "/doctors",
       "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
     },
     {
       "name": "الاشتراكات",
       "short_name": "اشتراك",
-      "description": "تسجيل كحرفي",
+      "description": "تسجيل كطبيب",
       "url": "/subscription",
       "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
     }

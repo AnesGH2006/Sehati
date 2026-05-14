@@ -1,4 +1,4 @@
-const CACHE_NAME = "herfati-v3";
+const CACHE_NAME = "Sehati-v3";
 const OFFLINE_URL = "/offline.html";
 
 const PRECACHE = [
@@ -75,10 +75,10 @@ self.addEventListener("push", (event) => {
   try {
     data = event.data.json();
   } catch {
-    data = { title: "حرفتي", body: event.data.text() };
+    data = { title: "صحتي", body: event.data.text() };
   }
 
-  const title   = data.title || "حرفتي";
+  const title   = data.title || "صحتي";
   const options = {
     body:     data.body  || "",
     icon:     data.icon  || "/logo.png",
