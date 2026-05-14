@@ -117,10 +117,6 @@ export function Navbar() {
                     <User className="h-3.5 w-3.5 text-primary" />
                   </div>
                   <span className="text-sm font-bold max-w-[120px] truncate">{displayName}</span>
-                    <DropdownMenuItem onClick={() => setLocation("/my-appointments")} className="cursor-pointer gap-2">
-                      <HeartCrackIcon className="h-4 w-4" />
-                      {isRtl ? "مواعيدي" : "Appointments"}
-                    </DropdownMenuItem>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align={isRtl ? "start" : "end"} className="w-56">
