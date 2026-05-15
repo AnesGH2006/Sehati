@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import  { useDoctorLocation } from "@/hooks/useDoctorLocation";
 import {
   MessageSquare, Star, Eye, Image as ImageIcon,
   MapPin, Save, BadgeCheck, Trash2, Upload, X,
@@ -22,7 +21,6 @@ import { LOCATIONS, DAIRAS, SPECIALTIES } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useCall } from "@/hooks/useCall";
 import { CallUI } from "@/components/CallUI";
@@ -155,9 +153,7 @@ export default function DoctorDashboard() {
   // ── Queries ───────────────────────────────────────────────────────────────
   const { data: serverDoctor, refetch } = useQuery<any>({
     queryKey: ["/api/doctors", doctor?.id],
-    queryFn: () => fetch(`/api/appointments/doctor/${doctor?.id}`)
-    .then(r => r.json())
-    .then(data => Array.isArray(data) ? data : []),
+    queryFn:  () => fetch(`/api/doctors/${doctor?.id}`).then(r => r.json()),
     enabled:  !!doctor?.id,
   });
   const realDoctor = serverDoctor || doctor;
@@ -168,36 +164,53 @@ export default function DoctorDashboard() {
 
   const { data: reviews = [] } = useQuery<any[]>({
     queryKey: ["/api/doctors", doctor?.id, "reviews"],
-    queryFn:  () => fetch(`/api/doctors/${doctor?.id}/reviews`).then(r => r.json()),
-    enabled:  !!doctor?.id, refetchInterval: 30000,
+    queryFn: () =>
+      fetch(`/api/doctors/${doctor?.id}/reviews`)
+        .then(r => r.json())
+        .then(data => Array.isArray(data) ? data : data?.reviews ?? data?.data ?? []),
+    enabled: !!doctor?.id,
+    refetchInterval: 30000,
   });
 
   const { data: conversations = [] } = useQuery<any[]>({
     queryKey: ["/api/conversations", String(doctor?.id)],
-    queryFn:  () => fetch(`/api/conversations/${doctor?.id}?role=doctor`).then(r => r.json()),
-    enabled:  !!doctor?.id, refetchInterval: 5000,
+    queryFn: () =>
+      fetch(`/api/conversations/${doctor?.id}?role=doctor`)
+        .then(r => r.json())
+        .then(data => Array.isArray(data) ? data : data?.conversations ?? data?.data ?? []),
+    enabled: !!doctor?.id,
+    refetchInterval: 5000,
   });
 
   const { data: convMessages = [] } = useQuery<any[]>({
     queryKey: ["/api/conversations", selectedConv?.id, "messages"],
-    queryFn:  () => fetch(`/api/conversations/${selectedConv?.id}/messages`).then(r => r.json()),
-    enabled:  !!selectedConv?.id, refetchInterval: 2000,
+    queryFn: () =>
+      fetch(`/api/conversations/${selectedConv?.id}/messages`)
+        .then(r => r.json())
+        .then(data => Array.isArray(data) ? data : data?.messages ?? data?.data ?? []),
+    enabled: !!selectedConv?.id,
+    refetchInterval: 2000,
   });
 
   const { data: appointments = [] } = useQuery<any[]>({
     queryKey: ["/api/appointments/doctor", doctor?.id],
-    queryFn:  () => fetch(`/api/appointments/doctor/${doctor?.id}`).then(r => r.json()),
-    enabled:  !!doctor?.id, refetchInterval: 15000,
+    queryFn: () =>
+      fetch(`/api/appointments/doctor/${doctor?.id}`)
+        .then(r => r.json())
+        .then(data => Array.isArray(data) ? data : data?.appointments ?? data?.data ?? []),
+    enabled: !!doctor?.id,
+    refetchInterval: 15000,
   });
 
   const { data: analytics } = useQuery<any>({
     queryKey: ["/api/doctors", doctor?.id, "analytics"],
     queryFn:  () => fetch(`/api/doctors/${doctor?.id}/analytics`).then(r => r.json()),
     enabled:  !!doctor?.id && canAnalytics,
-    refetchInterval: 60000, staleTime: 30000,
+    refetchInterval: 60000,
+    staleTime: 30000,
   });
 
-  const chatFinished = (convMessages as any[]).some(
+  const chatFinished = convMessages.some(
     (m: any) => m.content === FINISH_SIGNAL && m.senderType === "doctor"
   );
 
@@ -222,7 +235,12 @@ export default function DoctorDashboard() {
 
   const deleteMutation = useMutation({
     mutationFn: () => fetch(`/api/doctors/${doctor?.id}`, { method: "DELETE" }).then(r => r.json()),
-    onSuccess:  () => { logout(); queryClient.invalidateQueries({ queryKey: ["/api/doctors"] }); toast({ title: "تم حذف الحساب" }); setLocation("/"); },
+    onSuccess: () => {
+      logout();
+      queryClient.invalidateQueries({ queryKey: ["/api/doctors"] });
+      toast({ title: "تم حذف الحساب" });
+      setLocation("/");
+    },
   });
 
   const sendReplyMutation = useMutation({
@@ -230,7 +248,10 @@ export default function DoctorDashboard() {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ conversationId: selectedConv?.id, senderId: String(doctor?.id), receiverId: selectedConv?.patientId, senderType: "doctor", content }),
     }).then(r => r.json()),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/conversations", selectedConv?.id, "messages"] }); setReplyText(""); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", selectedConv?.id, "messages"] });
+      setReplyText("");
+    },
   });
 
   const finishChatMutation = useMutation({
@@ -257,7 +278,10 @@ export default function DoctorDashboard() {
     onError: () => toast({ title: "فشل تحديث الموعد", variant: "destructive" }),
   });
 
-  const handleSendReply = () => { if (!replyText.trim() || chatFinished) return; sendReplyMutation.mutate(replyText); };
+  const handleSendReply = () => {
+    if (!replyText.trim() || chatFinished) return;
+    sendReplyMutation.mutate(replyText);
+  };
 
   const handleVoiceClip = async () => {
     if (!selectedConv || chatFinished) return;
@@ -310,11 +334,11 @@ export default function DoctorDashboard() {
     );
   }
 
-  const dailyData    = analytics?.dailyConversations  || [];
-  const dailyViews   = analytics?.dailyViews          || [];
-  const pendingAppts = (appointments as any[]).filter(a => a.status === "pending");
+  const dailyData    = analytics?.dailyConversations || [];
+  const dailyViews   = analytics?.dailyViews         || [];
+  const pendingAppts = appointments.filter((a: any) => a.status === "pending");
   const todayStr     = new Date().toISOString().slice(0, 10);
-  const todayAppts   = (appointments as any[]).filter(a => a.appointmentDate === todayStr);
+  const todayAppts   = appointments.filter((a: any) => a.appointmentDate === todayStr);
 
   const apptStatusColor: Record<string, string> = {
     pending:   "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
@@ -382,10 +406,10 @@ export default function DoctorDashboard() {
                   </div>
                 </div>
                 <div className="grid grid-cols-4 gap-2 lg:gap-3 lg:w-auto lg:min-w-[480px]">
-                  <MiniStat icon={<Eye className="h-3.5 w-3.5" />}           label="مشاهدات"  value={analytics?.totalViews          ?? 0} color="text-blue-400"   />
-                  <MiniStat icon={<Calendar className="h-3.5 w-3.5" />}      label="مواعيد"   value={(appointments as any[]).length} color="text-teal-400"   />
-                  <MiniStat icon={<MessageSquare className="h-3.5 w-3.5" />} label="محادثات"  value={analytics?.totalConversations  ?? conversations.length} color="text-purple-400" />
-                  <MiniStat icon={<Star className="h-3.5 w-3.5" />}          label="تقييمات"  value={reviews.length}                 color="text-amber-400"  />
+                  <MiniStat icon={<Eye className="h-3.5 w-3.5" />}           label="مشاهدات" value={analytics?.totalViews         ?? 0} color="text-blue-400"   />
+                  <MiniStat icon={<Calendar className="h-3.5 w-3.5" />}      label="مواعيد"  value={appointments.length}               color="text-teal-400"   />
+                  <MiniStat icon={<MessageSquare className="h-3.5 w-3.5" />} label="محادثات" value={analytics?.totalConversations ?? conversations.length} color="text-purple-400" />
+                  <MiniStat icon={<Star className="h-3.5 w-3.5" />}          label="تقييمات" value={reviews.length}                     color="text-amber-400"  />
                 </div>
               </div>
               {planKey !== "gold" && (
@@ -410,10 +434,10 @@ export default function DoctorDashboard() {
         {/* ══ Tabs ══ */}
         <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-1.5 mb-6 flex gap-1 overflow-x-auto">
           {[
-            { key: "overview",      label: "نظرة عامة",    icon: <Eye className="h-4 w-4" /> },
-            { key: "appointments",  label: "المواعيد",      icon: <Calendar className="h-4 w-4" />, badge: pendingAppts.length },
-            { key: "analytics",     label: "التحليلات",     icon: <BarChart2 className="h-4 w-4" />, locked: !canAnalytics },
-            { key: "settings",      label: "الإعدادات",     icon: <Save className="h-4 w-4" /> },
+            { key: "overview",     label: "نظرة عامة",  icon: <Eye className="h-4 w-4" /> },
+            { key: "appointments", label: "المواعيد",    icon: <Calendar className="h-4 w-4" />, badge: pendingAppts.length },
+            { key: "analytics",    label: "التحليلات",   icon: <BarChart2 className="h-4 w-4" />, locked: !canAnalytics },
+            { key: "settings",     label: "الإعدادات",   icon: <Save className="h-4 w-4" /> },
           ].map(tab => (
             <button key={tab.key}
               className={`flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-all ${
@@ -431,10 +455,10 @@ export default function DoctorDashboard() {
         {activeTab === "overview" && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <KpiCard icon={<Eye className="h-4 w-4" />}           label="المشاهدات"  value={String(analytics?.totalViews         ?? "–")} change={analytics?.viewsChange}   color="blue"   />
-              <KpiCard icon={<Calendar className="h-4 w-4" />}      label="المواعيد"   value={String(analytics?.totalAppointments  ?? (appointments as any[]).length)} change={analytics?.apptChange} color="teal"   />
-              <KpiCard icon={<Star className="h-4 w-4" />}          label="التقييم"    value={analytics?.avgRating ? `${analytics.avgRating} ★` : (realDoctor?.rating || "0")} change={analytics?.reviewsChange} color="amber"  />
-              <KpiCard icon={<TrendingUp className="h-4 w-4" />}    label="معدل الرد"  value={analytics?.replyRate != null ? `${analytics.replyRate}%` : "–"} color="green" />
+              <KpiCard icon={<Eye className="h-4 w-4" />}        label="المشاهدات" value={String(analytics?.totalViews        ?? "–")} change={analytics?.viewsChange}   color="blue"  />
+              <KpiCard icon={<Calendar className="h-4 w-4" />}   label="المواعيد"  value={String(analytics?.totalAppointments ?? appointments.length)} change={analytics?.apptChange} color="teal"  />
+              <KpiCard icon={<Star className="h-4 w-4" />}       label="التقييم"   value={analytics?.avgRating ? `${analytics.avgRating} ★` : (realDoctor?.rating || "0")} change={analytics?.reviewsChange} color="amber" />
+              <KpiCard icon={<TrendingUp className="h-4 w-4" />} label="معدل الرد" value={analytics?.replyRate != null ? `${analytics.replyRate}%` : "–"} color="green" />
             </div>
 
             {/* اليوم */}
@@ -466,12 +490,12 @@ export default function DoctorDashboard() {
 
             {/* معلومات الطبيب */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <InfoItem icon={<Mail />}       label="البريد الإلكتروني"  value={realDoctor?.email              || "–"} />
-              <InfoItem icon={<Phone />}      label="الهاتف"             value={realDoctor?.phone              || "–"} />
-              <InfoItem icon={<Banknote />}   label="سعر الكشف"          value={`${realDoctor?.consultationFee || "–"} دج`} />
-              <InfoItem icon={<Briefcase />}  label="سنوات الخبرة"       value={`${realDoctor?.yearsOfExperience || "–"} سنوات`} />
-              <InfoItem icon={<MapPin />}     label="الموقع"             value={`${realDoctor?.wilaya || ""} - ${realDoctor?.daira || "–"}`} />
-              <InfoItem icon={<BadgeCheck />} label="التخصص"             value={realDoctor?.specialty || "–"} />
+              <InfoItem icon={<Mail />}       label="البريد الإلكتروني" value={realDoctor?.email                || "–"} />
+              <InfoItem icon={<Phone />}      label="الهاتف"            value={realDoctor?.phone                || "–"} />
+              <InfoItem icon={<Banknote />}   label="سعر الكشف"         value={`${realDoctor?.consultationFee   || "–"} دج`} />
+              <InfoItem icon={<Briefcase />}  label="سنوات الخبرة"      value={`${realDoctor?.yearsOfExperience || "–"} سنوات`} />
+              <InfoItem icon={<MapPin />}     label="الموقع"            value={`${realDoctor?.wilaya || ""} - ${realDoctor?.daira || "–"}`} />
+              <InfoItem icon={<BadgeCheck />} label="التخصص"            value={realDoctor?.specialty            || "–"} />
             </div>
 
             {/* المحادثات */}
@@ -485,7 +509,10 @@ export default function DoctorDashboard() {
                 </CardHeader>
                 <CardContent className="p-0">
                   {conversations.length === 0 ? (
-                    <div className="p-8 text-center text-zinc-500"><MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-20" /><p>لا توجد محادثات بعد</p></div>
+                    <div className="p-8 text-center text-zinc-500">
+                      <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                      <p>لا توجد محادثات بعد</p>
+                    </div>
                   ) : conversations.map((conv: any) => (
                     <button key={conv.id} onClick={() => setSelectedConv(selectedConv?.id === conv.id ? null : conv)}
                       className={`w-full p-4 flex items-center gap-4 border-b border-white/5 transition-all text-right ${selectedConv?.id === conv.id ? "bg-primary/10 border-primary/20" : "hover:bg-white/5"}`}>
@@ -514,7 +541,9 @@ export default function DoctorDashboard() {
                     <Card className="bg-white/[0.03] border-white/10 rounded-3xl overflow-hidden flex flex-col h-[70vh] min-h-[560px]">
                       <CardHeader className="p-4 border-b border-white/10 flex-row items-center justify-between space-y-0">
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9"><AvatarFallback className="bg-primary/20 text-primary font-black text-sm">{selectedConv.patientName?.[0] || "؟"}</AvatarFallback></Avatar>
+                          <Avatar className="h-9 w-9">
+                            <AvatarFallback className="bg-primary/20 text-primary font-black text-sm">{selectedConv.patientName?.[0] || "؟"}</AvatarFallback>
+                          </Avatar>
                           <div>
                             <p className="font-bold text-sm">{selectedConv.patientName || `مريض #${selectedConv.patientId?.slice(-6)}`}</p>
                             <p className="text-xs text-green-400">{chatFinished ? "✅ تم إنهاء المحادثة" : "متصل"}</p>
@@ -525,7 +554,8 @@ export default function DoctorDashboard() {
                           <button onClick={() => startCall(selectedConv.patientId, selectedConv.patientName || "مريض", "video")} className="p-1.5 rounded-full bg-white/5 hover:bg-primary/20 text-zinc-400 hover:text-primary transition-colors"><Video className="h-4 w-4" /></button>
                           <button onClick={() => setLocation(`/chat/${selectedConv.doctorId}`)} className="p-1.5 rounded-full bg-white/5 hover:bg-blue-500/20 text-zinc-400 hover:text-blue-400 transition-colors"><ExternalLink className="h-4 w-4" /></button>
                           {!chatFinished && convMessages.length > 0 && (
-                            <button onClick={() => { if (confirm("هل تريد إنهاء هذه المحادثة؟")) finishChatMutation.mutate(); }} disabled={finishChatMutation.isPending}
+                            <button onClick={() => { if (confirm("هل تريد إنهاء هذه المحادثة؟")) finishChatMutation.mutate(); }}
+                              disabled={finishChatMutation.isPending}
                               className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors text-xs font-bold border border-green-500/20">
                               <CheckCheck className="h-3.5 w-3.5" /> إنهاء
                             </button>
@@ -538,7 +568,9 @@ export default function DoctorDashboard() {
                           if (msg.content === FINISH_SIGNAL) return (
                             <div key={msg.id} className="flex items-center gap-2 my-2">
                               <div className="flex-1 h-px bg-green-500/20" />
-                              <span className="text-xs text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20 flex items-center gap-1"><CheckCheck className="h-3 w-3" /> أنهيت المحادثة</span>
+                              <span className="text-xs text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20 flex items-center gap-1">
+                                <CheckCheck className="h-3 w-3" /> أنهيت المحادثة
+                              </span>
                               <div className="flex-1 h-px bg-green-500/20" />
                             </div>
                           );
@@ -546,7 +578,9 @@ export default function DoctorDashboard() {
                           return (
                             <div key={msg.id} className={`flex ${isMe ? "justify-start" : "justify-end"}`}>
                               <div className={`max-w-[75%] px-3 py-2 rounded-2xl text-sm ${isMe ? "bg-gradient-to-br from-primary to-primary/80 text-white rounded-br-sm" : "bg-white/10 text-white rounded-bl-sm"}`}>
-                                {isImageContent(msg.content) ? <img src={getImageSrc(msg.content)} alt="صورة" className="max-w-full rounded-xl max-h-40 object-cover" /> : <p>{msg.content}</p>}
+                                {isImageContent(msg.content)
+                                  ? <img src={getImageSrc(msg.content)} alt="صورة" className="max-w-full rounded-xl max-h-40 object-cover" />
+                                  : <p>{msg.content}</p>}
                                 <span className="text-[10px] opacity-60 mt-0.5 block">{formatTime(msg.createdAt)}</span>
                               </div>
                             </div>
@@ -554,24 +588,35 @@ export default function DoctorDashboard() {
                         })}
                       </div>
                       <div className="p-3 border-t border-white/10">
-                        {chatFinished ? <p className="text-center text-xs text-zinc-500 py-1">تم إنهاء المحادثة</p> : (
+                        {chatFinished ? (
+                          <p className="text-center text-xs text-zinc-500 py-1">تم إنهاء المحادثة</p>
+                        ) : (
                           <div className="flex items-center gap-2 bg-white/5 rounded-2xl px-3 py-2 border border-white/10">
                             <label className="cursor-pointer text-zinc-400 hover:text-primary transition-colors shrink-0">
                               <ImageIcon className="h-4 w-4" />
                               <input type="file" accept="image/*" className="hidden" onChange={(e) => {
                                 const file = e.target.files?.[0]; if (!file) return;
                                 const reader = new FileReader();
-                                reader.onloadend = () => fetch("/api/upload", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ data: reader.result }) }).then(r => r.json()).then(({ url }) => { if (url) sendReplyMutation.mutate(url); }).catch(() => {});
-                                reader.readAsDataURL(file); e.target.value = "";
+                                reader.onloadend = () =>
+                                  fetch("/api/upload", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ data: reader.result }) })
+                                    .then(r => r.json()).then(({ url }) => { if (url) sendReplyMutation.mutate(url); }).catch(() => {});
+                                reader.readAsDataURL(file);
+                                e.target.value = "";
                               }} />
                             </label>
                             <button onClick={handleVoiceClip} className={`shrink-0 rounded-full p-1.5 transition-colors ${isRecordingVoice ? "bg-red-500/20 text-red-400" : "text-zinc-400 hover:text-primary"}`}>
                               {isRecordingVoice ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                             </button>
-                            <input type="text" className="flex-1 bg-transparent border-none focus:outline-none text-sm text-white placeholder:text-zinc-500" placeholder="اكتب ردك..."
-                              value={replyText} onChange={e => setReplyText(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSendReply()} />
+                            <input type="text"
+                              className="flex-1 bg-transparent border-none focus:outline-none text-sm text-white placeholder:text-zinc-500"
+                              placeholder="اكتب ردك..."
+                              value={replyText}
+                              onChange={e => setReplyText(e.target.value)}
+                              onKeyDown={e => e.key === "Enter" && handleSendReply()} />
                             <button onClick={handleSendReply} disabled={!replyText.trim() || sendReplyMutation.isPending}
-                              className="p-1.5 bg-primary rounded-full text-white disabled:opacity-40 transition-all hover:bg-primary/80 active:scale-95"><Send className="h-4 w-4" /></button>
+                              className="p-1.5 bg-primary rounded-full text-white disabled:opacity-40 transition-all hover:bg-primary/80 active:scale-95">
+                              <Send className="h-4 w-4" />
+                            </button>
                           </div>
                         )}
                       </div>
@@ -602,7 +647,11 @@ export default function DoctorDashboard() {
                         </div>
                         <div className="flex gap-0.5">{[1,2,3,4,5].map(s => <Star key={s} className={`h-3.5 w-3.5 ${s <= review.rating ? "text-amber-400 fill-amber-400" : "text-zinc-600"}`} />)}</div>
                       </div>
-                      {review.comment && <p className="text-zinc-400 text-xs leading-relaxed flex gap-1.5"><Quote className="h-3 w-3 shrink-0 mt-0.5 text-zinc-600" />{review.comment}</p>}
+                      {review.comment && (
+                        <p className="text-zinc-400 text-xs leading-relaxed flex gap-1.5">
+                          <Quote className="h-3 w-3 shrink-0 mt-0.5 text-zinc-600" />{review.comment}
+                        </p>
+                      )}
                     </div>
                   ))}
                 </CardContent>
@@ -616,8 +665,13 @@ export default function DoctorDashboard() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
               {(["pending","confirmed","completed","cancelled"] as const).map(s => {
-                const count = (appointments as any[]).filter(a => a.status === s).length;
-                const icons: any = { pending: <AlertCircle className="h-4 w-4" />, confirmed: <CheckCircle2 className="h-4 w-4" />, completed: <CheckCheck className="h-4 w-4" />, cancelled: <XCircle className="h-4 w-4" /> };
+                const count = appointments.filter((a: any) => a.status === s).length;
+                const icons: any = {
+                  pending:   <AlertCircle className="h-4 w-4" />,
+                  confirmed: <CheckCircle2 className="h-4 w-4" />,
+                  completed: <CheckCheck className="h-4 w-4" />,
+                  cancelled: <XCircle className="h-4 w-4" />,
+                };
                 return (
                   <div key={s} className={`rounded-2xl border p-4 ${apptStatusColor[s]}`}>
                     <div className="flex items-center gap-2 mb-1">{icons[s]}<span className="text-xs font-black uppercase">{apptStatusLabel[s]}</span></div>
@@ -627,9 +681,12 @@ export default function DoctorDashboard() {
               })}
             </div>
 
-            {(appointments as any[]).length === 0 ? (
-              <div className="text-center py-20 text-zinc-500"><Calendar className="h-12 w-12 mx-auto mb-4 opacity-20" /><p>لا توجد مواعيد بعد</p></div>
-            ) : (appointments as any[]).map((appt: any) => (
+            {appointments.length === 0 ? (
+              <div className="text-center py-20 text-zinc-500">
+                <Calendar className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                <p>لا توجد مواعيد بعد</p>
+              </div>
+            ) : appointments.map((appt: any) => (
               <motion.div key={appt.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                 className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 flex flex-col md:flex-row md:items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-teal-500/10 flex items-center justify-center shrink-0">
@@ -678,10 +735,10 @@ export default function DoctorDashboard() {
               <div className="space-y-6">
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                   {[
-                    { label: "المشاهدات",  value: analytics?.totalViews         ?? "–", change: analytics?.viewsChange   ?? 0, color: "text-blue-400" },
-                    { label: "المواعيد",   value: analytics?.totalAppointments  ?? "–", change: analytics?.apptChange    ?? 0, color: "text-teal-400" },
-                    { label: "المحادثات", value: analytics?.totalConversations  ?? "–", change: analytics?.convsChange   ?? 0, color: "text-purple-400" },
-                    { label: "التقييمات", value: analytics?.totalReviews        ?? "–", change: analytics?.reviewsChange ?? 0, color: "text-amber-400" },
+                    { label: "المشاهدات",  value: analytics?.totalViews        ?? "–", change: analytics?.viewsChange   ?? 0, color: "text-blue-400"   },
+                    { label: "المواعيد",   value: analytics?.totalAppointments ?? "–", change: analytics?.apptChange    ?? 0, color: "text-teal-400"   },
+                    { label: "المحادثات", value: analytics?.totalConversations ?? "–", change: analytics?.convsChange   ?? 0, color: "text-purple-400" },
+                    { label: "التقييمات", value: analytics?.totalReviews       ?? "–", change: analytics?.reviewsChange ?? 0, color: "text-amber-400"  },
                     { label: "معدل الرد", value: analytics?.replyRate != null ? `${analytics.replyRate}%` : "–", change: 0, color: "text-green-400" },
                   ].map(item => (
                     <div key={item.label} className="bg-white/[0.03] border border-white/10 rounded-2xl p-4">
@@ -700,7 +757,13 @@ export default function DoctorDashboard() {
                     <p className="text-sm font-black mb-4 flex items-center gap-2"><Eye className="h-4 w-4 text-blue-400" />المشاهدات — آخر 7 أيام</p>
                     {dailyViews.length > 0 && dailyViews.some((d: any) => d.count > 0) ? (
                       <ResponsiveContainer width="100%" height={180}>
-                        <BarChart data={dailyViews}><CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" /><XAxis dataKey="date" tick={{ fontSize: 10, fill: "#71717a" }} /><YAxis tick={{ fontSize: 10, fill: "#71717a" }} allowDecimals={false} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="count" fill="#3B82F6" radius={[4,4,0,0]} /></BarChart>
+                        <BarChart data={dailyViews}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                          <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#71717a" }} />
+                          <YAxis tick={{ fontSize: 10, fill: "#71717a" }} allowDecimals={false} />
+                          <Tooltip content={<CustomTooltip />} />
+                          <Bar dataKey="count" fill="#3B82F6" radius={[4,4,0,0]} />
+                        </BarChart>
                       </ResponsiveContainer>
                     ) : <div className="h-[180px] flex items-center justify-center text-zinc-600 text-sm">لا توجد مشاهدات بعد</div>}
                   </Card>
@@ -708,7 +771,13 @@ export default function DoctorDashboard() {
                     <p className="text-sm font-black mb-4 flex items-center gap-2"><Calendar className="h-4 w-4 text-teal-400" />المواعيد — آخر 7 أيام</p>
                     {dailyData.length > 0 ? (
                       <ResponsiveContainer width="100%" height={180}>
-                        <LineChart data={dailyData}><CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" /><XAxis dataKey="date" tick={{ fontSize: 10, fill: "#71717a" }} /><YAxis tick={{ fontSize: 10, fill: "#71717a" }} allowDecimals={false} /><Tooltip content={<CustomTooltip />} /><Line type="monotone" dataKey="count" stroke="#14B8A6" strokeWidth={2} dot={{ r: 3, fill: "#14B8A6" }} activeDot={{ r: 5 }} /></LineChart>
+                        <LineChart data={dailyData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                          <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#71717a" }} />
+                          <YAxis tick={{ fontSize: 10, fill: "#71717a" }} allowDecimals={false} />
+                          <Tooltip content={<CustomTooltip />} />
+                          <Line type="monotone" dataKey="count" stroke="#14B8A6" strokeWidth={2} dot={{ r: 3, fill: "#14B8A6" }} activeDot={{ r: 5 }} />
+                        </LineChart>
                       </ResponsiveContainer>
                     ) : <div className="h-[180px] flex items-center justify-center text-zinc-600 text-sm">لا توجد بيانات كافية</div>}
                   </Card>
@@ -731,7 +800,10 @@ export default function DoctorDashboard() {
                       <h3 className="font-black text-sm">حالة التوفر</h3>
                     </div>
                     <StatusToggle variant="full" initialStatus={realDoctor?.isOnline ?? false}
-                      onStatusChange={(status) => { queryClient.invalidateQueries({ queryKey: ["/api/doctors", doctor?.id] }); toast({ title: status ? "✅ أنت الآن متاح" : "⏸️ تم إخفاؤك" }); }} />
+                      onStatusChange={(status) => {
+                        queryClient.invalidateQueries({ queryKey: ["/api/doctors", doctor?.id] });
+                        toast({ title: status ? "✅ أنت الآن متاح" : "⏸️ تم إخفاؤك" });
+                      }} />
                   </CardContent>
                 </Card>
                 <Card className="bg-white/[0.03] border-white/10 rounded-2xl">
@@ -740,9 +812,13 @@ export default function DoctorDashboard() {
                       <div className="w-8 h-8 rounded-lg bg-blue-500/15 text-blue-400 flex items-center justify-center"><Crosshair className="h-4 w-4" /></div>
                       <h3 className="font-black text-sm">موقع العيادة</h3>
                     </div>
-                    <LocationPicker initialLat={realDoctor?.latitude} initialLng={realDoctor?.longitude}
+                    <LocationPicker
+                      initialLat={realDoctor?.latitude} initialLng={realDoctor?.longitude}
                       initialName={realDoctor?.locationName || realDoctor?.wilaya || ""}
-                      onSaved={() => { queryClient.invalidateQueries({ queryKey: ["/api/doctors", doctor?.id] }); toast({ title: "📍 تم حفظ موقعك" }); }} />
+                      onSaved={() => {
+                        queryClient.invalidateQueries({ queryKey: ["/api/doctors", doctor?.id] });
+                        toast({ title: "📍 تم حفظ موقعك" });
+                      }} />
                   </CardContent>
                 </Card>
               </div>
@@ -771,21 +847,27 @@ export default function DoctorDashboard() {
                       <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">التخصص</Label>
                       <Select defaultValue={realDoctor?.specialty} onValueChange={v => updateMutation.mutate({ specialty: v })} dir="rtl">
                         <SelectTrigger className="bg-white/5 border-white/10 h-11 rounded-xl text-white"><SelectValue placeholder="اختر التخصص" /></SelectTrigger>
-                        <SelectContent dir="rtl" className="bg-zinc-900 border-white/10 text-white">{SPECIALTIES.map(s => <SelectItem key={s.id} value={s.label}>{s.label}</SelectItem>)}</SelectContent>
+                        <SelectContent dir="rtl" className="bg-zinc-900 border-white/10 text-white">
+                          {SPECIALTIES.map(s => <SelectItem key={s.id} value={s.label}>{s.label}</SelectItem>)}
+                        </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">الولاية</Label>
                       <Select value={wilaya} onValueChange={v => { setWilaya(v); setDaira((LOCATIONS as any)[v]?.[0] || ""); }} dir="rtl">
                         <SelectTrigger className="bg-white/5 border-white/10 h-11 rounded-xl text-white"><SelectValue /></SelectTrigger>
-                        <SelectContent dir="rtl" className="bg-zinc-900 border-white/10 text-white">{DAIRAS.map(w => <SelectItem key={w} value={w}>{w}</SelectItem>)}</SelectContent>
+                        <SelectContent dir="rtl" className="bg-zinc-900 border-white/10 text-white">
+                          {DAIRAS.map(w => <SelectItem key={w} value={w}>{w}</SelectItem>)}
+                        </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">الدائرة</Label>
                       <Select value={daira} onValueChange={setDaira} disabled={!wilaya} dir="rtl">
                         <SelectTrigger className="bg-white/5 border-white/10 h-11 rounded-xl text-white"><SelectValue /></SelectTrigger>
-                        <SelectContent dir="rtl" className="bg-zinc-900 border-white/10 text-white">{wilaya && (LOCATIONS as any)[wilaya]?.map((d: string) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
+                        <SelectContent dir="rtl" className="bg-zinc-900 border-white/10 text-white">
+                          {wilaya && (LOCATIONS as any)[wilaya]?.map((d: string) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                        </SelectContent>
                       </Select>
                     </div>
                   </div>
@@ -799,11 +881,13 @@ export default function DoctorDashboard() {
                     <Button onClick={() => {
                       const g = (id: string) => (document.getElementById(id) as HTMLInputElement)?.value;
                       updateMutation.mutate({
-                        name: g("edit-name"), phone: g("edit-phone"),
-                        consultationFee: parseInt(g("edit-fee")),
+                        name:              g("edit-name"),
+                        phone:             g("edit-phone"),
+                        consultationFee:   parseInt(g("edit-fee")),
                         yearsOfExperience: parseInt(g("edit-exp")),
-                        clinicName: g("edit-clinic"), licenseNumber: g("edit-license"),
-                        description: (document.getElementById("edit-desc") as HTMLTextAreaElement)?.value,
+                        clinicName:        g("edit-clinic"),
+                        licenseNumber:     g("edit-license"),
+                        description:       (document.getElementById("edit-desc") as HTMLTextAreaElement)?.value,
                         wilaya, daira,
                       });
                     }} className="gap-2 rounded-xl font-black h-11 px-6" disabled={updateMutation.isPending}>
@@ -823,7 +907,9 @@ export default function DoctorDashboard() {
                       <div className={`w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br ${planMeta.upgradeColor} text-white shadow-lg`}>{planMeta.icon}</div>
                       <div>
                         <p className="font-black text-lg">خطة {planMeta.label}</p>
-                        <p className="text-xs text-zinc-500">{planKey === "free" ? "مجاني" : planKey === "standard" ? "2,000 دج/شهر" : planKey === "pro" ? "3,000 دج/شهر" : "5,000 دج/شهر"}</p>
+                        <p className="text-xs text-zinc-500">
+                          {planKey === "free" ? "مجاني" : planKey === "standard" ? "2,000 دج/شهر" : planKey === "pro" ? "3,000 دج/شهر" : "5,000 دج/شهر"}
+                        </p>
                       </div>
                     </div>
                     {planKey !== "gold" && (
@@ -857,13 +943,18 @@ export default function DoctorDashboard() {
       </main>
       <Footer />
 
-      <CallUI callState={callState} callType={callType} remoteName={remoteName}
-        isMuted={isMuted} isCamOff={isCamOff} localVideoRef={localVideoRef} remoteVideoRef={remoteVideoRef}
+      <CallUI
+        callState={callState} callType={callType} remoteName={remoteName}
+        isMuted={isMuted} isCamOff={isCamOff}
+        localVideoRef={localVideoRef} remoteVideoRef={remoteVideoRef}
         onAccept={acceptCall} onReject={rejectCall} onEnd={endCall}
-        onToggleMute={toggleMute} onToggleCamera={toggleCamera} />
+        onToggleMute={toggleMute} onToggleCamera={toggleCamera}
+      />
     </div>
   );
 }
+
+// ── Helper Components ─────────────────────────────────────────────────────────
 
 function InfoItem({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (

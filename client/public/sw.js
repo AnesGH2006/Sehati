@@ -1,119 +1,106 @@
-const CACHE_NAME = "Sehati-v3";
-const OFFLINE_URL = "/offline.html";
-
-const PRECACHE = [
+const CACHE_NAME = "tabib-v1";
+const STATIC_ASSETS = [
   "/",
-  "/offline.html",
   "/manifest.json",
-  "/logo.png",
+  "/icon-192.png",
+  "/icon-512.png",
 ];
 
-// ── Install ─────────────────────────────────────────────────────
-self.addEventListener("install", (e) => {
-  e.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(PRECACHE))
-      .then(() => self.skipWaiting())
+// ── Install ───────────────────────────────────────────────────────────────────
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(STATIC_ASSETS).catch(() => {});
+    })
   );
+  self.skipWaiting();
 });
 
-// ── Activate ────────────────────────────────────────────────────
-self.addEventListener("activate", (e) => {
-  e.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(
+// ── Activate ──────────────────────────────────────────────────────────────────
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
         keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))
-      ))
-      .then(() => self.clients.claim())
+      )
+    )
   );
+  self.clients.claim();
 });
 
-// ── Fetch ───────────────────────────────────────────────────────
-self.addEventListener("fetch", (e) => {
-  const { request } = e;
-  if (request.method !== "GET") return;
-  const url = new URL(request.url);
-  if (url.pathname.startsWith("/api/")) return;
+// ── Fetch — Network First for API, Cache First for assets ─────────────────────
+self.addEventListener("fetch", (event) => {
+  const url = new URL(event.request.url);
 
-  if (request.mode === "navigate") {
-    e.respondWith(
-      fetch(request)
-        .then((res) => {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then((c) => c.put(request, clone));
-          return res;
-        })
-        .catch(() =>
-          caches.match(request).then((cached) => cached || caches.match(OFFLINE_URL))
-        )
-    );
+  // API calls — always network
+  if (url.pathname.startsWith("/api/")) {
+    event.respondWith(fetch(event.request).catch(() => new Response(JSON.stringify({ error: "offline" }), { headers: { "Content-Type": "application/json" } })));
     return;
   }
 
-  e.respondWith(
-    caches.open(CACHE_NAME).then(async (cache) => {
-      const cached = await cache.match(request);
-      const fetchPromise = fetch(request).then((res) => {
-        if (res.ok) cache.put(request, res.clone());
-        return res;
-      }).catch(() => null);
-      return cached || (await fetchPromise) || Response.error();
+  // Static assets — cache first
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      if (cached) return cached;
+      return fetch(event.request).then((response) => {
+        if (!response || response.status !== 200 || response.type !== "basic") return response;
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        return response;
+      }).catch(() => {
+        // Offline fallback for navigation
+        if (event.request.mode === "navigate") {
+          return caches.match("/");
+        }
+      });
     })
   );
 });
 
-// ── Message ─────────────────────────────────────────────────────
-self.addEventListener("message", (e) => {
-  if (e.data?.type === "SKIP_WAITING") self.skipWaiting();
-});
-
-// ── Push ────────────────────────────────────────────────────────
+// ── Push Notifications ────────────────────────────────────────────────────────
 self.addEventListener("push", (event) => {
-  if (!event.data) return;
-
   let data = {};
   try {
-    data = event.data.json();
+    data = event.data ? event.data.json() : {};
   } catch {
-    data = { title: "صحتي", body: event.data.text() };
+    data = { title: "طبيبي", body: event.data ? event.data.text() : "إشعار جديد" };
   }
 
-  const title   = data.title || "صحتي";
+  const title   = data.title || "طبيبي 🩺";
   const options = {
-    body:     data.body  || "",
-    icon:     data.icon  || "/logo.png",
-    badge:    data.badge || "/logo.png",
-    data:     { url: data.url || "/" },
-    dir:      "rtl",
-    lang:     "ar",
-    vibrate:  [200, 100, 200],
-    tag:      data.type || "general",
-    renotify: true,
-    actions:  data.type === "message" ? [
-      { action: "open",    title: "فتح المحادثة" },
-      { action: "dismiss", title: "تجاهل"        },
-    ] : [],
+    body:    data.body    || "لديك إشعار جديد",
+    icon:    "/icon-192.png",
+    badge:   "/icon-192.png",
+    tag:     data.type    || "general",
+    data:    { url: data.url || "/" },
+    dir:     "rtl",
+    lang:    "ar",
+    vibrate: [200, 100, 200],
+    actions: data.type === "appointment" ? [
+      { action: "view",   title: "عرض الموعد" },
+      { action: "dismiss", title: "رفض" },
+    ] : [
+      { action: "view",   title: "فتح" },
+    ],
   };
 
-  event.waitUntil(
-    self.registration.showNotification(title, options)
-  );
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
-// ── Notification Click ──────────────────────────────────────────
+// ── Notification Click ────────────────────────────────────────────────────────
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  if (event.action === "dismiss") return;
 
   const url = event.notification.data?.url || "/";
+
+  if (event.action === "dismiss") return;
 
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
         if (client.url.includes(self.location.origin) && "focus" in client) {
-          client.focus();
           client.navigate(url);
-          return;
+          return client.focus();
         }
       }
       if (clients.openWindow) return clients.openWindow(url);

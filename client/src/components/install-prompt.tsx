@@ -1,127 +1,81 @@
-import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
-import { Download, X, Smartphone } from "lucide-react";
-import { useLang } from "@/contexts/language.context"
-interface BeforeInstallPromptEvent extends Event {
-  prompt(): Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-}
+import { motion, AnimatePresence } from "framer-motion";
+import { X, Download, Smartphone } from "lucide-react";
+import { usePWA } from "@/hooks/usePWA";
 
 export function InstallPrompt() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const { canInstall, install, isInstalled } = usePWA();
+  const [dismissed, setDismissed] = useState(() => {
+    try { return !!localStorage.getItem("pwa_dismissed"); } catch { return false; }
+  });
   const [show, setShow] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
-  const [isIos, setIsIos] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(false);
-  const { lang } = useLang();
 
   useEffect(() => {
-    // Already installed (standalone)
-    if (window.matchMedia("(display-mode: standalone)").matches) {
-      setIsInstalled(true);
-      return;
+    if (canInstall && !dismissed) {
+      const t = setTimeout(() => setShow(true), 3000);
+      return () => clearTimeout(t);
     }
-
-    // Detect iOS
-    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !(window as any).MSStream;
-    setIsIos(ios);
-
-    if (ios && !sessionStorage.getItem("ios-prompt-dismissed")) {
-      setTimeout(() => setShow(true), 3000);
-    }
-
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-      if (!sessionStorage.getItem("install-dismissed")) {
-        setTimeout(() => setShow(true), 3000);
-      }
-    };
-
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, []);
-
-  const handleInstall = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === "accepted") setIsInstalled(true);
-      setDeferredPrompt(null);
-    }
-    setShow(false);
-  };
+  }, [canInstall, dismissed]);
 
   const handleDismiss = () => {
     setShow(false);
-    sessionStorage.setItem("install-dismissed", "1");
-    sessionStorage.setItem("ios-prompt-dismissed", "1");
+    setDismissed(true);
+    try { localStorage.setItem("pwa_dismissed", "1"); } catch {}
   };
 
-  if (isInstalled || dismissed) return null;
+  const handleInstall = async () => {
+    const accepted = await install();
+    if (accepted) setShow(false);
+  };
+
+  if (isInstalled || !show) return null;
 
   return (
     <AnimatePresence>
-      {show && (
-        <motion.div
-          initial={{ y: 120, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 120, opacity: 0 }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className="fixed bottom-24 left-3 right-3 z-[60] md:left-auto md:right-6 md:w-80"
-          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-        >
-          <div className="p-4 rounded-2xl bg-card border border-primary/30 shadow-2xl shadow-primary/10 backdrop-blur-xl">
-            <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-xl bg-primary/10 text-primary shrink-0">
-                <Smartphone className="w-5 h-5" />
+      <motion.div
+        initial={{ opacity: 0, y: 80 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 80 }}
+        transition={{ type: "spring", damping: 20, stiffness: 200 }}
+        className="fixed bottom-4 right-4 left-4 md:left-auto md:right-6 md:w-80 z-50"
+        dir="rtl"
+      >
+        <div className="bg-card border border-border/60 rounded-2xl shadow-2xl shadow-black/20 overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-primary/10 to-teal-500/10 px-4 py-3 flex items-center justify-between border-b border-border/40">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center">
+                <span className="text-white font-black text-sm">ط</span>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-white mb-0.5">
-                  {lang === "ar" ? "ثبّت التطبيق" : "Install the App"}
-                </p>
-                {isIos ? (
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {lang === "ar"
-                      ? 'اضغط على زر المشاركة ثم "إضافة إلى الشاشة الرئيسية"'
-                      : 'Tap Share then "Add to Home Screen"'}
-                  </p>
-                ) : (
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {lang === "ar"
-                      ? "أضف الموقع لشاشتك الرئيسية لتجربة تطبيق كاملة بدون متصفح"
-                      : "Add to your home screen for a full app experience"}
-                  </p>
-                )}
+              <div>
+                <p className="font-bold text-sm">طبيبي</p>
+                <p className="text-xs text-muted-foreground">ثبّت التطبيق مجاناً</p>
               </div>
-              <button
-                onClick={handleDismiss}
-                className="text-muted-foreground hover:text-white transition p-1 shrink-0"
-              >
-                <X className="w-4 h-4" />
+            </div>
+            <button onClick={handleDismiss} className="p-1 rounded-lg hover:bg-muted/50 text-muted-foreground transition-colors">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="px-4 py-3 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              ثبّت التطبيق على هاتفك للوصول السريع وإشعارات المواعيد حتى بدون إنترنت.
+            </p>
+            <div className="flex gap-2">
+              <button onClick={handleInstall}
+                className="flex-1 flex items-center justify-center gap-2 bg-primary text-white rounded-xl py-2.5 text-sm font-bold hover:bg-primary/90 transition-colors">
+                <Download className="h-4 w-4" />
+                تثبيت الآن
+              </button>
+              <button onClick={handleDismiss}
+                className="px-4 py-2.5 rounded-xl border border-border/50 text-sm text-muted-foreground hover:bg-muted/50 transition-colors">
+                لاحقاً
               </button>
             </div>
-
-            {!isIos && (
-              <div className="flex gap-2 mt-3">
-                <button
-                  onClick={handleInstall}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold"
-                >
-                  <Download className="w-4 h-4" />
-                  {lang === "ar" ? "تثبيت" : "Install"}
-                </button>
-                <button
-                  onClick={handleDismiss}
-                  className="px-4 py-2.5 rounded-xl bg-white/5 text-muted-foreground text-sm"
-                >
-                  {lang === "ar" ? "لاحقًا" : "Later"}
-                </button>
-              </div>
-            )}
           </div>
-        </motion.div>
-      )}
+        </div>
+      </motion.div>
     </AnimatePresence>
   );
 }

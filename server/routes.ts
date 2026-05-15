@@ -415,7 +415,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const role = req.query.role as "doctor" | "patient";
       if (!role) return res.status(400).json({ message: "Role is required" });
       res.json(await storage.getConversationsByUser(req.params.userId, role));
-    } catch { res.status(500).json({ message: "Failed to fetch conversations" }); }
+    } catch (err: any) { console.error("[conversations]", err?.message, err?.stack); res.status(500).json({ message: err?.message || "Failed to fetch conversations" }); }
   });
 
   app.post("/api/conversations", async (req: Request, res: Response) => {
