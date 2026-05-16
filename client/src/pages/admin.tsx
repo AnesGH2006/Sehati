@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, MessageSquare, ChevronDown, ChevronUp, Shield, LogOut, Eye, EyeOff, Users, Star, UserCheck, Mail, Calendar } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast"
 
 const ADMIN_STORAGE_KEY = "tabib_admin_session";
 
