@@ -26,7 +26,7 @@ const About           = lazy(() => import("@/pages/about"));
 const Admin           = lazy(() => import("@/pages/admin"));
 const NearbyPage      = lazy(() => import("@/pages/Nearby"));
 const EmergencyPage   = lazy(() => import("@/pages/emergency"));
-const appointments  = lazy(() => import("@/pages/appointments"));
+const MyAppointments  = lazy(() => import("@/pages/appointments"));
 
 
 // ── Google OAuth ──────────────────────────────────────────────────────────────
@@ -127,8 +127,8 @@ function Router() {
         <Route path="/admin"            component={Admin}           />
         <Route path="/nearby"           component={NearbyPage}      />
         <Route path="/emergency"        component={EmergencyPage}   />
-        <Route path="/appointments"     component={appointments} />
-        <Route path="/appointments/:id" component={appointments} />
+        <Route path="/appointments"     component={MyAppointments} />
+        <Route path="/appointments/:id" component={MyAppointments} />
         <Route                          component={NotFound}        />
       </Switch>
     </Suspense>
