@@ -35,7 +35,7 @@
   "shortcuts": [
     {
       "name": "اطباء",
-      "short_name": "اطباء"
+      "short_name": "اطباء",
       "description": "عرض اطباء",
       "url": "/doctors",
       "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
@@ -49,4 +49,4 @@
     }
   ],
   "prefer_related_applications": false
-  }
+}
