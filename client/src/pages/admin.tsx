@@ -83,7 +83,7 @@ export default function Admin() {
   });
 
   const { data: allAppointments = [], isLoading: appointmentsLoading } = useQuery({
-    queryKey: ["/api/admin/appointments"],
+    queryKey: ["/api/admin/MyAppointments"],
     queryFn: async () => {
       const doctorList = await fetch("/api/doctors").then(r => r.json());
       const apptArrays = await Promise.all(

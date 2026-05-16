@@ -3,7 +3,7 @@
 // تثبيت: npm install leaflet @types/leaflet
 
 import { useEffect, useRef, useState } from "react";
-import { categoryLabel } from "@/lib/constants";
+import { SPECIALTIES } from "@/lib/constants";
 
 interface ArtisanLocation {
   id: number;

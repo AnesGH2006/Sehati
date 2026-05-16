@@ -159,7 +159,7 @@ export default function Profile() {
                     <Button size="lg" variant="outline" className="flex-1 md:flex-none gap-2" onClick={handleContactClick}>
                       <MessageCircle className="w-5 h-5" />راسل الطبيب
                     </Button>
-                    <Button size="lg" className="flex-1 md:flex-none gap-2 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20" onClick={() => setLocation(`/appointments/${doctor.id}`)}>
+                    <Button size="lg" className="flex-1 md:flex-none gap-2 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20" onClick={() => setLocation(`/MyAppointments/${doctor.id}`)}>
                       <Calendar className="w-5 h-5" />احجز موعد
                     </Button>
                   </div>

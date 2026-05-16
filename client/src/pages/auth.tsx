@@ -59,7 +59,7 @@ function GoogleButton({ loading }: { loading: boolean }) {
 
 export default function Auth() {
   const [, setLocation] = useLocation();
-  const { loginCustomer, loginArtisan } = useAuth();
+  const { loginPatient, loginDoctor } = useAuth();
   const { toast } = useToast();
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -89,26 +89,26 @@ export default function Auth() {
       if (!res.ok) { toast({ title: "خطأ", description: data.message, variant: "destructive" }); return; }
 
       // إذا كان حرفي → نوجّهه إلى لوحة التحكم مع الحفاظ على بياناته (التقييمات، الاشتراك، إلخ)
-      if (data.user.role === "artisan" && data.artisan) {
-        loginArtisan({
-          id: data.artisan.id,
-          name: data.artisan.name,
-          email: data.artisan.email || data.user.email,
-          phone: data.artisan.phone || data.user.phone || "",
-          category: data.artisan.category,
-          wilaya: data.artisan.wilaya,
-          daira: data.artisan.daira,
-          subscriptionType: data.artisan.subscriptionType || "free",
-          imageUrl: data.artisan.imageUrl || "",
+      if (data.user.role === "doctor" && data.doctor) {
+        loginDoctor({
+          id: data.doctor.id,
+          name: data.doctor.name,
+          email: data.doctor.email || data.user.email,
+          phone: data.doctor.phone || data.user.phone || "",
+          specialty: data.doctor.specialty,
+          wilaya: data.doctor.wilaya,
+          daira: data.doctor.daira,
+          subscriptionType: data.doctor.subscriptionType || "free",
+          imageUrl: data.doctor.imageUrl || "",
         });
-        toast({ title: "مرحباً بك! 👋", description: `أهلاً ${data.artisan.name}` });
-        setLocation("/artisan/dashboard");
+        toast({ title: "مرحباً بك! 👋", description: `أهلاً د. ${data.doctor.name}` });
+        setLocation("/doctor/dashboard");
         return;
       }
 
-      loginCustomer({ id: data.user.id, name: data.user.name, phone: data.user.phone || "" });
+      loginPatient({ id: data.user.id, name: data.user.name, phone: data.user.phone || "" });
       toast({ title: "مرحباً بك! 👋", description: `أهلاً ${data.user.name}` });
-      setLocation("/");
+      setLocation("/")
     } catch { toast({ title: "خطأ", description: "تعذر الاتصال بالخادم", variant: "destructive" }); }
     finally { setLoading(false); }
   };
