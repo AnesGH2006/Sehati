@@ -898,6 +898,116 @@ export default function DoctorDashboard() {
               </Card>
             </section>
 
+            {/* ── جدول أوقات العمل ── */}
+            <section>
+              <SectionHeader icon={<Clock className="h-4 w-4" />} title="جدول أوقات العمل" subtitle="عرض وتحديث مواعيد عمل العيادة" color="text-teal-400" />
+              <Card className="bg-white/[0.03] border-white/10 rounded-2xl">
+                <CardContent className="p-5 space-y-4">
+                  {/* الأيام */}
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-3">أيام العمل</p>
+                    <div className="grid grid-cols-7 gap-1.5">
+                      {[
+                        { id: "السبت",    short: "سبت" },
+                        { id: "الأحد",    short: "أحد" },
+                        { id: "الاثنين",  short: "اثن" },
+                        { id: "الثلاثاء", short: "ثلث" },
+                        { id: "الأربعاء", short: "أرب" },
+                        { id: "الخميس",  short: "خمس" },
+                        { id: "الجمعة",  short: "جمع" },
+                      ].map(day => {
+                        const isWorking = (realDoctor?.workingDays ?? ["السبت","الأحد","الاثنين","الثلاثاء","الأربعاء"]).includes(day.id);
+                        return (
+                          <div
+                            key={day.id}
+                            className="flex flex-col items-center gap-1 py-2 px-1 rounded-xl border text-center"
+                            style={{
+                              background: isWorking ? "rgba(20,184,166,0.12)" : "rgba(255,255,255,0.02)",
+                              borderColor: isWorking ? "rgba(20,184,166,0.35)" : "rgba(255,255,255,0.08)",
+                            }}
+                          >
+                            <span className="text-[10px] font-black" style={{ color: isWorking ? "#14b8a6" : "#52525b" }}>{day.short}</span>
+                            <div className={`w-2 h-2 rounded-full ${isWorking ? "bg-teal-400" : "bg-zinc-700"}`} />
+                            <span className="text-[8px] font-bold" style={{ color: isWorking ? "#5eead4" : "#52525b" }}>
+                              {isWorking ? "عمل" : "إجازة"}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* ساعات العمل */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-white/[0.03] border border-white/8 rounded-xl p-3 flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-teal-500/15 text-teal-400 flex items-center justify-center shrink-0">
+                        <Clock className="h-3.5 w-3.5" />
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-zinc-600">يبدأ من</p>
+                        <p className="text-sm font-black text-white">{realDoctor?.workingHoursStart ?? "08:00"}</p>
+                      </div>
+                    </div>
+                    <div className="bg-white/[0.03] border border-white/8 rounded-xl p-3 flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-zinc-500/15 text-zinc-400 flex items-center justify-center shrink-0">
+                        <Clock className="h-3.5 w-3.5" />
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-zinc-600">ينتهي عند</p>
+                        <p className="text-sm font-black text-white">{realDoctor?.workingHoursEnd ?? "17:00"}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* جدول مرئي بالأيام والحالة */}
+                  <div className="rounded-xl overflow-hidden border border-white/6">
+                    <div className="grid grid-cols-3 bg-white/[0.03] border-b border-white/6 text-[9px] font-black uppercase tracking-widest text-zinc-600">
+                      <div className="py-2 px-3">اليوم</div>
+                      <div className="py-2 px-3 text-center">الحالة</div>
+                      <div className="py-2 px-3 text-center">الساعات</div>
+                    </div>
+                    {[
+                      "السبت","الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة"
+                    ].map((day, i) => {
+                      const isWorking = (realDoctor?.workingDays ?? ["السبت","الأحد","الاثنين","الثلاثاء","الأربعاء"]).includes(day);
+                      return (
+                        <div
+                          key={day}
+                          className={`grid grid-cols-3 border-b border-white/4 last:border-0 text-xs ${i % 2 === 0 ? "" : "bg-white/[0.01]"}`}
+                        >
+                          <div className="py-2.5 px-3 font-bold text-zinc-300">{day}</div>
+                          <div className="py-2.5 px-3 text-center">
+                            {isWorking ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-400 text-[10px] font-black border border-teal-500/25">
+                                <CheckCircle2 className="h-2.5 w-2.5" /> عمل
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-500 text-[10px] font-black border border-zinc-700">
+                                <XCircle className="h-2.5 w-2.5" /> إجازة
+                              </span>
+                            )}
+                          </div>
+                          <div className="py-2.5 px-3 text-center text-zinc-500">
+                            {isWorking
+                              ? `${realDoctor?.workingHoursStart ?? "08:00"} – ${realDoctor?.workingHoursEnd ?? "17:00"}`
+                              : "—"}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <Button
+                    onClick={() => setLocation("/subscription")}
+                    variant="outline"
+                    className="gap-2 rounded-xl text-xs border-teal-500/25 text-teal-400 hover:bg-teal-500/10 h-9"
+                  >
+                    <Calendar className="h-3.5 w-3.5" /> تعديل الجدول
+                  </Button>
+                </CardContent>
+              </Card>
+            </section>
+
             <section>
               <SectionHeader icon={<Crown className="h-4 w-4" />} title="خطة الاشتراك" color="text-amber-400" />
               <Card className="bg-white/[0.03] border-white/10 rounded-2xl overflow-hidden">
@@ -908,7 +1018,7 @@ export default function DoctorDashboard() {
                       <div>
                         <p className="font-black text-lg">خطة {planMeta.label}</p>
                         <p className="text-xs text-zinc-500">
-                          {planKey === "free" ? "مجاني" : planKey === "standard" ? "2,000 دج/شهر" : planKey === "pro" ? "3,000 دج/شهر" : "5,000 دج/شهر"}
+                          {planKey === "free" ? "مجاني" : "10,000 دج/شهر"}
                         </p>
                       </div>
                     </div>

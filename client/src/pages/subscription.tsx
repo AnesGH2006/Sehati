@@ -2,14 +2,14 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import {
   Check, Mail, User, Briefcase, Phone, Clock,
-  Star, Zap, Crown, Sparkles, Stethoscope,
+  Star, Sparkles, Stethoscope, MapPin, Navigation,
+  Calendar,
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogDescription,
@@ -19,9 +19,18 @@ import {
   Select, SelectContent, SelectItem,
   SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { motion, AnimatePresence } from "framer-motion";
 import { DAIRAS, SPECIALTIES, LOCATIONS } from "@/lib/constants";
-import { useToast as useToastHook } from "@/hooks/use-toast";
+
+// ── أيام الأسبوع ──────────────────────────────────────────────────────────────
+const WEEK_DAYS = [
+  { id: "السبت",    label: "سبت" },
+  { id: "الأحد",    label: "أحد" },
+  { id: "الاثنين",  label: "اثنين" },
+  { id: "الثلاثاء", label: "ثلاثاء" },
+  { id: "الأربعاء", label: "أربعاء" },
+  { id: "الخميس",  label: "خميس" },
+  { id: "الجمعة",  label: "جمعة" },
+];
 
 // ── تعريف الخطط ───────────────────────────────────────────────────────────────
 const PLANS = [
@@ -45,57 +54,22 @@ const PLANS = [
     ],
   },
   {
-    id: "standard",
-    nameAr: "قياسي",
-    price: 2000,
-    icon: Zap,
-    tag: null,
-    color: "#38bdf8",
-    isDisabled: true,
-    glow: "rgba(56,189,248,0.25)",
-    gradient: "linear-gradient(145deg, #0c1f33 0%, #0a1628 100%)",
-    btnGradient: "linear-gradient(135deg, #0369a1, #0284c7)",
-    features: [
-      "كل مزايا المجاني",
-      "ظهور أعلى في البحث",
-      "شارة الطبيب القياسي",
-      "أولوية في نتائج الولاية",
-      "عرض مواعيد متاحة",
-    ],
-  },
-  {
-    id: "pro",
-    nameAr: "احترافي",
-    price: 3000,
-    icon: Crown,
-    color: "#c084fc",
-    isDisabled: true,
-    glow: "rgba(192,132,252,0.3)",
-    gradient: "linear-gradient(145deg, #1a0f2e 0%, #130b22 100%)",
-    btnGradient: "linear-gradient(135deg, #7e22ce, #9333ea)",
-    features: [
-      "كل مزايا القياسي",
-      "ظهور أعلى من القياسي",
-      "صفحة التحليلات الكاملة",
-      "إحصاءات المشاهدات والنمو",
-      "شارة الطبيب الاحترافي المميزة",
-    ],
-  },
-  {
     id: "gold",
     nameAr: "ذهبي",
-    price: 5000,
+    price: 10000,
     icon: Sparkles,
+    tag: "الأفضل",
     color: "#fbbf24",
-    isDisabled: true,
-    glow: "rgba(251,191,36,0.3)",
+    isDisabled: false,
+    glow: "rgba(251,191,36,0.35)",
     gradient: "linear-gradient(145deg, #1f1400 0%, #170f00 100%)",
     btnGradient: "linear-gradient(135deg, #b45309, #d97706)",
     features: [
-      "كل مزايا الاحترافي",
+      "كل مزايا المجاني",
       "أعلى ظهور في البحث",
       "شارة ذهبية مميزة",
-      "الأولوية القصوى",
+      "صفحة التحليلات الكاملة",
+      "الأولوية القصوى في ولايتك",
       "دعم مخصص على واتساب",
       "إدارة المواعيد المتقدمة",
     ],
@@ -145,16 +119,12 @@ export default function Subscription() {
       <div className="min-h-screen flex flex-col bg-[#08080a] text-white">
         <Navbar />
         <main className="flex-1 flex items-center justify-center">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.92 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="text-center space-y-5"
-          >
+          <div className="text-center space-y-5">
             <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto">
               <Clock className="h-8 w-8 text-primary animate-spin" style={{ animationDuration: "3s" }} />
             </div>
             <p className="text-zinc-400 font-medium">جاري التوجيه للوحة التحكم...</p>
-          </motion.div>
+          </div>
         </main>
         <Footer />
       </div>
@@ -172,43 +142,32 @@ export default function Subscription() {
       </div>
 
       <main className="flex-1 relative z-10 py-16 px-4">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-3xl mx-auto">
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-14"
-          >
+          <div className="text-center mb-14">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/8 bg-white/3 text-zinc-400 text-xs font-bold uppercase tracking-widest mb-5">
               <Stethoscope className="h-3 w-3" /> اختر خطتك
             </div>
             <h1 className="text-5xl md:text-6xl font-black tracking-tight leading-none mb-4">
               انضم إلى صحتي
             </h1>
-            <p className="text-zinc-500 text-lg">ابدأ مجاناً أو اختر خطة تناسب طموحك</p>
-          </motion.div>
+            <p className="text-zinc-500 text-lg">ابدأ مجاناً أو اختر الخطة الذهبية</p>
+          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {PLANS.map((plan, i) => {
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
+            {PLANS.map((plan) => {
               const Icon = plan.icon;
               const isFeatured = !!plan.tag;
 
               return (
-                <motion.div
-                  key={plan.id}
-                  initial={{ opacity: 0, y: 32 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.55, delay: i * 0.09, ease: [0.16, 1, 0.3, 1] }}
-                  className={`relative group ${plan.isDisabled ? 'opacity-40 grayscale pointer-events-none select-none' : ''}`}
-                >
+                <div key={plan.id} className="relative group">
                   {plan.tag && (
                     <div
                       className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap"
                       style={{
-                        background: plan.isDisabled ? '#27272a' : plan.btnGradient,
-                        color: plan.isDisabled ? '#71717a' : "#fff",
-                        boxShadow: plan.isDisabled ? 'none' : `0 0 16px ${plan.glow}`
+                        background: plan.btnGradient,
+                        color: "#fff",
+                        boxShadow: `0 0 16px ${plan.glow}`
                       }}
                     >
                       {plan.tag}
@@ -216,23 +175,21 @@ export default function Subscription() {
                   )}
 
                   <div
-                    className="relative rounded-2xl overflow-hidden flex flex-col h-full transition-all duration-500 group-hover:scale-[1.02] group-hover:-translate-y-1"
+                    className="relative rounded-2xl overflow-hidden flex flex-col h-full transition-all duration-300 group-hover:scale-[1.02] group-hover:-translate-y-1"
                     style={{
                       background: plan.gradient,
                       border: `1px solid ${plan.color}22`,
-                      boxShadow: (isFeatured && !plan.isDisabled) ? `0 0 40px ${plan.glow}` : "none",
+                      boxShadow: isFeatured ? `0 0 40px ${plan.glow}` : "none",
                     }}
                   >
-                    {!plan.isDisabled && (
-                      <div
-                        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                        style={{ background: `radial-gradient(ellipse at 50% 0%, ${plan.glow} 0%, transparent 70%)` }}
-                      />
-                    )}
+                    <div
+                      className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                      style={{ background: `radial-gradient(ellipse at 50% 0%, ${plan.glow} 0%, transparent 70%)` }}
+                    />
 
                     <div className="p-6 pb-4 relative">
                       <div
-                        className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110"
+                        className="w-11 h-11 rounded-xl flex items-center justify-center mb-4"
                         style={{ background: `${plan.color}18`, border: `1px solid ${plan.color}30` }}
                       >
                         <Icon className="h-5 w-5" style={{ color: plan.color }} />
@@ -273,31 +230,16 @@ export default function Subscription() {
                     </div>
 
                     <div className="p-5 pt-0">
-                      {plan.isDisabled ? (
-                        <button
-                          disabled
-                          className="w-full h-11 rounded-xl text-xs font-black bg-white/5 text-zinc-600 border border-white/5 cursor-not-allowed"
-                        >
-                          غير متوفر حالياً
-                        </button>
-                      ) : (
-                        <RegisterDialog plan={plan} registerMutation={registerMutation} isRtl={isRtl} />
-                      )}
+                      <RegisterDialog plan={plan} registerMutation={registerMutation} isRtl={isRtl} />
                     </div>
                   </div>
-                </motion.div>
+                </div>
               );
             })}
           </div>
 
           {/* Comparison Table */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.5 }}
-            className="mt-12 rounded-2xl overflow-hidden border border-white/6"
-            style={{ background: "rgba(255,255,255,0.018)" }}
-          >
+          <div className="mt-12 rounded-2xl overflow-hidden border border-white/6" style={{ background: "rgba(255,255,255,0.018)" }}>
             <div className="p-5 border-b border-white/6">
               <p className="text-xs font-black uppercase tracking-widest text-zinc-500">مقارنة الخطط</p>
             </div>
@@ -305,31 +247,29 @@ export default function Subscription() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-white/5">
-                    <th className="text-right py-3 px-5 text-zinc-600 font-medium w-1/3">الميزة</th>
-                    {PLANS.map(p => (
-                      <th key={p.id} className={`py-3 px-4 text-center font-black ${p.isDisabled ? 'opacity-30' : ''}`} style={{ color: p.color }}>
-                        {p.nameAr}
-                      </th>
-                    ))}
+                    <th className="text-right py-3 px-5 text-zinc-600 font-medium w-1/2">الميزة</th>
+                    <th className="py-3 px-4 text-center font-black" style={{ color: "#71717a" }}>مجاني</th>
+                    <th className="py-3 px-4 text-center font-black" style={{ color: "#fbbf24" }}>ذهبي</th>
                   </tr>
                 </thead>
                 <tbody>
                   {[
-                    { label: "الظهور في البحث",      vals: ["عادي", "متوسط", "عالي", "الأعلى"] },
-                    { label: "صفحة التحليلات",        vals: [false, false, true, true] },
-                    { label: "شارة مميزة",            vals: [false, "قياسي", "Pro", "ذهبي"] },
-                    { label: "إدارة المواعيد",        vals: [false, true, true, true] },
-                    { label: "دعم واتساب",            vals: [false, false, false, true] },
+                    { label: "الظهور في البحث",   vals: ["عادي", "الأعلى"] },
+                    { label: "صفحة التحليلات",     vals: [false, true] },
+                    { label: "شارة مميزة",          vals: [false, "ذهبية"] },
+                    { label: "إدارة المواعيد",      vals: [true, true] },
+                    { label: "دعم واتساب",          vals: [false, true] },
+                    { label: "جدول مواعيد متقدم",  vals: [false, true] },
                   ].map((row, ri) => (
                     <tr key={ri} className="border-b border-white/4 last:border-0 hover:bg-white/[0.012] transition-colors">
                       <td className="py-3 px-5 text-zinc-400">{row.label}</td>
                       {row.vals.map((v, vi) => (
-                        <td key={vi} className={`py-3 px-4 text-center ${PLANS[vi].isDisabled ? 'opacity-30 grayscale' : ''}`}>
+                        <td key={vi} className="py-3 px-4 text-center">
                           {v === true
                             ? <span className="text-green-400 font-bold">✓</span>
                             : v === false
                             ? <span className="text-zinc-700">—</span>
-                            : <span className="font-bold" style={{ color: PLANS[vi].color }}>{v}</span>
+                            : <span className="font-bold" style={{ color: vi === 0 ? "#71717a" : "#fbbf24" }}>{v}</span>
                           }
                         </td>
                       ))}
@@ -338,7 +278,7 @@ export default function Subscription() {
                 </tbody>
               </table>
             </div>
-          </motion.div>
+          </div>
 
         </div>
       </main>
@@ -349,15 +289,52 @@ export default function Subscription() {
 
 // ── Registration Dialog ───────────────────────────────────────────────────────
 function RegisterDialog({ plan, registerMutation, isRtl }: any) {
-  const { toast } = useToastHook();
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [wilaya, setWilaya] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "", email: "", phone: "", specialty: "", daira: "",
     yearsOfExperience: "",
+    workingHoursStart: "08:00",
+    workingHoursEnd: "17:00",
+    latitude: "",
+    longitude: "",
+    locationName: "",
   });
+  const [workingDays, setWorkingDays] = useState<string[]>(["السبت","الأحد","الاثنين","الثلاثاء","الأربعاء"]);
+  const [gettingLocation, setGettingLocation] = useState(false);
 
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
+
+  const toggleDay = (day: string) => {
+    setWorkingDays(prev =>
+      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+    );
+  };
+
+  const getGpsLocation = () => {
+    if (!navigator.geolocation) {
+      toast({ title: "تنبيه", description: "متصفحك لا يدعم تحديد الموقع", variant: "destructive" });
+      return;
+    }
+    setGettingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setForm(p => ({
+          ...p,
+          latitude: pos.coords.latitude.toFixed(6),
+          longitude: pos.coords.longitude.toFixed(6),
+        }));
+        setGettingLocation(false);
+        toast({ title: "✅ تم تحديد موقعك" });
+      },
+      () => {
+        setGettingLocation(false);
+        toast({ title: "تعذّر تحديد الموقع", description: "أدخله يدوياً", variant: "destructive" });
+      },
+      { timeout: 10000 }
+    );
+  };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -373,9 +350,15 @@ function RegisterDialog({ plan, registerMutation, isRtl }: any) {
       yearsOfExperience: parseInt(form.yearsOfExperience) || 1,
       subscriptionType: plan.id,
       subscriptionDuration: 1,
-      description: "طبيب محترف في منصة طبيبي",
+      description: "طبيب محترف في منصة صحتي",
       imageUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(form.name)}&background=2DD4BF&color=fff&size=400`,
       isVerified: false,
+      workingDays,
+      workingHoursStart: form.workingHoursStart,
+      workingHoursEnd: form.workingHoursEnd,
+      latitude: form.latitude ? parseFloat(form.latitude) : undefined,
+      longitude: form.longitude ? parseFloat(form.longitude) : undefined,
+      locationName: form.locationName || undefined,
     });
     setOpen(false);
   };
@@ -406,7 +389,7 @@ function RegisterDialog({ plan, registerMutation, isRtl }: any) {
       </DialogTrigger>
 
       <DialogContent
-        className="sm:max-w-[520px] max-h-[92vh] overflow-y-auto p-0 gap-0 border-white/10"
+        className="sm:max-w-[560px] max-h-[92vh] overflow-y-auto p-0 gap-0 border-white/10"
         style={{ background: "#0d0d10", borderRadius: "20px" }}
         dir="rtl"
       >
@@ -426,11 +409,12 @@ function RegisterDialog({ plan, registerMutation, isRtl }: any) {
             </div>
           </div>
           <DialogDescription className="text-zinc-500 text-xs mt-2">
-            أدخل بياناتك لبدء رحلتك مع طبيبي
+            أدخل بياناتك لبدء رحلتك مع صحتي
           </DialogDescription>
         </div>
 
-        <form onSubmit={submit} className="p-6 space-y-3.5">
+        <form onSubmit={submit} className="p-6 space-y-4">
+          {/* المعلومات الأساسية */}
           <div className="grid grid-cols-2 gap-3">
             <FLabel label="الاسم الكامل">
               <div className="relative">
@@ -446,19 +430,20 @@ function RegisterDialog({ plan, registerMutation, isRtl }: any) {
             </FLabel>
           </div>
 
-          <FLabel label="رقم الهاتف">
-            <div className="relative">
-              <Phone className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-600" />
-              <input style={inputStyle} type="tel" placeholder="06XXXXXXXX" value={form.phone} onChange={e => set("phone", e.target.value)} />
-            </div>
-          </FLabel>
-
-          <FLabel label="سنوات الخبرة">
-            <div className="relative">
-              <Briefcase className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-600" />
-              <input style={inputStyle} type="number" placeholder="5" value={form.yearsOfExperience} onChange={e => set("yearsOfExperience", e.target.value)} />
-            </div>
-          </FLabel>
+          <div className="grid grid-cols-2 gap-3">
+            <FLabel label="رقم الهاتف">
+              <div className="relative">
+                <Phone className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-600" />
+                <input style={inputStyle} type="tel" placeholder="06XXXXXXXX" value={form.phone} onChange={e => set("phone", e.target.value)} />
+              </div>
+            </FLabel>
+            <FLabel label="سنوات الخبرة">
+              <div className="relative">
+                <Briefcase className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-600" />
+                <input style={inputStyle} type="number" placeholder="5" value={form.yearsOfExperience} onChange={e => set("yearsOfExperience", e.target.value)} />
+              </div>
+            </FLabel>
+          </div>
 
           <FLabel label="التخصص الطبي">
             <Select value={form.specialty} onValueChange={v => set("specialty", v)} dir="rtl">
@@ -485,6 +470,102 @@ function RegisterDialog({ plan, registerMutation, isRtl }: any) {
                   {wilaya && (LOCATIONS as any)[wilaya]?.map((d: string) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
                 </SelectContent>
               </Select>
+            </FLabel>
+          </div>
+
+          {/* جدول العمل */}
+          <div className="rounded-xl border border-white/8 p-4 space-y-3" style={{ background: "rgba(255,255,255,0.02)" }}>
+            <div className="flex items-center gap-2 mb-1">
+              <Calendar className="h-3.5 w-3.5 text-primary" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">جدول أوقات العمل</span>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {WEEK_DAYS.map(day => (
+                <button
+                  key={day.id}
+                  type="button"
+                  onClick={() => toggleDay(day.id)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200"
+                  style={{
+                    background: workingDays.includes(day.id) ? `${plan.color}22` : "rgba(255,255,255,0.04)",
+                    border: `1px solid ${workingDays.includes(day.id) ? plan.color + "55" : "rgba(255,255,255,0.08)"}`,
+                    color: workingDays.includes(day.id) ? plan.color : "#71717a",
+                  }}
+                >
+                  {day.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <FLabel label="من الساعة">
+                <input
+                  type="time"
+                  value={form.workingHoursStart}
+                  onChange={e => set("workingHoursStart", e.target.value)}
+                  style={{ ...inputStyle, padding: "0 10px", colorScheme: "dark" }}
+                />
+              </FLabel>
+              <FLabel label="إلى الساعة">
+                <input
+                  type="time"
+                  value={form.workingHoursEnd}
+                  onChange={e => set("workingHoursEnd", e.target.value)}
+                  style={{ ...inputStyle, padding: "0 10px", colorScheme: "dark" }}
+                />
+              </FLabel>
+            </div>
+          </div>
+
+          {/* الموقع الجغرافي */}
+          <div className="rounded-xl border border-white/8 p-4 space-y-3" style={{ background: "rgba(255,255,255,0.02)" }}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-3.5 w-3.5 text-green-400" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">موقع العيادة (اختياري)</span>
+              </div>
+              <button
+                type="button"
+                onClick={getGpsLocation}
+                disabled={gettingLocation}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-green-500/10 border border-green-500/25 text-green-400 hover:bg-green-500/20 transition-colors disabled:opacity-50"
+              >
+                <Navigation className="h-3 w-3" />
+                {gettingLocation ? "جاري التحديد..." : "تحديد GPS"}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <FLabel label="خط العرض">
+                <input
+                  style={inputStyle}
+                  placeholder="36.123456"
+                  value={form.latitude}
+                  onChange={e => set("latitude", e.target.value)}
+                  type="number"
+                  step="any"
+                />
+              </FLabel>
+              <FLabel label="خط الطول">
+                <input
+                  style={inputStyle}
+                  placeholder="2.123456"
+                  value={form.longitude}
+                  onChange={e => set("longitude", e.target.value)}
+                  type="number"
+                  step="any"
+                />
+              </FLabel>
+            </div>
+
+            <FLabel label="اسم العنوان (اختياري)">
+              <input
+                style={inputStyle}
+                placeholder="مثال: عيادة النور، شارع باستور"
+                value={form.locationName}
+                onChange={e => set("locationName", e.target.value)}
+              />
             </FLabel>
           </div>
 

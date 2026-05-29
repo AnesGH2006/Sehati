@@ -30,7 +30,7 @@ export function Hero() {
             transition={{ duration: 0.8, ease: "easeOut" }}
             className="text-4xl md:text-6xl font-bold font-heading text-white leading-tight"
           >
-            {اعثر على طبيبك في دقائق}
+            {"اعثر على طبيبك في دقائق"}
           </motion.h1>
           
           <motion.p 
