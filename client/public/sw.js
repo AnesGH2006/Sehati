@@ -1,44 +1,36 @@
-const CACHE_NAME = "tabib-v1";
-const STATIC_ASSETS = [
-  "/",
-  "/manifest.json",
-  "/icon-192.png",
-  "/icon-512.png",
-];
+const CACHE_NAME = "sehati-v1";
+const STATIC_ASSETS = ["/", "/manifest.json", "/logo.png"];
 
-// ── Install ───────────────────────────────────────────────────────────────────
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS).catch(() => {});
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS).catch(() => {}))
   );
   self.skipWaiting();
 });
 
-// ── Activate ──────────────────────────────────────────────────────────────────
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(
-        keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))
-      )
+      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
     )
   );
   self.clients.claim();
 });
 
-// ── Fetch — Network First for API, Cache First for assets ─────────────────────
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  // API calls — always network
   if (url.pathname.startsWith("/api/")) {
-    event.respondWith(fetch(event.request).catch(() => new Response(JSON.stringify({ error: "offline" }), { headers: { "Content-Type": "application/json" } })));
+    event.respondWith(
+      fetch(event.request).catch(() =>
+        new Response(JSON.stringify({ error: "offline" }), {
+          headers: { "Content-Type": "application/json" },
+        })
+      )
+    );
     return;
   }
 
-  // Static assets — cache first
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
@@ -48,53 +40,41 @@ self.addEventListener("fetch", (event) => {
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
         return response;
       }).catch(() => {
-        // Offline fallback for navigation
-        if (event.request.mode === "navigate") {
-          return caches.match("/");
-        }
+        if (event.request.mode === "navigate") return caches.match("/");
+        return new Response("Offline", { status: 503 });
       });
     })
   );
 });
 
-// ── Push Notifications ────────────────────────────────────────────────────────
 self.addEventListener("push", (event) => {
   let data = {};
   try {
     data = event.data ? event.data.json() : {};
   } catch {
-    data = { title: "طبيبي", body: event.data ? event.data.text() : "إشعار جديد" };
+    data = { title: "سهاتي", body: event.data ? event.data.text() : "إشعار جديد" };
   }
-
-  const title   = data.title || "طبيبي 🩺";
+  const title = data.title || "سهاتي 🩺";
   const options = {
-    body:    data.body    || "لديك إشعار جديد",
-    icon:    "/icon-192.png",
-    badge:   "/icon-192.png",
-    tag:     data.type    || "general",
-    data:    { url: data.url || "/" },
-    dir:     "rtl",
-    lang:    "ar",
+    body: data.body || "لديك إشعار جديد",
+    icon: "/logo.png",
+    badge: "/logo.png",
+    tag: data.type || "general",
+    data: { url: data.url || "/" },
+    dir: "rtl",
+    lang: "ar",
     vibrate: [200, 100, 200],
-    actions: data.type === "appointment" ? [
-      { action: "view",   title: "عرض الموعد" },
-      { action: "dismiss", title: "رفض" },
-    ] : [
-      { action: "view",   title: "فتح" },
-    ],
+    actions: data.type === "appointment"
+      ? [{ action: "view", title: "عرض الموعد" }, { action: "dismiss", title: "رفض" }]
+      : [{ action: "view", title: "فتح" }],
   };
-
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
-// ── Notification Click ────────────────────────────────────────────────────────
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-
   const url = event.notification.data?.url || "/";
-
   if (event.action === "dismiss") return;
-
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {

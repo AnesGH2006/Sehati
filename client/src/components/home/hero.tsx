@@ -1,7 +1,7 @@
 import { Search, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DAIRAS, CATEGORIES } from "@/lib/constants";
+import { DAIRAS, SPECIALTIES } from "@/lib/constants";
 import heroImage from "@assets/generated_images/algerian_artisan_working_on_pottery_or_leather_in_a_bright_workshop.png";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -15,7 +15,7 @@ export function Hero() {
       <div className="absolute inset-0 z-0">
         <img 
           src={heroImage} 
-          alt="Algerian Artisan" 
+          alt="Algerian Doctor" 
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-black/30 backdrop-blur-[1px]"></div>
@@ -30,7 +30,7 @@ export function Hero() {
             transition={{ duration: 0.8, ease: "easeOut" }}
             className="text-4xl md:text-6xl font-bold font-heading text-white leading-tight"
           >
-            {t('hero.title')}
+            {اعثر على طبيبك في دقائق}
           </motion.h1>
           
           <motion.p 
@@ -39,7 +39,7 @@ export function Hero() {
             transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
             className="text-lg md:text-xl text-gray-200 max-w-2xl mx-auto"
           >
-            {t('hero.subtitle')}
+            {t('')}
           </motion.p>
 
           <motion.div
@@ -49,7 +49,7 @@ export function Hero() {
             className="pt-8"
           >
             <Button size="lg" className="h-16 px-10 text-xl font-bold rounded-2xl shadow-2xl hover:scale-105 transition-transform">
-              ابدأ الآن مجاناً
+              ابدأ الآن 
             </Button>
           </motion.div>
         </div>
