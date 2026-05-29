@@ -17,8 +17,8 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
   return Math.round(R * 2 * Math.asin(Math.sqrt(a)) * 10) / 10;
 }
 
-// ─── GET /api/artisans/nearby ─────────────────────────
-// ?lat=36.73&lng=3.08&radius=10&craft=نجار&status=available&q=علي&sort=distance
+// ─── GET /api/doctors/nearby ──────────────────────────
+// ?lat=36.73&lng=3.08&radius=10&specialty=cardiology&status=available&q=علي&sort=distance
 router.get("/nearby", async (req: Request, res: Response) => {
   try {
     const lat = parseFloat(req.query.lat as string);
@@ -29,33 +29,33 @@ router.get("/nearby", async (req: Request, res: Response) => {
     }
 
     const radiusKm = Math.min(parseFloat(req.query.radius as string) || 10, 100);
-    const craft    = req.query.craft as string | undefined;
-    const status   = req.query.status as string | undefined;
-    const q        = (req.query.q as string | undefined)?.trim().toLowerCase();
-    const sort     = (req.query.sort as string) || "distance";
-    const limit    = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    const specialty = req.query.specialty as string | undefined;
+    const status    = req.query.status as string | undefined;
+    const q         = (req.query.q as string | undefined)?.trim().toLowerCase();
+    const sort      = (req.query.sort as string) || "distance";
+    const limit     = Math.min(parseInt(req.query.limit as string) || 50, 100);
 
-    // جلب كل الحرفيين من storage الموجود
-    const all = await storage.getArtisans({
-      category: craft && craft !== "all" ? craft : undefined,
-      search:   q || undefined,
+    // جلب كل الأطباء من storage
+    const all = await storage.getDoctors({
+      specialty: specialty && specialty !== "all" ? specialty : undefined,
+      search:    q || undefined,
     });
 
     // فلترة + حساب المسافة في JS
     let results = all
-      .filter((a: any) => {
-        if (a.latitude == null || a.longitude == null) return false;
-        if (status && status !== "all" && a.status !== status) return false;
-        const dist = haversineKm(lat, lng, a.latitude, a.longitude);
+      .filter((d: any) => {
+        if (d.latitude == null || d.longitude == null) return false;
+        if (status && status !== "all" && d.status !== status) return false;
+        const dist = haversineKm(lat, lng, d.latitude, d.longitude);
         return dist <= radiusKm;
       })
-      .map((a: any) => ({
-        ...a,
-        distanceKm: haversineKm(lat, lng, a.latitude, a.longitude),
+      .map((d: any) => ({
+        ...d,
+        distanceKm: haversineKm(lat, lng, d.latitude, d.longitude),
       }));
 
     // ترتيب
-    if (sort === "rating")   results.sort((a: any, b: any) => (b.rating ?? 0) - (a.rating ?? 0));
+    if (sort === "rating")    results.sort((a: any, b: any) => (b.rating ?? 0) - (a.rating ?? 0));
     else if (sort === "name") results.sort((a: any, b: any) => (a.name ?? "").localeCompare(b.name ?? "", "ar"));
     else                      results.sort((a: any, b: any) => a.distanceKm - b.distanceKm);
 
@@ -71,22 +71,22 @@ router.get("/nearby", async (req: Request, res: Response) => {
   }
 });
 
-// ─── PUT /api/artisans/:id/location ──────────────────
-// Body: { lat, lng, city?, wilaya? }
+// ─── PUT /api/doctors/:id/location ───────────────────
+// Body: { lat, lng, locationName?, wilaya? }
 router.put("/:id/location", async (req: Request, res: Response) => {
   try {
-    const artisanId = parseInt(req.params.id);
-    const { lat, lng, city, wilaya } = req.body;
+    const doctorId = parseInt(req.params.id);
+    const { lat, lng, locationName, wilaya } = req.body;
 
     if (isNaN(lat) || isNaN(lng)) {
       return res.status(400).json({ error: "lat و lng مطلوبان" });
     }
 
-    await storage.updateArtisan(artisanId, {
-      latitude:  lat,
-      longitude: lng,
-      ...(city   ? { city }   : {}),
-      ...(wilaya ? { wilaya } : {}),
+    await storage.updateDoctor(doctorId, {
+      latitude:     lat,
+      longitude:    lng,
+      ...(locationName ? { locationName } : {}),
+      ...(wilaya       ? { wilaya }       : {}),
     });
 
     return res.json({ success: true, message: "تم تحديث الموقع" });
