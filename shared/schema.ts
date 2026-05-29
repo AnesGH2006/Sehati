@@ -76,7 +76,7 @@ export const doctors = pgTable("doctors", {
 // ── Appointments ──────────────────────────────────────────────────────────────
 export const appointments = pgTable("appointments", {
   id:              integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  doctorId:        integer("artisan_id").notNull().references(() => doctors.id, { onDelete: "cascade" }),
+  doctorId:        integer("doctor_id").notNull().references(() => doctors.id, { onDelete: "cascade" }),
   patientId: text("patient_id").notNull(),
   patientName:     text("patient_name").notNull(),
   patientPhone:    text("patient_phone"),
@@ -95,7 +95,7 @@ export const appointments = pgTable("appointments", {
 // ── Conversations ─────────────────────────────────────────────────────────────
 export const conversations = pgTable("conversations", {
   id:            text("id").primaryKey(),
-  doctorId:      integer("artisan_id").notNull().references(() => doctors.id, { onDelete: "cascade" }),
+  doctorId:      integer("doctor_id").notNull(),
   patientId:     text("patient_id").notNull(),
   patientName:   text("patient_name"),
   lastMessageAt: timestamp("last_message_at").notNull().defaultNow(),
@@ -106,7 +106,7 @@ export const conversations = pgTable("conversations", {
 // ── Messages ──────────────────────────────────────────────────────────────────
 export const messages = pgTable("messages", {
   id:             integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  conversationId: text("conversation_id").notNull().references(() => conversations.id, { onDelete: "cascade" }),
+  conversationId: text("conversation_id").notNull(),
   senderId:       text("sender_id").notNull(),
   receiverId:     text("receiver_id").notNull(),
   senderType:     text("sender_type", { enum: ["patient", "doctor"] }).notNull(),
@@ -118,7 +118,7 @@ export const messages = pgTable("messages", {
 // ── Reviews ───────────────────────────────────────────────────────────────────
 export const reviews = pgTable("reviews", {
   id:          integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  doctorId:    integer("artisan_id").notNull().references(() => doctors.id, { onDelete: "cascade" }),
+  doctorId:    integer("doctor_id").notNull().references(() => doctors.id, { onDelete: "cascade" }),
   patientId:   text("patient_id").notNull(),
   patientName: text("patient_name").notNull(),
   rating:      integer("rating").notNull(),
@@ -129,7 +129,7 @@ export const reviews = pgTable("reviews", {
 // ── Doctor Views ──────────────────────────────────────────────────────────────
 export const doctorViews = pgTable("doctor_views", {
   id:        serial("id").primaryKey(),
-  doctorId:  integer("artisan_id").notNull().references(() => doctors.id, { onDelete: "cascade" }),
+  doctorId:  integer("doctor_id").notNull().references(() => doctors.id, { onDelete: "cascade" }),
   viewerIp:  text("viewer_ip").notNull().default("unknown"),
   viewerId:  text("viewer_id"),
   createdAt: timestamp("created_at").defaultNow(),

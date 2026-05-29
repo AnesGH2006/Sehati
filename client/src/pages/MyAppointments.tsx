@@ -97,12 +97,17 @@ const TABS: { key: AppointmentStatus | "all"; label: string }[] = [
 
 // ── الصفحة الرئيسية ────────────────────────────────────────────────────────────
 export default function MyAppointments() {
-  const { customer, patient, isLoggedIn, isDoctor } = useAuth();
+  const { customer, patient, isLoggedIn, isDoctor, isGuest, ensureGuest } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const me = patient || customer;
+
+  // ensure guest session so unauthenticated users can see their appointments
+  useEffect(() => {
+    if (!me && !isDoctor) ensureGuest();
+  }, []);
 
   const [activeTab, setActiveTab] = useState<AppointmentStatus | "all">("all");
   const [showBooking, setShowBooking] = useState(false);
@@ -112,9 +117,10 @@ export default function MyAppointments() {
   const { data: appointments = [], isLoading } = useQuery<Appointment[]>({
     queryKey: ["/api/appointments/patient", me?.id],
     queryFn: () =>
-      fetch("/api/doctors")
-        .then((r) => r.json())
-        .then((d) => (Array.isArray(d) ? d : d.doctors || d.data || [])),
+      fetch(`/api/appointments/patient/${me?.id}`)
+        .then((r) => r.ok ? r.json() : [])
+        .catch(() => []),
+    enabled: !!me?.id,
   });
 
   // جلب بيانات الأطباء لإضافة الاسم والتخصص
@@ -156,17 +162,15 @@ export default function MyAppointments() {
     onError: () => toast({ title: "فشل إلغاء الموعد", variant: "destructive" }),
   });
 
-  if (!isLoggedIn || isDoctor) {
+  if (isDoctor) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
         <Navbar />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-4">
             <Stethoscope className="h-12 w-12 mx-auto text-muted-foreground opacity-30" />
-            <p className="text-muted-foreground">
-              يجب تسجيل الدخول كمريض للوصول لمواعيدك
-            </p>
-            <Button onClick={() => setLocation("/auth")}>تسجيل الدخول</Button>
+            <p className="text-muted-foreground">صفحة المرضى فقط</p>
+            <Button onClick={() => setLocation("/doctor/dashboard")}>لوحة تحكم الطبيب</Button>
           </div>
         </main>
         <Footer />

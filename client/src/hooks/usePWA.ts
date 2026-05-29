@@ -11,8 +11,8 @@ export function usePWA() {
   const [swReady, setSwReady]             = useState(false);
 
   useEffect(() => {
-    // تسجيل Service Worker
-    if ("serviceWorker" in navigator) {
+    // تسجيل Service Worker في وضع الإنتاج فقط
+    if ("serviceWorker" in navigator && import.meta.env.PROD) {
       navigator.serviceWorker
         .register("/sw.js", { scope: "/" })
         .then((reg) => {
@@ -20,6 +20,11 @@ export function usePWA() {
           setSwReady(true);
         })
         .catch((err) => console.warn("[PWA] SW registration failed:", err));
+    } else if ("serviceWorker" in navigator && !import.meta.env.PROD) {
+      // إلغاء تسجيل Service Worker في وضع التطوير لتجنب التخزين المؤقت
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        regs.forEach((reg) => reg.unregister());
+      });
     }
 
     // تحقق إذا كان التطبيق مثبتاً

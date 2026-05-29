@@ -1,5 +1,5 @@
-const CACHE_NAME = "sehati-v1";
-const STATIC_ASSETS = ["/", "/manifest.json", "/logo.png"];
+const CACHE_NAME = "sehati-v2";
+const STATIC_ASSETS = ["/manifest.json", "/logo.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -20,13 +20,32 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  if (url.pathname.startsWith("/api/")) {
+  if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/@") || url.pathname.startsWith("/src/")) {
     event.respondWith(
       fetch(event.request).catch(() =>
-        new Response(JSON.stringify({ error: "offline" }), {
-          headers: { "Content-Type": "application/json" },
-        })
+        url.pathname.startsWith("/api/")
+          ? new Response(JSON.stringify({ error: "offline" }), {
+              headers: { "Content-Type": "application/json" },
+            })
+          : new Response("Offline", { status: 503 })
       )
+    );
+    return;
+  }
+
+  const isJsOrCss = url.pathname.endsWith(".js") || url.pathname.endsWith(".css") || url.pathname.endsWith(".ts") || url.pathname.endsWith(".tsx");
+
+  if (isJsOrCss) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200 && response.type === "basic") {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request).then((cached) => cached || new Response("Offline", { status: 503 })))
     );
     return;
   }
