@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sehati - غير متصل</title>
+  <title>صحتي — غير متصل</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -20,45 +20,74 @@
       position: fixed;
       top: 50%; left: 50%;
       transform: translate(-50%, -50%);
-      width: 300px; height: 300px;
+      width: 320px; height: 320px;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(124,58,237,0.15), transparent 70%);
+      background: radial-gradient(circle, rgba(45,212,191,0.12), transparent 70%);
       pointer-events: none;
     }
     .card {
       text-align: center;
-      max-width: 320px;
+      max-width: 340px;
       position: relative;
       z-index: 1;
     }
-    .icon {
-      font-size: 4rem;
-      margin-bottom: 1.25rem;
-      display: block;
+    .logo {
+      width: 72px; height: 72px;
+      border-radius: 20px;
+      margin: 0 auto 1.5rem;
+      background: linear-gradient(135deg, #2DD4BF, #0891b2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem;
+      box-shadow: 0 0 40px rgba(45,212,191,0.25);
     }
-    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; }
-    p { color: #94a3b8; font-size: 0.9rem; line-height: 1.6; margin-bottom: 1.5rem; }
-    button {
-      padding: 0.75rem 2rem;
-      background: #7c3aed;
-      color: white;
-      border: none;
-      border-radius: 12px;
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: #f1f5f9;
+    }
+    p {
+      color: #94a3b8;
       font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity 0.2s;
+      line-height: 1.7;
+      margin-bottom: 2rem;
     }
-    button:active { opacity: 0.8; }
+    .actions { display: flex; flex-direction: column; gap: 0.75rem; }
+    button {
+      padding: 0.8rem 2rem;
+      background: #2DD4BF;
+      color: #0f1117;
+      border: none;
+      border-radius: 14px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    button:active { opacity: 0.85; transform: scale(0.98); }
+    a.secondary {
+      display: block;
+      padding: 0.8rem 2rem;
+      color: #94a3b8;
+      border: 1px solid #2a2f3e;
+      border-radius: 14px;
+      font-size: 0.9rem;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    a.secondary:hover { background: rgba(255,255,255,0.04); }
   </style>
 </head>
 <body>
   <div class="glow"></div>
   <div class="card">
-    <span class="icon">📡</span>
-    <h1>أنت غير متصل</h1>
-    <p>يبدو أن الاتصال بالإنترنت منقطع. تحقق من اتصالك وحاول مجددًا.</p>
-    <button onclick="window.location.reload()">إعادة المحاولة</button>
+    <div class="logo">🩺</div>
+    <h1>أنت غير متصل بالإنترنت</h1>
+    <p>يبدو أن الاتصال بالإنترنت منقطع.<br>تحقق من اتصالك وأعد المحاولة.</p>
+    <div class="actions">
+      <button onclick="window.location.reload()">🔄 إعادة المحاولة</button>
+      <a href="/" class="secondary">العودة للرئيسية</a>
+    </div>
   </div>
 </body>
 </html>

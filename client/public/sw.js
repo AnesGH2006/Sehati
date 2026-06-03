@@ -1,87 +1,144 @@
-const CACHE_NAME = "sehati-v2";
-const STATIC_ASSETS = ["/manifest.json", "/logo.png"];
+const CACHE_VERSION = "v3";
+const SHELL_CACHE  = `sehati-shell-${CACHE_VERSION}`;
+const ASSET_CACHE  = `sehati-assets-${CACHE_VERSION}`;
+const API_CACHE    = `sehati-api-${CACHE_VERSION}`;
 
+const PRECACHE_URLS = [
+  "/",
+  "/offline.html",
+  "/manifest.json",
+  "/logo.png",
+];
+
+// ── Install: precache shell ──────────────────────────────────────────────────
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS).catch(() => {}))
+    caches.open(SHELL_CACHE).then((cache) =>
+      cache.addAll(PRECACHE_URLS).catch(() => {})
+    )
   );
   self.skipWaiting();
 });
 
+// ── Activate: delete old caches ──────────────────────────────────────────────
 self.addEventListener("activate", (event) => {
+  const valid = [SHELL_CACHE, ASSET_CACHE, API_CACHE];
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+      Promise.all(keys.filter((k) => !valid.includes(k)).map((k) => caches.delete(k)))
     )
   );
   self.clients.claim();
 });
 
+// ── Fetch ────────────────────────────────────────────────────────────────────
 self.addEventListener("fetch", (event) => {
-  const url = new URL(event.request.url);
+  const { request } = event;
+  const url = new URL(request.url);
 
-  if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/@") || url.pathname.startsWith("/src/")) {
+  // Only handle same-origin requests
+  if (url.origin !== self.location.origin) return;
+
+  // ── API calls: network-first, short offline fallback ──────────────────────
+  if (url.pathname.startsWith("/api/")) {
     event.respondWith(
-      fetch(event.request).catch(() =>
-        url.pathname.startsWith("/api/")
-          ? new Response(JSON.stringify({ error: "offline" }), {
-              headers: { "Content-Type": "application/json" },
-            })
-          : new Response("Offline", { status: 503 })
-      )
-    );
-    return;
-  }
-
-  const isJsOrCss = url.pathname.endsWith(".js") || url.pathname.endsWith(".css") || url.pathname.endsWith(".ts") || url.pathname.endsWith(".tsx");
-
-  if (isJsOrCss) {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200 && response.type === "basic") {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+      fetch(request)
+        .then((res) => {
+          if (res.ok && request.method === "GET") {
+            const clone = res.clone();
+            caches.open(API_CACHE).then((c) => c.put(request, clone));
           }
-          return response;
+          return res;
         })
-        .catch(() => caches.match(event.request).then((cached) => cached || new Response("Offline", { status: 503 })))
+        .catch(async () => {
+          const cached = await caches.match(request);
+          if (cached) return cached;
+          return new Response(JSON.stringify({ error: "offline", data: [] }), {
+            status: 503,
+            headers: { "Content-Type": "application/json" },
+          });
+        })
     );
     return;
   }
 
+  // ── Vite dev files: always network ────────────────────────────────────────
+  if (url.pathname.startsWith("/@") || url.pathname.startsWith("/src/") || url.pathname.startsWith("/node_modules/")) {
+    return;
+  }
+
+  // ── Hashed static assets (JS/CSS bundles): cache-first ───────────────────
+  const isHashedAsset = /\.[a-f0-9]{8,}\.(js|css)$/.test(url.pathname);
+  if (isHashedAsset) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((res) => {
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(ASSET_CACHE).then((c) => c.put(request, clone));
+          }
+          return res;
+        });
+      })
+    );
+    return;
+  }
+
+  // ── Images / fonts: stale-while-revalidate ────────────────────────────────
+  const isMedia = /\.(png|jpg|jpeg|gif|webp|svg|woff2?|ttf|ico)$/.test(url.pathname);
+  if (isMedia) {
+    event.respondWith(
+      caches.open(ASSET_CACHE).then(async (cache) => {
+        const cached = await cache.match(request);
+        const fetchPromise = fetch(request).then((res) => {
+          if (res.ok) cache.put(request, res.clone());
+          return res;
+        }).catch(() => cached);
+        return cached || fetchPromise;
+      })
+    );
+    return;
+  }
+
+  // ── Navigation (HTML pages): network-first, offline fallback ─────────────
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request)
+        .then((res) => {
+          const clone = res.clone();
+          caches.open(SHELL_CACHE).then((c) => c.put(request, clone));
+          return res;
+        })
+        .catch(async () => {
+          const cached = await caches.match(request) || await caches.match("/");
+          return cached || caches.match("/offline.html");
+        })
+    );
+    return;
+  }
+
+  // ── Default: network with cache fallback ──────────────────────────────────
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request).then((response) => {
-        if (!response || response.status !== 200 || response.type !== "basic") return response;
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        return response;
-      }).catch(() => {
-        if (event.request.mode === "navigate") return caches.match("/");
-        return new Response("Offline", { status: 503 });
-      });
-    })
+    fetch(request).catch(() => caches.match(request))
   );
 });
 
+// ── Push Notifications ────────────────────────────────────────────────────────
 self.addEventListener("push", (event) => {
   let data = {};
-  try {
-    data = event.data ? event.data.json() : {};
-  } catch {
-    data = { title: "سهاتي", body: event.data ? event.data.text() : "إشعار جديد" };
-  }
-  const title = data.title || "سهاتي 🩺";
+  try { data = event.data ? event.data.json() : {}; }
+  catch { data = { title: "صحتي", body: event.data ? event.data.text() : "إشعار جديد" }; }
+
+  const title = data.title || "صحتي 🩺";
   const options = {
-    body: data.body || "لديك إشعار جديد",
-    icon: "/logo.png",
-    badge: "/logo.png",
-    tag: data.type || "general",
-    data: { url: data.url || "/" },
-    dir: "rtl",
-    lang: "ar",
+    body:    data.body    || "لديك إشعار جديد",
+    icon:    "/logo.png",
+    badge:   "/logo.png",
+    tag:     data.type    || "general",
+    data:    { url: data.url || "/" },
+    dir:     "rtl",
+    lang:    "ar",
     vibrate: [200, 100, 200],
     actions: data.type === "appointment"
       ? [{ action: "view", title: "عرض الموعد" }, { action: "dismiss", title: "رفض" }]
@@ -90,13 +147,14 @@ self.addEventListener("push", (event) => {
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
+// ── Notification click ────────────────────────────────────────────────────────
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = event.notification.data?.url || "/";
   if (event.action === "dismiss") return;
   event.waitUntil(
-    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const client of list) {
         if (client.url.includes(self.location.origin) && "focus" in client) {
           client.navigate(url);
           return client.focus();
@@ -105,4 +163,9 @@ self.addEventListener("notificationclick", (event) => {
       if (clients.openWindow) return clients.openWindow(url);
     })
   );
+});
+
+// ── Skip waiting on message ───────────────────────────────────────────────────
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
 });

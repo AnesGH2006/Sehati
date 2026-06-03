@@ -44,11 +44,11 @@ export function InstallPrompt() {
           {/* Header */}
           <div className="bg-gradient-to-r from-primary/10 to-teal-500/10 px-4 py-3 flex items-center justify-between border-b border-border/40">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center">
-                <span className="text-white font-black text-sm">ط</span>
+              <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center overflow-hidden">
+                <img src="/logo.png" alt="صحتي" className="w-full h-full object-cover" />
               </div>
               <div>
-                <p className="font-bold text-sm">طبيبي</p>
+                <p className="font-bold text-sm">صحتي</p>
                 <p className="text-xs text-muted-foreground">ثبّت التطبيق مجاناً</p>
               </div>
             </div>

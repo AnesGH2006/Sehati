@@ -25,6 +25,8 @@ export function usePushNotifications(userId: string | null | undefined) {
 
     async function register() {
       try {
+        // Only register SW in production to avoid caching issues in dev
+        if (!import.meta.env.PROD) return;
         const reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
         await navigator.serviceWorker.ready;
         console.log("[Push] Service Worker registered");
