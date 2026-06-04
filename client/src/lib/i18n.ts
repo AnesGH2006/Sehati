@@ -1,10 +1,14 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
+// Always force Arabic — clear any stale language saved from previous sessions
+try { localStorage.removeItem('i18nextLng'); } catch {}
+
 i18n
   .use(initReactI18next)
   .init({
     lng: 'ar',
+    fallbackLng: 'ar',
     initImmediate: false,
     resources: {
       ar: {
@@ -314,7 +318,6 @@ i18n
         }
       }
     },
-    fallbackLng: 'ar',
     interpolation: {
       escapeValue: false
     }
