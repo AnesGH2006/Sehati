@@ -605,8 +605,16 @@ export async function registerRoutes(
     try {
       const data = insertAppointmentSchema.parse(req.body);
       const appointment = await storage.createAppointment(data);
-      // إرسال إشعار للطبيب
+      // إشعار للطبيب — موعد جديد
       const doctor = await storage.getDoctor(data.doctorId);
+      storage.createNotification({
+        recipientId:   String(data.doctorId),
+        recipientType: "doctor",
+        type:          "appointment_new",
+        title:         `موعد جديد من ${data.patientName}`,
+        body:          `${data.appointmentDate} الساعة ${data.appointmentTime}${data.isUrgent ? " 🚨 عاجل" : ""}`,
+        link:          "/doctor/dashboard",
+      }).catch(() => {});
       if (doctor?.userId) {
         const receiverIds = await resolveUserIds(doctor.userId);
         for (const id of receiverIds) {
@@ -692,19 +700,37 @@ export async function registerRoutes(
         );
         if (!appointment)
           return res.status(404).json({ message: "Appointment not found" });
-        // إرسال إشعار للمريض عند تأكيد أو إلغاء الموعد
-        if (status === "confirmed" || status === "cancelled") {
-          const statusText =
-            status === "confirmed" ? "تم تأكيد موعدك ✅" : "تم إلغاء موعدك ❌";
-          const receiverIds = await resolveUserIds(appointment.patientId);
-          for (const id of receiverIds) {
-            const sent = await sendPushToUser(id, {
-              title: statusText,
-              body: `${appointment.appointmentDate} - ${appointment.appointmentTime}`,
-              url: "/my-appointments",
-              type: "appointments",
-            });
-            if (sent) break;
+        // إشعار للمريض عند تغيير حالة الموعد
+        if (status === "confirmed" || status === "cancelled" || status === "completed") {
+          const titles: Record<string, string> = {
+            confirmed:  "تم تأكيد موعدك ✅",
+            cancelled:  "تم إلغاء موعدك ❌",
+            completed:  "اكتمل موعدك 🏁",
+          };
+          const types: Record<string, string> = {
+            confirmed: "appointment_confirmed",
+            cancelled: "appointment_cancelled",
+            completed: "appointment_completed",
+          };
+          storage.createNotification({
+            recipientId:   appointment.patientId,
+            recipientType: "patient",
+            type:          types[status] || "appointment_update",
+            title:         titles[status] || "تحديث الموعد",
+            body:          `${appointment.appointmentDate} الساعة ${appointment.appointmentTime}`,
+            link:          "/my-appointments",
+          }).catch(() => {});
+          if (status !== "completed") {
+            const receiverIds = await resolveUserIds(appointment.patientId);
+            for (const id of receiverIds) {
+              const sent = await sendPushToUser(id, {
+                title: titles[status],
+                body: `${appointment.appointmentDate} - ${appointment.appointmentTime}`,
+                url: "/my-appointments",
+                type: "appointments",
+              });
+              if (sent) break;
+            }
           }
         }
         res.json(appointment);
@@ -763,6 +789,53 @@ export async function registerRoutes(
     },
   );
 
+  // ── In-App Notifications ──────────────────────────────────────────────────
+  app.get("/api/notifications/:recipientId", async (req: Request, res: Response) => {
+    try {
+      const notifs = await storage.getNotifications(req.params.recipientId);
+      res.json(notifs);
+    } catch {
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  });
+
+  app.get("/api/notifications/:recipientId/count", async (req: Request, res: Response) => {
+    try {
+      const count = await storage.getUnreadCount(req.params.recipientId);
+      res.json({ count });
+    } catch {
+      res.status(500).json({ count: 0 });
+    }
+  });
+
+  app.patch("/api/notifications/:id/read", async (req: Request, res: Response) => {
+    try {
+      await storage.markNotificationRead(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch {
+      res.status(500).json({ message: "Failed to mark as read" });
+    }
+  });
+
+  app.patch("/api/notifications/read-all/:recipientId", async (req: Request, res: Response) => {
+    try {
+      await storage.markAllNotificationsRead(req.params.recipientId);
+      res.json({ success: true });
+    } catch {
+      res.status(500).json({ message: "Failed to mark all as read" });
+    }
+  });
+
+  app.delete("/api/notifications/:id", async (req: Request, res: Response) => {
+    try {
+      const deleted = await storage.deleteNotification(parseInt(req.params.id));
+      if (!deleted) return res.status(404).json({ message: "Not found" });
+      res.json({ success: true });
+    } catch {
+      res.status(500).json({ message: "Failed to delete notification" });
+    }
+  });
+
   // ── Push Notifications ────────────────────────────────────────────────────
   app.post("/api/push/subscribe", (req: Request, res: Response) => {
     const { userId, subscription } = req.body;
@@ -782,6 +855,20 @@ export async function registerRoutes(
     try {
       const data = insertMessageSchema.parse(req.body);
       const message = await storage.createMessage(data);
+      // إشعار للمستلم — رسالة جديدة
+      const FINISH_SIGNAL = "__CHAT_FINISHED__";
+      if (data.content !== FINISH_SIGNAL && !data.content.startsWith("data:image")) {
+        const receiverType = data.senderType === "doctor" ? "patient" : "doctor";
+        const senderLabel  = data.senderType === "doctor" ? "طبيبك" : "مريض";
+        storage.createNotification({
+          recipientId:   data.receiverId,
+          recipientType: receiverType,
+          type:          "new_message",
+          title:         `رسالة جديدة من ${senderLabel}`,
+          body:          data.content.length > 60 ? data.content.slice(0, 57) + "..." : data.content,
+          link:          data.senderType === "doctor" ? "/my-appointments" : "/doctor/dashboard",
+        }).catch(() => {});
+      }
       sendPushNotification(data).catch((err) =>
         console.warn("[Push] Background notification failed:", err),
       );

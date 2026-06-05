@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { NotificationBell } from "@/components/notification-bell";
 
 export function Navbar() {
   const [location, setLocation] = useLocation();
@@ -77,6 +78,9 @@ export function Navbar() {
 
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-3">
+          {/* Notification Bell */}
+          <NotificationBell />
+
           {/* Dark mode toggle */}
           <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="rounded-full">
             <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />

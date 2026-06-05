@@ -196,6 +196,24 @@ export const insertDoctorViewSchema = createInsertSchema(doctorViews).omit({
   id: true, createdAt: true,
 });
 
+// ── Notifications ─────────────────────────────────────────────────────────────
+export const notifications = pgTable("notifications", {
+  id:            serial("id").primaryKey(),
+  recipientId:   text("recipient_id").notNull(),
+  recipientType: text("recipient_type", { enum: ["doctor", "patient"] }).notNull(),
+  type:          text("type").notNull(),
+  title:         text("title").notNull(),
+  body:          text("body").notNull(),
+  link:          text("link"),
+  isRead:        boolean("is_read").notNull().default(false),
+  createdAt:     timestamp("created_at").notNull().defaultNow(),
+});
+
+export type Notification       = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, isRead: true, createdAt: true });
+
 export type InsertDoctor       = z.infer<typeof insertDoctorSchema>;
 export type InsertAppointment  = z.infer<typeof insertAppointmentSchema>;
 export type InsertConversation = z.infer<typeof insertConversationSchema>;
