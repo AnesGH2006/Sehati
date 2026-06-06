@@ -27,13 +27,13 @@ export const doctors = pgTable("doctors", {
 
   // ── المعلومات الطبية ──────────────────────────────────
   specialty:             text("specialty").notNull(),            // التخصص (مثال: طب عام، قلب، أطفال...)
-  licenseNumber:         text("license_number"),                 // رقم الترخيص الطبي
+  licenseNumber:         text("license_number"),                  // رقم الترخيص الطبي
   clinicName:            text("clinic_name"),                    // اسم العيادة
-  consultationFee: integer("consultation_fee").notNull().default(1000),
+  consultationFee:       integer("consultation_fee").notNull().default(1000),
 
   wilaya:                text("wilaya").notNull().default("الجزائر"),
   daira:                 text("daira").notNull(),
-  clinicAddress:         text("clinic_address"),                 // عنوان العيادة التفصيلي
+  clinicAddress:         text("clinic_address"),                  // عنوان العيادة التفصيلي
 
   description:           text("description"),
   rating:                real("rating").notNull().default(0),
@@ -73,15 +73,16 @@ export const doctors = pgTable("doctors", {
   createdAt:             timestamp("created_at").notNull().defaultNow(),
 });
 
-// ── Appointments ──────────────────────────────────────────────────────────────
+// ── Appointments (نظام التذكرة الرقمية) ──────────────────────────────────────────────
 export const appointments = pgTable("appointments", {
   id:              integer("id").primaryKey().generatedAlwaysAsIdentity(),
   doctorId:        integer("doctor_id").notNull().references(() => doctors.id, { onDelete: "cascade" }),
-  patientId: text("patient_id").notNull(),
+  patientId:       text("patient_id").notNull(),
   patientName:     text("patient_name").notNull(),
   patientPhone:    text("patient_phone"),
-  appointmentDate: text("appointment_date").notNull(),
-  appointmentTime: text("appointment_time").notNull(),
+  appointmentDate: text("appointment_date").notNull(), // تاريخ اليوم YYYY-MM-DD
+  appointmentTime: text("appointment_time").notNull().default("matin"), // تم تحويرها لتمثيل الفترة: matin أو soir
+  queueNumber:     integer("queue_number").notNull().default(1), // رقم الدور التلقائي للمريض في ذلك اليوم
   status:          text("status", {
                      enum: ["pending", "confirmed", "cancelled", "completed"],
                    }).notNull().default("pending"),
@@ -135,21 +136,35 @@ export const doctorViews = pgTable("doctor_views", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// ── Notifications ─────────────────────────────────────────────────────────────
+export const notifications = pgTable("notifications", {
+  id:            serial("id").primaryKey(),
+  recipientId:   text("recipient_id").notNull(),
+  recipientType: text("recipient_type", { enum: ["doctor", "patient"] }).notNull(),
+  type:          text("type").notNull(),
+  title:         text("title").notNull(),
+  body:          text("body").notNull(),
+  link:          text("link"),
+  isRead:        boolean("is_read").notNull().default(false),
+  createdAt:     timestamp("created_at").notNull().defaultNow(),
+});
+
 // ── Types ─────────────────────────────────────────────────────────────────────
-export type User             = typeof users.$inferSelect;
-export type Doctor           = typeof doctors.$inferSelect;
-export type Appointment      = typeof appointments.$inferSelect;
-export type Conversation     = typeof conversations.$inferSelect;
-export type Message          = typeof messages.$inferSelect;
-export type Review           = typeof reviews.$inferSelect;
-export type DoctorView       = typeof doctorViews.$inferSelect;
+export type User           = typeof users.$inferSelect;
+export type Doctor         = typeof doctors.$inferSelect;
+export type Appointment    = typeof appointments.$inferSelect;
+export type Conversation   = typeof conversations.$inferSelect;
+export type Message        = typeof messages.$inferSelect;
+export type Review         = typeof reviews.$inferSelect;
+export type DoctorView     = typeof doctorViews.$inferSelect;
 export type InsertDoctorView = typeof doctorViews.$inferInsert;
+export type Notification       = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;
 
 // ── Insert Schemas (Zod) ──────────────────────────────────────────────────────
 export const insertDoctorSchema = createInsertSchema(doctors)
   .omit({ id: true, rating: true, reviewCount: true, createdAt: true })
   .extend({
-    // جميع الحقول الاختيارية غير المطلوبة في نموذج التسجيل
     userId:                z.string().optional(),
     licenseNumber:         z.string().optional(),
     clinicName:            z.string().optional(),
@@ -196,25 +211,9 @@ export const insertDoctorViewSchema = createInsertSchema(doctorViews).omit({
   id: true, createdAt: true,
 });
 
-// ── Notifications ─────────────────────────────────────────────────────────────
-export const notifications = pgTable("notifications", {
-  id:            serial("id").primaryKey(),
-  recipientId:   text("recipient_id").notNull(),
-  recipientType: text("recipient_type", { enum: ["doctor", "patient"] }).notNull(),
-  type:          text("type").notNull(),
-  title:         text("title").notNull(),
-  body:          text("body").notNull(),
-  link:          text("link"),
-  isRead:        boolean("is_read").notNull().default(false),
-  createdAt:     timestamp("created_at").notNull().defaultNow(),
-});
-
-export type Notification       = typeof notifications.$inferSelect;
-export type InsertNotification = typeof notifications.$inferInsert;
-
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, isRead: true, createdAt: true });
 
-export type InsertDoctor       = z.infer<typeof insertDoctorSchema>;
+export type InsertDoctor   = z.infer<typeof insertDoctorSchema>;
 export type InsertAppointment  = z.infer<typeof insertAppointmentSchema>;
 export type InsertConversation = z.infer<typeof insertConversationSchema>;
 export type InsertMessage      = z.infer<typeof insertMessageSchema>;
