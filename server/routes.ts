@@ -15,7 +15,7 @@ import nearbyRouter from "./routes/nearby";
 import emergencyRouter from "./routes/emergency";
 import doctorStatusRouter from "./routes/doctor-status";
 import { db } from "./db";
-
+import { GoogleGenAI } from "@google/genai";
 import {
   insertDoctorSchema,
   insertMessageSchema,
