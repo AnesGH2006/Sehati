@@ -15,7 +15,7 @@ import nearbyRouter from "./routes/nearby";
 import emergencyRouter from "./routes/emergency";
 import doctorStatusRouter from "./routes/doctor-status";
 import { db } from "./db";
-import { GoogleGenAI } from "@google/genai";
+import Groq from "groq-sdk";
 import {
   insertDoctorSchema,
   insertMessageSchema,
@@ -74,6 +74,54 @@ export async function registerRoutes(
   app.use("/api/emergency", emergencyRouter);
   app.use("/api/doctor", doctorStatusRouter);
 
+  // ── AI Chat (MediAssist) ──────────────────────────────────────────────────
+  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY! });
+
+  const MEDIASSIST_PROMPT = `You are MediAssist, a helpful AI medical assistant for a healthcare platform.
+Your role:
+1. Help patients understand their symptoms empathetically (never diagnose)
+2. Recommend the right medical specialty based on what they describe
+3. Guide patients to book an appointment
+
+Available specialties: General Practice, Cardiology, Dermatology, Neurology,
+Pediatrics, Orthopedics, Gastroenterology, Psychiatry, ENT, Ophthalmology.
+
+Rules:
+- Always be calm, warm, and empathetic
+- Remind users you are an AI, not a doctor, when relevant
+- For serious symptoms (chest pain, difficulty breathing), urge emergency care immediately
+- Never prescribe or recommend specific medications
+- Keep responses concise and conversational (2-4 sentences max)
+- When you recommend a specialty, offer to help book an appointment
+- Always respond in the same language the patient uses (Arabic, French, or English)`;
+
+  app.post("/api/chat", async (req: Request, res: Response) => {
+    try {
+      const { messages } = req.body as {
+        messages: { role: "user" | "assistant"; content: string }[];
+      };
+
+      if (!messages || !Array.isArray(messages) || messages.length === 0)
+        return res.status(400).json({ error: "messages array is required" });
+
+      const response = await groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          { role: "system", content: MEDIASSIST_PROMPT },
+          ...messages.map((m) => ({
+            role: m.role as "user" | "assistant",
+            content: m.content,
+          })),
+        ],
+      });
+
+      res.json({ reply: response.choices[0].message.content });
+    } catch (err) {
+      console.error("Groq error:", err);
+      res.status(500).json({ error: "AI error, please try again." });
+    }
+  });
+
   // ── Upload ────────────────────────────────────────────────────────────────
   app.post("/api/upload", async (req: Request, res: Response) => {
     try {
@@ -129,15 +177,13 @@ export async function registerRoutes(
       const otp = generateOTP();
       await storage.setUserOTP(email, otp);
       const sent = await sendVerificationEmail(email, name, otp);
-      res
-        .status(201)
-        .json({
-          user: safeUser(user),
-          emailSent: sent,
-          message: sent
-            ? "تم ارسال رمز التحقق"
-            : "تم انشاء الحساب لكن فشل ارسال البريد",
-        });
+      res.status(201).json({
+        user: safeUser(user),
+        emailSent: sent,
+        message: sent
+          ? "تم ارسال رمز التحقق"
+          : "تم انشاء الحساب لكن فشل ارسال البريد",
+      });
     } catch {
       res.status(500).json({ message: "خطا في الخادم" });
     }
@@ -226,13 +272,11 @@ export async function registerRoutes(
           .status(401)
           .json({ message: "البريد او كلمة المرور غير صحيحة" });
       if (!user.isVerified)
-        return res
-          .status(403)
-          .json({
-            message: "يجب تاكيد بريدك الالكتروني اولا",
-            needsVerification: true,
-            email,
-          });
+        return res.status(403).json({
+          message: "يجب تاكيد بريدك الالكتروني اولا",
+          needsVerification: true,
+          email,
+        });
       let doctorData = null;
       if (user.role === "doctor" && user.doctorId)
         doctorData = await storage.getDoctor(user.doctorId);
@@ -605,16 +649,17 @@ export async function registerRoutes(
     try {
       const data = insertAppointmentSchema.parse(req.body);
       const appointment = await storage.createAppointment(data);
-      // إشعار للطبيب — موعد جديد
       const doctor = await storage.getDoctor(data.doctorId);
-      storage.createNotification({
-        recipientId:   String(data.doctorId),
-        recipientType: "doctor",
-        type:          "appointment_new",
-        title:         `موعد جديد من ${data.patientName}`,
-        body:          `${data.appointmentDate} الساعة ${data.appointmentTime}${data.isUrgent ? " 🚨 عاجل" : ""}`,
-        link:          "/doctor/dashboard",
-      }).catch(() => {});
+      storage
+        .createNotification({
+          recipientId: String(data.doctorId),
+          recipientType: "doctor",
+          type: "appointment_new",
+          title: `موعد جديد من ${data.patientName}`,
+          body: `${data.appointmentDate} الساعة ${data.appointmentTime}${data.isUrgent ? " 🚨 عاجل" : ""}`,
+          link: "/doctor/dashboard",
+        })
+        .catch(() => {});
       if (doctor?.userId) {
         const receiverIds = await resolveUserIds(doctor.userId);
         for (const id of receiverIds) {
@@ -700,26 +745,31 @@ export async function registerRoutes(
         );
         if (!appointment)
           return res.status(404).json({ message: "Appointment not found" });
-        // إشعار للمريض عند تغيير حالة الموعد
-        if (status === "confirmed" || status === "cancelled" || status === "completed") {
+        if (
+          status === "confirmed" ||
+          status === "cancelled" ||
+          status === "completed"
+        ) {
           const titles: Record<string, string> = {
-            confirmed:  "تم تأكيد موعدك ✅",
-            cancelled:  "تم إلغاء موعدك ❌",
-            completed:  "اكتمل موعدك 🏁",
+            confirmed: "تم تأكيد موعدك ✅",
+            cancelled: "تم إلغاء موعدك ❌",
+            completed: "اكتمل موعدك 🏁",
           };
           const types: Record<string, string> = {
             confirmed: "appointment_confirmed",
             cancelled: "appointment_cancelled",
             completed: "appointment_completed",
           };
-          storage.createNotification({
-            recipientId:   appointment.patientId,
-            recipientType: "patient",
-            type:          types[status] || "appointment_update",
-            title:         titles[status] || "تحديث الموعد",
-            body:          `${appointment.appointmentDate} الساعة ${appointment.appointmentTime}`,
-            link:          "/my-appointments",
-          }).catch(() => {});
+          storage
+            .createNotification({
+              recipientId: appointment.patientId,
+              recipientType: "patient",
+              type: types[status] || "appointment_update",
+              title: titles[status] || "تحديث الموعد",
+              body: `${appointment.appointmentDate} الساعة ${appointment.appointmentTime}`,
+              link: "/my-appointments",
+            })
+            .catch(() => {});
           if (status !== "completed") {
             const receiverIds = await resolveUserIds(appointment.patientId);
             for (const id of receiverIds) {
@@ -790,41 +840,53 @@ export async function registerRoutes(
   );
 
   // ── In-App Notifications ──────────────────────────────────────────────────
-  app.get("/api/notifications/:recipientId", async (req: Request, res: Response) => {
-    try {
-      const notifs = await storage.getNotifications(req.params.recipientId);
-      res.json(notifs);
-    } catch {
-      res.status(500).json({ message: "Failed to fetch notifications" });
-    }
-  });
+  app.get(
+    "/api/notifications/:recipientId",
+    async (req: Request, res: Response) => {
+      try {
+        const notifs = await storage.getNotifications(req.params.recipientId);
+        res.json(notifs);
+      } catch {
+        res.status(500).json({ message: "Failed to fetch notifications" });
+      }
+    },
+  );
 
-  app.get("/api/notifications/:recipientId/count", async (req: Request, res: Response) => {
-    try {
-      const count = await storage.getUnreadCount(req.params.recipientId);
-      res.json({ count });
-    } catch {
-      res.status(500).json({ count: 0 });
-    }
-  });
+  app.get(
+    "/api/notifications/:recipientId/count",
+    async (req: Request, res: Response) => {
+      try {
+        const count = await storage.getUnreadCount(req.params.recipientId);
+        res.json({ count });
+      } catch {
+        res.status(500).json({ count: 0 });
+      }
+    },
+  );
 
-  app.patch("/api/notifications/:id/read", async (req: Request, res: Response) => {
-    try {
-      await storage.markNotificationRead(parseInt(req.params.id));
-      res.json({ success: true });
-    } catch {
-      res.status(500).json({ message: "Failed to mark as read" });
-    }
-  });
+  app.patch(
+    "/api/notifications/:id/read",
+    async (req: Request, res: Response) => {
+      try {
+        await storage.markNotificationRead(parseInt(req.params.id));
+        res.json({ success: true });
+      } catch {
+        res.status(500).json({ message: "Failed to mark as read" });
+      }
+    },
+  );
 
-  app.patch("/api/notifications/read-all/:recipientId", async (req: Request, res: Response) => {
-    try {
-      await storage.markAllNotificationsRead(req.params.recipientId);
-      res.json({ success: true });
-    } catch {
-      res.status(500).json({ message: "Failed to mark all as read" });
-    }
-  });
+  app.patch(
+    "/api/notifications/read-all/:recipientId",
+    async (req: Request, res: Response) => {
+      try {
+        await storage.markAllNotificationsRead(req.params.recipientId);
+        res.json({ success: true });
+      } catch {
+        res.status(500).json({ message: "Failed to mark all as read" });
+      }
+    },
+  );
 
   app.delete("/api/notifications/:id", async (req: Request, res: Response) => {
     try {
@@ -855,19 +917,30 @@ export async function registerRoutes(
     try {
       const data = insertMessageSchema.parse(req.body);
       const message = await storage.createMessage(data);
-      // إشعار للمستلم — رسالة جديدة
       const FINISH_SIGNAL = "__CHAT_FINISHED__";
-      if (data.content !== FINISH_SIGNAL && !data.content.startsWith("data:image")) {
-        const receiverType = data.senderType === "doctor" ? "patient" : "doctor";
-        const senderLabel  = data.senderType === "doctor" ? "طبيبك" : "مريض";
-        storage.createNotification({
-          recipientId:   data.receiverId,
-          recipientType: receiverType,
-          type:          "new_message",
-          title:         `رسالة جديدة من ${senderLabel}`,
-          body:          data.content.length > 60 ? data.content.slice(0, 57) + "..." : data.content,
-          link:          data.senderType === "doctor" ? "/my-appointments" : "/doctor/dashboard",
-        }).catch(() => {});
+      if (
+        data.content !== FINISH_SIGNAL &&
+        !data.content.startsWith("data:image")
+      ) {
+        const receiverType =
+          data.senderType === "doctor" ? "patient" : "doctor";
+        const senderLabel = data.senderType === "doctor" ? "طبيبك" : "مريض";
+        storage
+          .createNotification({
+            recipientId: data.receiverId,
+            recipientType: receiverType,
+            type: "new_message",
+            title: `رسالة جديدة من ${senderLabel}`,
+            body:
+              data.content.length > 60
+                ? data.content.slice(0, 57) + "..."
+                : data.content,
+            link:
+              data.senderType === "doctor"
+                ? "/my-appointments"
+                : "/doctor/dashboard",
+          })
+          .catch(() => {});
       }
       sendPushNotification(data).catch((err) =>
         console.warn("[Push] Background notification failed:", err),

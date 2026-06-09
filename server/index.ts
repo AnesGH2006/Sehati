@@ -5,8 +5,6 @@ import { registerRoutes } from "./routes";
 import { setupGoogleAuth } from "./google-Auth";
 import path from "path";
 import fs from "fs";
-import aiRouter from "./routes/ai";
-
 async function main() {
   const app = express();
   const httpServer = createServer(app);
@@ -14,7 +12,6 @@ async function main() {
   // ── Middleware ──────────────────────────────────────────────────────────────
   app.use(express.json({ limit: "10mb" }));
   app.use(express.urlencoded({ extended: false }));
-  app.use(aiRouter);
   // ── Socket.IO ───────────────────────────────────────────────────────────────
   const io = new SocketIOServer(httpServer, {
     cors: { origin: "*", methods: ["GET", "POST"] },

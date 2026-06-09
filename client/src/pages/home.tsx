@@ -82,13 +82,11 @@ export default function Home() {
   const [, setLocation] = useLocation();
   const reveal = useScrollReveal();
 
-  // فلاتر البحث التقليدي
   const [searchQuery, setSearchQuery] = useState("");
   const [searchSpecialty, setSearchSpecialty] = useState("");
   const [searchWilaya, setSearchWilaya] = useState("");
   const [searchDaira, setSearchDaira] = useState("");
 
-  // حالات صندوق المساعد الطبي الذكي (AI Triage)
   const [aiSymptoms, setAiSymptoms] = useState("");
   const [aiResponse, setAiResponse] = useState("");
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -102,31 +100,27 @@ export default function Home() {
     setLocation(`/doctors?${params.toString()}`);
   };
 
-  // دالة إرسال الأعراض للمساعد الذكي في الـ Backend
   const handleAiAsk = async () => {
     if (!aiSymptoms.trim() || isAiLoading) return;
-
     setIsAiLoading(true);
     setAiResponse("");
-
     try {
-      const res = await fetch("/api/ai-triage", {
+      const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ symptoms: aiSymptoms }),
+        body: JSON.stringify({
+          messages: [{ role: "user", content: aiSymptoms }],
+        }),
       });
-
-      if (!res.ok) throw new Error();
       const data = await res.json();
+      if (data.error) throw new Error();
       setAiResponse(data.reply);
     } catch (error) {
-      setAiResponse(
-        "يوجد خطأ في الاتصال مع الخادم. يرجى الاتصال لاحقا.",
-      );
+      setAiResponse("يوجد خطأ في الاتصال مع الخادم. يرجى الاتصال لاحقا.");
     } finally {
       setIsAiLoading(false);
     }
-  };
+  }; // ← THIS WAS MISSING
 
   const dairaOptions = searchWilaya
     ? ((LOCATIONS as any)[searchWilaya] ?? [])
@@ -140,7 +134,7 @@ export default function Home() {
       <main className="flex-1">
         <Hero />
 
-        {/* ── Search Section ──────────────────────────────────── */}
+        {/* Search Section */}
         <section className="py-16 bg-background border-b" dir="rtl">
           <div className="container px-4 md:px-8 max-w-5xl mx-auto">
             <div ref={reveal} className="anim-ready text-center mb-8 space-y-2">
@@ -238,7 +232,6 @@ export default function Home() {
               </Button>
             </div>
 
-            {/* Quick Specialty Buttons */}
             <div
               ref={reveal}
               className="anim-ready mt-6 flex flex-wrap gap-2 justify-center"
@@ -268,7 +261,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── 🌟 ميزة قاتلة للسوق: صندوق التوجيه الطبي الذكي (AI Triage) ──────────────── */}
+        {/* AI Triage Section */}
         <section className="py-16 bg-muted/20 border-b" dir="rtl">
           <div className="container px-4 md:px-8 max-w-4xl mx-auto">
             <div
@@ -276,7 +269,6 @@ export default function Home() {
               className="anim-ready bg-gradient-to-br from-zinc-900 via-card to-zinc-900 border border-primary/20 rounded-[2.5rem] p-6 md:p-8 shadow-2xl relative overflow-hidden"
             >
               <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl" />
-
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary animate-pulse">
                   <Bot className="h-5 w-5" />
@@ -297,7 +289,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* حقل إدخال الأعراض بالعامية أو الفصحى */}
               <div className="space-y-3 relative z-10">
                 <div className="flex gap-2">
                   <textarea
@@ -323,7 +314,6 @@ export default function Home() {
                   </Button>
                 </div>
 
-                {/* صندوق عرض إجابة التوجيه القادمة من الـ API */}
                 {aiResponse && (
                   <div className="bg-zinc-950/80 border border-white/5 rounded-2xl p-4 text-sm text-zinc-200 leading-relaxed space-y-3 animate-fade-in">
                     <p className="whitespace-pre-line">{aiResponse}</p>
