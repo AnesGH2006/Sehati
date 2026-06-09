@@ -1,49 +1,51 @@
-// server/routes/ai.ts
-import { Router, Request, Response } from "express";
-import { GoogleGenAI } from "@google/genai";
+import { Router } from "express";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const router = Router();
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-// تعريف المساعد الذكي مع التحقق من وجود المفتاح لتفادي انهيار السيرفر
-const apiKey = process.env.GEMINI_API_KEY || "";
-const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+const SYSTEM_PROMPT = `You are MediAssist, a helpful AI medical assistant for a healthcare platform.
+Your role:
+1. Help patients understand their symptoms empathetically (never diagnose)
+2. Recommend the right medical specialty based on what they describe
+3. Guide patients to book an appointment
 
-// استخدام الواجهة الرسمية المتوافقة تماماً مع Typescript لـ Express
-router.post("/api/ai-triage", async (req: Request, res: Response): Promise<any> => {
+Available specialties: General Practice, Cardiology, Dermatology, Neurology,
+Pediatrics, Orthopedics, Gastroenterology, Psychiatry, ENT, Ophthalmology.
+
+Rules:
+- Always be calm, warm, and empathetic
+- Remind users you are an AI, not a doctor, when relevant
+- For serious symptoms (chest pain, difficulty breathing), urge emergency care immediately
+- Never prescribe or recommend specific medications
+- Keep responses concise and conversational (2-4 sentences max)
+- When you recommend a specialty, offer to help book an appointment`;
+
+router.post("/api/chat", async (req, res) => {
   try {
-    const { symptoms } = req.body;
+    const { messages } = req.body;
 
-    if (!symptoms || String(symptoms).trim() === "") {
-      return res.status(400).json({ error: "الرجاء كتابة الأعراض أولاً" });
-    }
-
-    if (!ai) {
-      console.error("AI Error: GEMINI_API_KEY is missing in env variables.");
-      return res.status(500).json({ error: "مفتاح الذكاء الاصطناعي غير معرف على السيرفر" });
-    }
-
-    // استدعاء الموديل بالطريقة المتوافقة تماماً مع الـ Type Definitions للمكتبة
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: String(symptoms),
-      config: {
-        systemInstruction: `أنت مساعد طبي ذكي وموجه خبير في منصة "صحتي" بالجزائر. 
-        مهمتك الأساسية هي الاستماع لشكوى المريض بالعامية الجزائرية (الدارجة) أو العربية الفصحى، وتحليلها لتوجيهه للتخصص الطبي المناسب المتوفر في العيادات.
-
-        قواعد الإجابة الصارمة التي يجب أن تلتزم بها:
-        1. الرد بلهجة محترمة، قريبة، ومطمئنة، تمزج بين العربية المفهومة والكلمات الطبية المتداولة في الجزائر (مثل: السطر، الحريق، الفشلة، التنمال، طبيب العظام، السبيطار...).
-        2. حدد للمريض التخصص الطبي المناسب لحالته بوضوح (مثال: طبيب أمراض النساء، طبيب القلب، طبيب الأطفال، طبيب جراحة العظام، طب عام...).
-        3. ممنوع منعاً باتاً إعطاء أسماء أدوية أو جرعات (لا تكتب باراسيتامول، مضادات حيوية، أو أي دواء آخر)، واكتفِ بنصائح عامة مثل الراحة أو شرب الماء.
-        4. إذا سألك المستخدم عن أي شيء خارج النطاق الطبي تماماً (مثل الطبخ، السياسة، البرمجة، الرياضة، أو النكت)، ارفض الإجابة فوراً وبكل أدب باستخدام الصيغة: "عذراً، أنا مساعد ذكي مخصص للإجابة على استفساراتكم الطبية وتوجيهكم للتخصص المناسب فقط. كيف يمكنني مساعدتك بخصوص حالتك الصحية اليوم؟".
-        5. لا تذكر عبارة "إخلاء مسؤولية" كعنوان، بل اجعل التوجيه يبدو ودياً وانصحه في نهاية الكلام بحجز تذكرة (Ticket) عبر المنصة لرؤية الأطباء المتاحين.`
-      }
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      systemInstruction: SYSTEM_PROMPT,
     });
 
-    return res.json({ reply: response.text });
+    // All messages except the last go into history
+    const history = messages.slice(0, -1).map((m: any) => ({
+      role: m.role === "user" ? "user" : "model",
+      parts: [{ text: m.content }],
+    }));
 
-  } catch (error) {
-    console.error("AI Triage Error:", error);
-    return res.status(500).json({ error: "فشل السيرفر في الاتصال بالمساعد الذكي" });
+    const chat = model.startChat({ history });
+
+    // Send only the latest user message
+    const lastMessage = messages[messages.length - 1].content;
+    const result = await chat.sendMessage(lastMessage);
+
+    res.json({ reply: result.response.text() });
+  } catch (err) {
+    console.error("Gemini error:", err);
+    res.status(500).json({ error: "AI error, please try again." });
   }
 });
 
