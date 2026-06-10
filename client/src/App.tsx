@@ -16,7 +16,7 @@ import { useAuth } from "@/lib/auth";
 import { useEffect, lazy, Suspense, useState } from "react";
 import PageLoader from "./components/PageLoader";
 import { motion } from "framer-motion";
-
+import AiChat from "@/pages/AiChat";
 const Doctors         = lazy(() => import("@/pages/doctors"));
 const Profile         = lazy(() => import("@/pages/profile"));
 const Chat            = lazy(() => import("@/pages/chat"));
@@ -126,6 +126,7 @@ function Router() {
         <Route path="/about"            component={About}           />
         <Route path="/admin"            component={Admin}           />
         <Route path="/nearby"           component={NearbyPage}      />
+        <Route path="/ai-chat"          component={AiChat} />
         <Route path="/emergency"        component={EmergencyPage}   />
         <Route path="/MyAppointments"     component={MyAppointments} />
         <Route path="/MyAppoinments/:id" component={MyAppointments} />
