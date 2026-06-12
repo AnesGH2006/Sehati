@@ -189,9 +189,6 @@ export default function AiChat() {
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>
-        <p className="text-center text-[10px] text-muted-foreground mt-2">
-          اضغط Enter للإرسال • Shift+Enter لسطر جديد
-        </p>
       </div>
     </div>
   );
